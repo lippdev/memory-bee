@@ -104,7 +104,8 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - Validação local em macOS arm64: `cargo fmt --all -- --check`,
   `cargo clippy --locked --all-targets -- -D warnings`, `cargo test --locked`
   (18 testes), `cargo build --locked`, links Markdown, sintaxe JS do roadmap e
-  `git diff --check`. Resultado remoto do CI será registrado no PR da entrega.
+  `git diff --check`. Execuções e resultados remotos de CI vinculados ao
+  [PR #4](https://github.com/lippdev/memory-pier/pull/4).
 - Revisão: autorrevisão de diff, critérios e falhas; corrigidos diagnóstico de
   metadados inválidos, conteúdo vazio e preservação do indicador de erro de ferramentas.
   Sem revisão independente.
