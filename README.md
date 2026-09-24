@@ -48,8 +48,10 @@ metadados dentro de uma raiz explícita; veja o [contrato de descoberta](docs/sp
 `prepare-resume <pacote> --target claude|codex --project <projeto>` verifica o
 pacote, compara o projeto com a base registrada e gera instrução de retomada e
 passos manuais, no mesmo checkout ou em nova worktree (`--worktree`). Veja a
-[preparação de retomada](docs/specs/resume-preparation.md). Lançamento automático
-de agentes continua pendente.
+[preparação de retomada](docs/specs/resume-preparation.md). Com `--output` e
+`--launch <confirmação>` obtida na prévia, o comando inicia o agente no mesmo
+checkout; sem confirmação correspondente, nada é lançado. Lançamento experimental,
+não validado com os agentes reais.
 
 ## Desenvolvimento
 

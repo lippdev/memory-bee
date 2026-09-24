@@ -12,7 +12,7 @@ use std::{
     process::ExitCode,
 };
 
-const USAGE: &str = "Usage:\n  memory-pier export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier inspect-codex <rollout.jsonl>\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier verify <bundle-dir>\n  memory-pier apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-pier prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file>)\nOffline; no model calls.\nNever launches agents. Exit: 0 success, 2 partial or attention needed, 3 possible secrets, 1 I/O or selection error, 64 usage error.";
+const USAGE: &str = "Usage:\n  memory-pier export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier inspect-codex <rollout.jsonl>\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier verify <bundle-dir>\n  memory-pier apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-pier prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file> [--launch <confirmation>])\nOffline; no model calls.\nLaunches an agent only with --launch and a matching confirmation from --preview.\nExit: 0 success, 2 partial or attention needed, 3 possible secrets, 4 launched agent exited non-zero, 1 I/O or selection error, 64 usage error.";
 fn output(value: &impl Serialize) -> Result<(), (u8, String)> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -216,6 +216,7 @@ fn prepare_resume(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
         return Err((64, USAGE.into()));
     };
     let (mut target, mut project, mut worktree, mut prompt_file) = (None, None, None, None);
+    let mut launch: Option<String> = None;
     let mut preview = false;
     let mut index = 1;
     while index < args.len() {
@@ -224,7 +225,7 @@ fn prepare_resume(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
                 preview = true;
                 index += 1;
             }
-            Some(flag @ ("--target" | "--project" | "--worktree" | "--output"))
+            Some(flag @ ("--target" | "--project" | "--worktree" | "--output" | "--launch"))
                 if index + 1 < args.len() =>
             {
                 let value = &args[index + 1];
@@ -232,6 +233,7 @@ fn prepare_resume(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
                     "--target" => target.is_none(),
                     "--project" => project.is_none(),
                     "--worktree" => worktree.is_none(),
+                    "--launch" => launch.is_none(),
                     _ => prompt_file.is_none(),
                 };
                 if !slot_empty {
@@ -248,6 +250,21 @@ fn prepare_resume(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
                     }
                     "--project" => project = Some(PathBuf::from(value)),
                     "--worktree" => worktree = Some(PathBuf::from(value)),
+                    "--launch" => {
+                        launch = Some(
+                            value
+                                .to_str()
+                                .filter(|v| {
+                                    v.len() == 16 && v.bytes().all(|b| b.is_ascii_hexdigit())
+                                })
+                                .ok_or((
+                                    64,
+                                    "confirmation must be the 16-character token from --preview"
+                                        .into(),
+                                ))?
+                                .to_ascii_lowercase(),
+                        )
+                    }
                     _ => prompt_file = Some(PathBuf::from(value)),
                 }
                 index += 2;
@@ -258,7 +275,7 @@ fn prepare_resume(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
     let (Some(target), Some(project)) = (target, project) else {
         return Err((64, USAGE.into()));
     };
-    if preview == prompt_file.is_some() {
+    if preview == prompt_file.is_some() || (launch.is_some() && prompt_file.is_none()) {
         return Err((64, USAGE.into()));
     }
     let request = memory_pier::resume::Request {
@@ -267,10 +284,25 @@ fn prepare_resume(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
         project,
         worktree,
     };
-    let preparation = memory_pier::resume::prepare(&request, prompt_file.as_deref())
+    let mut preparation = memory_pier::resume::prepare(&request, prompt_file.as_deref())
         .map_err(|e| (1, format!("Cannot prepare resume: {e}")))?;
+    if let Some(token) = &launch {
+        memory_pier::resume::check_launch(&preparation, token)
+            .map_err(|e| (1, format!("Cannot launch: {e}")))?;
+    }
     if prompt_file.is_some() {
         memory_pier::resume::write_prompt(&preparation).map_err(|e| (1, e))?;
+    }
+    if launch.is_some() {
+        // The agent owns the terminal; the report is printed after it exits.
+        let started = memory_pier::resume::launch(&mut preparation);
+        output(&preparation)?;
+        started.map_err(|e| (1, format!("Cannot launch: {e}")))?;
+        return Ok(if preparation.launch_exit_code == Some(0) {
+            0
+        } else {
+            4
+        });
     }
     output(&preparation)?;
     Ok(if preparation.needs_attention() { 2 } else { 0 })

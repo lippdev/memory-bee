@@ -593,3 +593,38 @@ pelos testes automatizados.
 |---|---|---|
 | 35–37: retomada no mesmo checkout, prompt em arquivo e nova worktree | Pendente | — |
 | 38: uso inválido e lançamento real controlado | Pendente | — |
+
+## 39. Lançamento confirmado com agente falso (pendente; depende do 36)
+
+Usa um `claude` falso para não iniciar o agente real:
+
+```sh
+mkdir -p exports/manual-resume/fake-bin
+printf '#!/bin/sh\npwd > "$0.calls"; printf "%%s\\n" "$@" >> "$0.calls"\n' > exports/manual-resume/fake-bin/claude
+chmod +x exports/manual-resume/fake-bin/claude
+cargo build --locked
+TOKEN=$(target/debug/memory-pier prepare-resume exports/manual-resume/bundle --target claude --project exports/manual-resume/target --preview | python3 -c 'import json,sys;print(json.load(sys.stdin)["confirmation"])')
+PATH="$PWD/exports/manual-resume/fake-bin:/usr/bin:/bin" target/debug/memory-pier prepare-resume exports/manual-resume/bundle --target claude --project exports/manual-resume/target --output exports/manual-resume/launch.md --launch "$TOKEN"
+cat exports/manual-resume/fake-bin/claude.calls
+PATH="$PWD/exports/manual-resume/fake-bin:/usr/bin:/bin" target/debug/memory-pier prepare-resume exports/manual-resume/bundle --target claude --project exports/manual-resume/target --output exports/manual-resume/launch2.md --launch 0000000000000000
+```
+
+Esperado: o lançamento retorna 0 com launched true e launch_exit_code 0; o arquivo
+.calls mostra o diretório target, o prompt e `--add-dir <pacote>`. O último comando
+retorna 1 por confirmação divergente e não cria launch2.md. Alterar target/a.txt
+depois da prévia também deve invalidar o token.
+
+## 40. Lançamento real controlado (pendente)
+
+Com pacote sintético, conta de teste e checkout descartável, repetir o item 39 sem
+o PATH falso, uma vez com `--target claude` e outra com `--target codex`. Conferir
+se o agente abre no diretório esperado, recebe o prompt inteiro, consegue ler
+HANDOFF.md, pede confirmação antes de editar e se, ao sair, o relatório traz o
+código de saída. Testar também saída com erro (4) e agente ausente do PATH (1),
+confirmando que pacote, prompt e origem ficam intactos. Anotar versões e
+diferenças de flags. Não usar conversas reais.
+
+| Itens novos | Estado | Evidência manual |
+|---|---|---|
+| 39: lançamento confirmado com agente falso e token divergente | Pendente | — |
+| 40: lançamento real controlado em Claude Code e Codex | Pendente | — |

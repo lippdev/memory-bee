@@ -1,11 +1,14 @@
 //! Explicit resume preparation. Verifies a bundle, observes an explicit project and
-//! renders a prompt plus manual commands. Never launches agents, creates worktrees,
-//! applies code, closes the source or copies historical text into the prompt.
+//! renders a prompt plus manual commands. Preparation never launches agents; only
+//! `launch` does, after a confirmation token matches the previewed preparation.
+//! Nothing here creates worktrees, applies code, closes the source or copies
+//! historical text into the prompt.
 use crate::{
     git,
     receive::{self, ChangeState, Verified},
 };
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 use std::{
     fs::{self, OpenOptions},
     io::Write,
@@ -77,7 +80,11 @@ pub struct Preparation {
     pub steps: Vec<Step>,
     pub prompt: String,
     pub prompt_file: Option<String>,
+    /// Binds a later `--launch` to exactly this bundle, project state, prompt and argv.
+    pub confirmation: String,
     pub launched: bool,
+    /// Exit code of the launched agent, when it was started and exited normally.
+    pub launch_exit_code: Option<i32>,
     pub source_modified: bool,
 }
 impl Preparation {
@@ -368,8 +375,14 @@ pub fn prepare(request: &Request, prompt_file: Option<&Path>) -> Result<Preparat
         steps,
         prompt,
         prompt_file: prompt_text,
+        confirmation: String::new(),
         launched: false,
+        launch_exit_code: None,
         source_modified: false,
+    })
+    .map(|mut preparation| {
+        preparation.confirmation = confirmation(&preparation, verified.manifest_sha256());
+        preparation
     })
 }
 
@@ -420,7 +433,7 @@ fn render_prompt(
         ChangeState::Unknown => "estado das mudanças incluídas desconhecido",
     };
     let mut text = format!(
-        "Retomada preparada pelo Memory Pier para {target}. Nenhum agente foi lançado automaticamente.\n\n\
+        "Retomada preparada pelo Memory Pier para {target}. Lançamento só ocorre por pedido explícito e confirmado do usuário.\n\n\
 Pacote: {bundle}\n\
 Diretório de trabalho: {working_directory}\n\
 Modo: {mode_text}\n\
@@ -452,4 +465,58 @@ Código: {changes_text}.\n\n",
 7. Antes de editar, confirme comigo qual é a próxima tarefa.\n",
     );
     text
+}
+
+/// Token over everything the user reviewed, excluding the prompt file location.
+fn confirmation(preparation: &Preparation, manifest_sha256: &str) -> String {
+    let material = serde_json::json!({
+        "manifest_sha256": manifest_sha256,
+        "target": preparation.target,
+        "mode": preparation.mode,
+        "bundle": preparation.bundle,
+        "verified": preparation.verified,
+        "source_agent": preparation.source_agent,
+        "project": preparation.project,
+        "expected_base": preparation.expected_base,
+        "base_match": preparation.base_match,
+        "changes": preparation.changes,
+        "working_directory": preparation.working_directory,
+        "attention": preparation.attention,
+        "steps": preparation.steps.iter().map(|s| (&s.cwd, &s.argv)).collect::<Vec<_>>(),
+        "prompt": preparation.prompt,
+    });
+    let digest = Sha256::digest(material.to_string().as_bytes());
+    format!("{digest:x}")[..16].to_owned()
+}
+
+/// Refuses launch unless the token matches and the final step is the only one left.
+pub fn check_launch(preparation: &Preparation, token: &str) -> Result<()> {
+    if preparation.mode != "same-checkout" {
+        return Err("launch requires same-checkout mode; create the worktree first, then prepare again with --project <worktree>".into());
+    }
+    if preparation.steps.len() != 1 {
+        return Err("launch refused: earlier manual steps (apply) are still pending".into());
+    }
+    if preparation.prompt_file.is_none() {
+        return Err("launch requires --output so the prompt is preserved".into());
+    }
+    if token != preparation.confirmation {
+        return Err("confirmation does not match the current preparation; preview again and review the changes".into());
+    }
+    Ok(())
+}
+
+/// Starts the target agent with inherited terminal, without a shell. The prompt file
+/// must already be written; bundle, prompt and source are never removed on failure.
+pub fn launch(preparation: &mut Preparation) -> Result<()> {
+    let step = preparation.steps.last().ok_or("no launch step")?;
+    let (program, args) = step.argv.split_first().ok_or("empty launch command")?;
+    let status = std::process::Command::new(program)
+        .args(args)
+        .current_dir(&step.cwd)
+        .status()
+        .map_err(|_| format!("cannot start {program}; bundle and prompt file were preserved"))?;
+    preparation.launched = true;
+    preparation.launch_exit_code = status.code();
+    Ok(())
 }
