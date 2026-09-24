@@ -43,7 +43,9 @@ O segundo leitor está disponível como `inspect-codex <rollout.jsonl>`, experim
 e limitado a arquivo explícito. Veja o [contrato Codex](docs/specs/codex-reader.md).
 `export-codex <rollout.jsonl> --preview` ou `--output <pasta-nova>` exporta
 contexto revisável com exclusões e referência/código Git opcionais, compatível com
-`verify`. Descoberta e lançamento Codex continuam pendentes.
+`verify`. `sessions-codex --root <pasta> --project <projeto>` descobre arquivos por
+metadados dentro de uma raiz explícita; veja o [contrato de descoberta](docs/specs/codex-discovery.md).
+Lançamento de agentes continua pendente.
 
 ## Desenvolvimento
 
