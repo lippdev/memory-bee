@@ -22,16 +22,22 @@ A exportação básica funciona sem chamadas a modelos. Sínteses semânticas de
 
 Etapa 01 concluída. Etapa 02 em andamento: projeto Cargo e primeiro leitor Claude
 Code com descoberta por projeto e seleção explícita de ramo, testados com fixtures
-sintéticas. Exportador e TUI pendentes; compatibilidade real não certificada.
+sintéticas. Etapa 03 implementada para exportação somente de contexto, com prévia,
+exclusões e manifesto v1. Validação manual e compatibilidade real pendentes; TUI
+continua no roadmap.
 
 ```sh
 cargo run --locked -- inspect testdata/claude/basic.jsonl
 cargo run --locked -- sessions --root testdata/claude-projects --project /synthetic/project
 cargo run --locked -- inspect testdata/claude-projects/arbitrary/session.jsonl --leaf a1
+cargo run --locked -- export testdata/claude/basic.jsonl --preview
 ```
 
 A saída é um relatório JSON local com eventos, proveniência e diagnósticos.
-Veja [uso, limites e códigos de saída](docs/specs/claude-reader.md).
+Veja [inspeção e descoberta](docs/specs/claude-reader.md),
+[exportação e limites](docs/specs/context-export.md) e o
+[roteiro para testar um por um](docs/MANUAL_TESTS.md). Para gravar um pacote,
+use `export <arquivo> --output <pasta-nova>`; a pasta pai deve existir.
 
 ## Desenvolvimento
 
@@ -44,6 +50,13 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked
 ```
 
+A validação adicional de pacotes usa Python apenas no desenvolvimento/CI:
+
+```sh
+python3 -m venv /tmp/memory-pier-validation
+/tmp/memory-pier-validation/bin/pip install -r scripts/requirements-validation.txt
+/tmp/memory-pier-validation/bin/python scripts/check_bundle.py
+```
 
 - Comece por [AGENTS.md](AGENTS.md), mesmo usando uma ferramenta que não carregue esse arquivo automaticamente.
 - [Roadmap canônico em Markdown](ROADMAP.md)

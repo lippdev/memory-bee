@@ -1,0 +1,2 @@
+# Development/CI only; the Memory Pier binary does not require Python.
+jsonschema==4.25.1

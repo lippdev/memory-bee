@@ -1,6 +1,6 @@
 # Pacote portátil v1 — contrato inicial
 
-Status: contrato de implementação da etapa 01; ainda não existe exportador. Mudanças incompatíveis após publicação exigem nova versão. Fixtures e exemplo são sintéticos.
+Status: contrato v1 com [exportador somente contexto implementado](context-export.md); estado do código e aplicação de mudanças ainda pendentes. Mudanças incompatíveis após publicação exigem nova versão. Fixtures e exemplo são sintéticos.
 
 ## Arquivos
 

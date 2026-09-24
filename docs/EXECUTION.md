@@ -5,22 +5,37 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta por projeto e seleção de ramo implementadas; TUI, exportação e contas pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; estado Git, TUI e contas pendentes.
 - Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
 - Documentação inicial integrada na `main` pelo PR #1.
 
+## Revisão de sequência — orientação do mantenedor
+
+Em 2026-09-24, o mantenedor pediu continuidade das implementações e deixou os
+ensaios manuais para depois, um por um. A validação controlada de compatibilidade
+da etapa 02 permanece pendente e deixa de bloquear a implementação da etapa 03.
+Isso não certifica suporte real nem dispensa testes automatizados e CI.
+
+Recorte autorizado nesta entrega: exportador somente contexto, com prévia, exclusão de linhas,
+HANDOFF/manifesto/histórico v1, hashes, diagnósticos e detecção básica de possíveis
+segredos. Aceite: pacote legível sem instalar o produto, proveniência preservada,
+sem modelos, sem sobrescrever destino e sem inferir estado do código. Exportação
+de patches e consulta ao Git ficam para a etapa 04.
+
 ## Próxima tarefa de produto
 
-**Etapa 02 — Validação controlada de compatibilidade Claude Code.** Preparar uma
-amostra descartável de sessão real, com tarefa e conteúdo sintéticos, registrando
-versão e ambiente sem versionar transcrições reais. Comparar layout, `cwd`, UUIDs,
-parentesco, ferramentas e compactação com os leitores; documentar divergências e
-cobrir ajustes com fixtures reescritas sintéticas. Não presumir compatibilidade por
-causa dos testes atuais. Definir o procedimento antes de iniciar sessões que façam
-chamadas a modelos; o leitor e a descoberta continuam totalmente offline.
-Não iniciar etapa 03 ainda.
+**Etapa 04 — Referência verificável do estado Git.** Adicionar leitura explícita
+por projeto de repositório/branch/commit/estado local e incorporá-la ao pacote
+somente contexto, com tratamento de repositório ausente, detached HEAD e erros.
+Não inferir código por falas do agente nem fazer commit/push do projeto exportado.
+Dividir patches e arquivos novos em uma entrega posterior, com base e aplicação
+explícita. Manter testes automatizados/CI e atualizar o roteiro manual.
+
+Compatibilidade real de Claude Code e ensaios de leitura/retomada do pacote estão
+pendentes com o mantenedor em [docs/MANUAL_TESTS.md](MANUAL_TESTS.md), sem bloquear
+esta próxima implementação, conforme a revisão de sequência acima.
 
 Referências: [decisão técnica atual](decisions/0004-rust-stack.md), [pesquisa de integrações](research/integrations.md), [contrato v1](specs/bundle-v1.md) e [cenário M1](research/m1-scenario.md).
 
@@ -41,7 +56,8 @@ separados; diagnosticar arquivos não classificáveis, erros e limites. Selecion
 ponta por UUID com cadeia de parentesco verificável, preservando diagnósticos e
 registrando exclusões. Aceite: fixtures sintéticas de projetos homônimos,
 subagentes, ramos válidos/ambíguos, falhas e limites; CLI e checks canônicos.
-Compatibilidade real será uma entrega controlada separada; não iniciar exportador.
+Orientação daquele recorte: compatibilidade real seria validada antes do exportador;
+substituída pela revisão de sequência do mantenedor registrada acima.
 
 ## Status do roadmap
 
@@ -49,7 +65,7 @@ Compatibilidade real será uma entrega controlada separada; não iniciar exporta
 |---|---|---|---|
 | 01 Pesquisa e contrato | P0 | Concluído | ADR 0003 substituído pelo ADR 0004, matriz de investigação, contrato v1, fixtures e cenário M1; compatibilidade real do leitor ainda não certificada. |
 | 02 Leitor de sessão | P0 | Em andamento | Leitor, descoberta e seleção de ramo testados com fixtures; validação controlada de compatibilidade real pendente. |
-| 03 Exportação revisável | P0 | Pendente | Depende de 02. |
+| 03 Exportação revisável | P0 | Em andamento | Exportador somente contexto com prévia, exclusões e testes implementado; ensaios manuais de pacote/retomada pendentes. |
 | 04 Estado do código | P0 | Pendente | Depende de 03; fecha M1. |
 | 05 Troca de agente | P1 | Pendente | Depende de 03–04. |
 | 06 Dashboard terminal | P1 | Pendente | Depende de 05. HTML existente é planejamento, não implementação. |
@@ -146,3 +162,40 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   verificável e pode recusar sessões compactadas. Nenhuma conversa pessoal lida.
 - Próximo passo: validação controlada de compatibilidade descrita acima; etapa 02
   permanece em andamento e exportação continua pendente.
+
+## Etapa 03 — Exportador somente contexto
+
+- Implementação concluída neste recorte: `export --preview` ou `--output`, escolha
+  de ramo, exclusões por linha, HANDOFF legível, history JSONL e manifesto v1 com
+  SHA-256. Conteúdo extraído e checkpoints permanecem distintos, sem síntese/modelos.
+- Perdas/seleção/exclusões registradas; trechos iniciais limitados sem truncar
+  histórico retido. Estado Git explicitamente desconhecido. Caminhos cwd e da
+  origem não são copiados automaticamente como metadados.
+- Detecção básica de possíveis segredos em texto e metadados, com localização sem
+  ecoar valor nos achados; gravação bloqueada se houver suspeitas. Revisão humana
+  sempre pendente. Destino exclusivo, permissões privadas no Unix e manifesto por
+  último; em erro comum, limpeza só de arquivos criados pela operação.
+- Validação local em macOS arm64: 49 testes Rust, fmt, Clippy e build com lockfile;
+  schema v1 e hashes independentes em Python para quatro pacotes sintéticos
+  (normal, filtrado, truncado e ferramentas). Links Markdown, sintaxe JS e diff
+  conferidos. CI passa a executar a mesma validação de schema.
+- Revisão: autorrevisão de privacidade, proveniência, falhas e contrato. Verificada
+  recusa de destinos existentes/symlink, limpeza parcial preservando arquivo alheio,
+  referências parentais após exclusão e cercas Markdown para texto histórico.
+  Sem revisão independente e sem execução dos ensaios pessoais do mantenedor.
+- Dependências justificadas no ADR 0006: sha2, regex e jsonschema apenas para checks
+  de desenvolvimento/CI. Compatibilidade real, revisão manual de pacotes, referências
+  Git e patches continuam pendentes. O marco M1 não está concluído.
+- Próximo passo de implementação: referência Git, descrita acima. Roteiro manual
+  separado permite testar as funcionalidades uma por uma posteriormente.
+
+### Retomada e fechamento da exportação
+
+- Sessão anterior deixou o commit `0579a7f` publicado na branch, sem PR.
+  Retomada conferiu árvore limpa, implementação, contrato e testes; nenhuma
+  alteração de comportamento foi necessária.
+- Reexecutados com sucesso: 49 testes Rust, build, fmt, Clippy, validação Python
+  de quatro pacotes (schema, proveniência, exclusões e hashes), links Markdown
+  e `git diff --check`. Revisão feita pelo próprio agente, sem revisão independente.
+- CI remoto e integração vinculados ao [PR #6](https://github.com/lippdev/memory-pier/pull/6).
+  Ensaios manuais continuam pendentes; próxima entrega permanece referência Git.
