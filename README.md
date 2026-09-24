@@ -22,6 +22,7 @@ Planejamento inicial; ainda não há CLI implementada. Exemplos de comandos disc
 
 ## Desenvolvimento
 
+- [Plano visual: prioridades e ordem de implementação](docs/roadmap/index.html)
 - [Fluxo de contribuição](CONTRIBUTING.md)
 - [Instruções para agentes](AGENTS.md)
 - [Decisões de arquitetura e processo](docs/decisions/0001-development-workflow.md)
