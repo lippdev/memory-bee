@@ -31,12 +31,12 @@ cargo run --locked -- export testdata/claude/basic.jsonl --exclude-line 2 --outp
 ## Resultado e proveniência
 
 - `HANDOFF.md`: primeiro pedido humano **retido**, último registro retido,
-  seleção, estado do código desconhecido, omissões e orientação manual de retomada.
+  seleção, referência Git opcional, omissões e orientação manual de retomada.
   Não infere objetivos, próximos passos ou conclusões semânticas da conversa.
 - `history.jsonl`: todos os eventos selecionados, sequência renumerada, fonte por
   linha/bloco e IDs preservados, papéis e ferramentas separados, checkpoints rotulados.
 - `manifest.json`: contrato v1, origem observada, SHA-256 dos dois payloads,
-  omissões, avisos e `redaction: pending-review`. Estado Git é null/unknown.
+  omissões, avisos e `redaction: pending-review`. Sem `--project`, estado Git é null/unknown.
 
 Caminho do arquivo lido e metadados `cwd` não são copiados. Outros IDs, nomes de
 ferramentas e textos são preservados: revise-os antes de compartilhar. Referências
@@ -75,7 +75,7 @@ inspecionadas e podem continuar impedindo a gravação.
 | Código | Resultado |
 |---|---|
 | 0 | Prévia disponível ou pacote gravado sem perdas detectadas na leitura |
-| 2 | Prévia/pacote disponível, com leitura parcial declarada |
+| 2 | Prévia/pacote disponível, com leitura parcial da sessão ou do Git declarada |
 | 3 | Possíveis segredos; prévia disponível, gravação bloqueada |
 | 1 | Falha de leitura, seleção, conteúdo vazio ou gravação |
 | 64 | Argumentos inválidos |
@@ -93,3 +93,37 @@ malicioso modificando o destino simultaneamente.
 O pacote é local; compartilhar, aplicar código ou publicar continuam ações
 separadas. Veja o [roteiro manual](../MANUAL_TESTS.md) e o
 [ADR 0006](../decisions/0006-context-export-and-deferred-manual-validation.md).
+
+## Referência do código com Git
+
+```sh
+cargo run --locked -- export testdata/claude/basic.jsonl --project . --preview
+```
+
+`--project <pasta>` consulta explicitamente uma working tree local (aceita subpasta
+ou worktree vinculada). Sem essa opção, não consulta Git. O projeto não é inferido
+nem sua associação com a sessão é certificada. Git instalado é necessário apenas
+para esta opção; a exportação de contexto continua disponível se a consulta falhar.
+
+O manifesto registra `remote` (origin), `branch`, `base_commit` e `dirty`. Com commit
+observado, `code_state` é `base-reference`, inclusive quando dirty é true. Isso
+não significa que mudanças locais foram incluídas ou que o commit está publicado.
+O HANDOFF mostra os valores e avisa sobre alterações que não acompanham o pacote.
+Não exporta nomes de arquivos, patches nem caminhos absolutos da working tree.
+
+- Detached HEAD: branch null, commit preservado e aviso.
+- Sem commit: base null, branch quando disponível, estado unknown e saída 2.
+- Projeto ausente, bare, sem Git ou falha: aviso genérico sem caminhos privados;
+  campos indisponíveis null e saída 2. O pacote de contexto ainda pode ser gravado.
+- Sem origin: remote null com aviso. Apenas origin é consultado, sem rede.
+- Origin sensível/local/não suportado: omitido. HTTPS e SSH simples são aceitos;
+  usuário SSH convencional git é removido. Query, fragmento e escapes não são aceitos.
+- Branch e remoto passam pelo detector de segredos: achados bloqueiam escrita
+  com saída 3, com precedência sobre saída parcial.
+
+Dirty inclui staged, unstaged, conflitos, submódulos e não rastreados; ignorados
+não contam. É observado antes da gravação do pacote, que pode alterar o status se
+seu destino estiver dentro do projeto. Consultas não formam snapshot atômico;
+HEAD/branch são relidos e descartados se mudarem. Não há fetch nem verificação de
+existência remota. Limite de stdout por comando: 1 MiB; sem timeout nesta entrega.
+Veja o [ADR 0007](../decisions/0007-explicit-git-reference.md).

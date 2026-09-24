@@ -88,3 +88,15 @@ transcrições reais para o repositório. Registrar resultados e limitações em
 
 Este roteiro não inicia Claude nem faz inferência. A implementação pode continuar
 enquanto o mantenedor executa os itens depois, conforme sua orientação atual.
+
+## 8. Referência Git explícita (pendente)
+
+1. Em um projeto de teste com commit, rode `export <sessão-sintética> --project <pasta> --preview`.
+2. Confira branch, commit e dirty contra `git status` e `git rev-parse HEAD`.
+3. Crie um arquivo novo: dirty deve ser true e HANDOFF deve avisar que mudanças não estão incluídas.
+4. Em checkout de teste detached, confira branch null e commit presente.
+5. Use pasta sem repositório: saída 2, code_state unknown e aviso, mantendo contexto disponível.
+6. Confira sem `--project`: campos Git null como antes.
+7. Revise o remoto antes de compartilhar; sua ausência não significa falha da exportação.
+
+Nenhum desses ensaios foi executado com conversas reais pelo agente.

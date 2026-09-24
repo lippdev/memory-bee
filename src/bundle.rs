@@ -1,4 +1,4 @@
-//! Context-only portable bundles. No Git commands, model calls or source writes.
+//! Context-only portable bundles with optional read-only Git references.
 use crate::{
     claude::{Event, ReadState, Report},
     selection::select,
@@ -10,13 +10,14 @@ use std::{
     collections::BTreeSet,
     fs::{self, OpenOptions},
     io::{self, Write},
-    path::Path,
+    path::{Path, PathBuf},
     sync::OnceLock,
     time::SystemTime,
 };
 
 #[derive(Default)]
 pub struct Options {
+    pub project: Option<PathBuf>,
     pub leaf: Option<String>,
     pub exclude_lines: BTreeSet<usize>,
 }
@@ -33,13 +34,7 @@ pub struct Origin {
     version: Option<String>,
     session_id: Option<String>,
 }
-#[derive(Debug, Serialize)]
-pub struct Project {
-    remote: Option<String>,
-    branch: Option<String>,
-    base_commit: Option<String>,
-    dirty: Option<bool>,
-}
+pub use crate::git::Project;
 #[derive(Debug, Serialize)]
 pub struct Payload {
     path: &'static str,
@@ -167,7 +162,7 @@ pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
             ));
         }
     }
-    let partial = report.state == ReadState::Partial;
+    let mut partial = report.state == ReadState::Partial;
     let mut omissions =
         vec!["Estado do código não verificado; nenhum arquivo de código ou patch incluído.".into()];
     let mut warnings = vec![
@@ -277,7 +272,31 @@ pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
             &mut findings,
         );
     }
-    let handoff = render_handoff(&events, &omissions, &warnings);
+    let mut project = Project::default();
+    if let Some(path) = &options.project {
+        let observation = crate::git::inspect(path);
+        project = observation.project;
+        partial |= observation.partial;
+        warnings.extend(observation.warnings);
+        omissions[0] = "Nenhum arquivo de código ou patch incluído; alterações locais não acompanham o pacote.".into();
+        if project.dirty == Some(true) {
+            warnings.push("Há alterações locais (incluindo arquivos não rastreados); o commit base não reproduz o estado de trabalho.".into());
+        }
+        for (field, value) in [
+            ("project.remote", &project.remote),
+            ("project.branch", &project.branch),
+        ] {
+            if let Some(value) = value {
+                scan(value, None, None, field, &mut findings);
+            }
+        }
+    }
+    let code_state = if project.base_commit.is_some() {
+        "base-reference"
+    } else {
+        "unknown"
+    };
+    let handoff = render_handoff(&events, &omissions, &warnings, &project);
     let now: chrono::DateTime<chrono::Utc> = SystemTime::now().into();
     let manifest = Manifest {
         format_version: 1,
@@ -287,13 +306,8 @@ pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
             version,
             session_id: sessions.into_iter().next(),
         },
-        project: Project {
-            remote: None,
-            branch: None,
-            base_commit: None,
-            dirty: None,
-        },
-        code_state: "unknown",
+        project,
+        code_state,
         files: vec![
             Payload {
                 path: "HANDOFF.md",
@@ -379,7 +393,12 @@ fn excerpt(text: &str) -> String {
     };
     format!("{fence}\n{shortened}\n{fence}\n{note}")
 }
-fn render_handoff(events: &[Event], omissions: &[String], warnings: &[String]) -> String {
+fn render_handoff(
+    events: &[Event],
+    omissions: &[String],
+    warnings: &[String],
+    project: &Project,
+) -> String {
     let mut text = String::from(
         "# Retomada — Memory Pier\n\nPacote somente de contexto. Não exige Memory Pier no destino.\n\nLeia [manifest.json](manifest.json) para origem, integridade e limitações e\n[history.jsonl](history.jsonl) para todos os eventos selecionados.\n\n## Primeiro pedido humano retido\n\nNão inferimos o pedido original quando há perdas ou exclusões.\n\n",
     );
@@ -394,7 +413,31 @@ fn render_handoff(events: &[Event], omissions: &[String], warnings: &[String]) -
     }
     let last = events.last().expect("nonempty events");
     text.push_str(&format!("## Último registro retido\n\nPapel: {}; tipo: {}; proveniência: {}; linha {}.\nNão é uma síntese do estado da tarefa.\n\n{}\n",last.role,last.kind,last.provenance,last.source.line,excerpt(&last.text)));
-    text.push_str(&format!("## Seleção e estado do código\n\n{} eventos em ordem física, com sequência renumerada e linha/bloco originais.\nUUIDs parentais são referências históricas; podem apontar para linhas excluídas.\nRepositório, branch, commit e alterações locais: **não verificados**.\nNenhum código ou patch incluído.\n\n",events.len()));
+    let observed =
+        project.base_commit.is_some() || project.branch.is_some() || project.dirty.is_some();
+    let code_description = if observed {
+        "Referência Git observada no projeto escolhido (detalhes abaixo)."
+    } else {
+        "Repositório, branch, commit e alterações locais: **não verificados**."
+    };
+    text.push_str(&format!("## Seleção e estado do código\n\n{} eventos em ordem física, com sequência renumerada e linha/bloco originais.\nUUIDs parentais são referências históricas; podem apontar para linhas excluídas.\n{code_description}\nNenhum código ou patch incluído.\n\n",events.len()));
+    if observed {
+        text.push_str(&excerpt(&format!(
+            "Origin: {}\nBranch: {}\nCommit base: {}\nAlterações locais: {}",
+            project.remote.as_deref().unwrap_or("indisponível/omitido"),
+            project
+                .branch
+                .as_deref()
+                .unwrap_or("indisponível (possível detached HEAD)"),
+            project.base_commit.as_deref().unwrap_or("desconhecido"),
+            project.dirty.map_or("desconhecidas", |dirty| if dirty {
+                "sim; não incluídas"
+            } else {
+                "não detectadas (arquivos ignorados não contados)"
+            })
+        )));
+        text.push('\n');
+    }
     for (title, entries) in [("Omissões", omissions), ("Avisos", warnings)] {
         text.push_str(&format!("## {title}\n\n"));
         // Keep the entrypoint bounded even with many damaged lines; full detail in manifest.

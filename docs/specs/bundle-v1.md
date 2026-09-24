@@ -1,6 +1,6 @@
 # Pacote portátil v1 — contrato inicial
 
-Status: contrato v1 com [exportador somente contexto implementado](context-export.md); estado do código e aplicação de mudanças ainda pendentes. Mudanças incompatíveis após publicação exigem nova versão. Fixtures e exemplo são sintéticos.
+Status: contrato v1 com [exportador somente contexto implementado](context-export.md); referência Git opcional implementada, transporte e aplicação de mudanças ainda pendentes. Mudanças incompatíveis após publicação exigem nova versão. Fixtures e exemplo são sintéticos.
 
 ## Arquivos
 
@@ -16,7 +16,7 @@ O exemplo desta etapa é somente contexto. O transporte inicial é uma pasta; em
 
 Ver [schema JSON](../../schemas/bundle-v1.schema.json). `format_version` é exatamente `1`. Versões desconhecidas são recusadas. Origem registra agente, versão quando conhecida e ID da sessão. IDs e metadados também passam por revisão; caminho absoluto do usuário não precisa sair da máquina.
 
-`project.base_commit` é hash Git completo ou null. `remote` é URL revisada, sem usuário/senha/token, ou null. `dirty` pode ser null quando não verificado. `code_state` distingue referência de base, mudanças incluídas e estado desconhecido. Nunca inferir commit ou estado a partir de uma afirmação do agente.
+`project.base_commit` é hash Git completo ou null. `remote` é URL revisada, sem usuário/senha/token, ou null. `dirty` pode ser null quando não verificado. `code_state` distingue referência de base, mudanças incluídas e estado desconhecido. Nunca inferir commit ou estado a partir de uma afirmação do agente. `base-reference` indica commit observado, mesmo com `dirty: true`; não implica alterações incluídas nem commit publicado. Detached HEAD mantém branch null. Falhas de observação são avisadas, com campos indisponíveis null.
 
 `files` lista caminho relativo, SHA-256 e finalidade de cada payload. O manifesto não calcula hash de si. Todos os payloads devem estar listados, e cada hash deve conferir. Hash detecta alteração, não autentica remetente. `omissions` e `warnings` são obrigatórios mesmo vazios. `redaction` indica revisão pendente ou feita, não garantia de ausência de segredos.
 

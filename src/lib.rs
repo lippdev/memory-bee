@@ -2,4 +2,5 @@
 pub mod bundle;
 pub mod claude;
 pub mod discovery;
+pub mod git;
 pub mod selection;
