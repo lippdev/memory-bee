@@ -332,3 +332,4 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   revisão humana e M1 permanecem pendentes; registro físico não reconstrói forks ou
   rollback. Sem novas dependências, modelos, descoberta ou lançamento.
 - Próximo passo: descoberta Codex por projeto sob raiz explícita, descrita acima.
+- Publicação e verificações remotas vinculadas ao [PR #11](https://github.com/lippdev/memory-pier/pull/11).
