@@ -1,0 +1,3 @@
+{"type": "summary", "summary": "Checkpoint sintético", "leafUuid": "a1"}
+{"type": "system", "subtype": "compact_boundary", "uuid": "boundary"}
+{"type": "user", "uuid": "u1", "parentUuid": null, "sessionId": "synthetic-reader", "timestamp": "2026-09-24T12:00:00Z", "message": {"role": "user", "content": "Resumo sintético da sessão anterior."}, "isCompactSummary": true}
