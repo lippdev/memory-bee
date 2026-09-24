@@ -88,11 +88,17 @@ impl Workspace {
         work
     }
     fn run(&self, args: &[&str]) -> (i32, Value, String) {
-        let result = Command::new(env!("CARGO_BIN_EXE_memory-pier"))
-            .current_dir(&self.0)
-            .args(args)
-            .output()
-            .unwrap();
+        self.run_path(args, None)
+    }
+    /// Runs with PATH restricted to a fake agent directory plus system Git locations,
+    /// so tests can never start a real Claude Code or Codex installation.
+    fn run_path(&self, args: &[&str], fake_bin: Option<&Path>) -> (i32, Value, String) {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_memory-pier"));
+        command.current_dir(&self.0).args(args);
+        if let Some(bin) = fake_bin {
+            command.env("PATH", format!("{}:/usr/bin:/bin", bin.display()));
+        }
+        let result = command.output().unwrap();
         let json = serde_json::from_slice(&result.stdout).unwrap_or(Value::Null);
         (
             result.status.code().unwrap(),
@@ -483,4 +489,252 @@ fn shell_quoting_is_posix_safe() {
         .output()
         .unwrap();
     assert_eq!(echoed.stdout, b"a'b\n$(x)");
+}
+
+/// Installs a fake agent that records cwd and argv (NUL separated) and exits with a
+/// code read from `exit-code` when present.
+fn fake_agent(work: &Workspace, name: &str) -> PathBuf {
+    let bin = work.0.join("fake-bin");
+    fs::create_dir_all(&bin).unwrap();
+    let script = bin.join(name);
+    let calls = work.0.join("calls");
+    let code = work.0.join("exit-code");
+    fs::write(
+        &script,
+        format!(
+            "#!/bin/sh\n{{ pwd; printf '%s\\0' \"$@\"; }} > '{}'\nif [ -f '{}' ]; then exit \"$(cat '{}')\"; fi\n",
+            calls.display(),
+            code.display(),
+            code.display()
+        ),
+    )
+    .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    bin
+}
+fn recorded(work: &Workspace) -> Option<(String, Vec<String>)> {
+    let text = fs::read_to_string(work.0.join("calls")).ok()?;
+    let (cwd, args) = text.split_once('\n').unwrap();
+    let args = args
+        .split('\0')
+        .filter(|a| !a.is_empty())
+        .map(String::from)
+        .collect();
+    Some((cwd.to_owned(), args))
+}
+fn launchable() -> Workspace {
+    let work = Workspace::with_changes();
+    assert_eq!(
+        work.run(&["apply", "bundle", "--project", "target", "--write"])
+            .0,
+        0
+    );
+    work
+}
+fn token(work: &Workspace, target: &str) -> String {
+    let (_, report, _) = work.run(&[
+        "prepare-resume",
+        "bundle",
+        "--target",
+        target,
+        "--project",
+        "target",
+        "--preview",
+    ]);
+    report["confirmation"].as_str().unwrap().to_owned()
+}
+fn launch_args<'a>(target: &'a str, out: &'a str, token: &'a str) -> Vec<&'a str> {
+    vec![
+        "prepare-resume",
+        "bundle",
+        "--target",
+        target,
+        "--project",
+        "target",
+        "--output",
+        out,
+        "--launch",
+        token,
+    ]
+}
+
+#[test]
+fn confirmed_launch_runs_exact_previewed_command_and_preserves_everything() {
+    let work = launchable();
+    let bin = fake_agent(&work, "claude");
+    let (_, preview, _) = work.run(&[
+        "prepare-resume",
+        "bundle",
+        "--target",
+        "claude",
+        "--project",
+        "target",
+        "--preview",
+    ]);
+    let confirmation = preview["confirmation"].as_str().unwrap();
+    assert_eq!(confirmation.len(), 16);
+    assert_eq!(preview["launched"], false);
+    assert!(recorded(&work).is_none(), "preview must not launch");
+
+    let (code, report, stderr) = work.run_path(
+        &launch_args("claude", "prompt.md", confirmation),
+        Some(&bin),
+    );
+    assert_eq!(code, 0, "{stderr} {report:#}");
+    assert_eq!(report["launched"], true);
+    assert_eq!(report["launch_exit_code"], 0);
+    assert_eq!(report["confirmation"], confirmation);
+    let (cwd, args) = recorded(&work).unwrap();
+    assert_eq!(fs::canonicalize(cwd).unwrap(), work.0.join("target"));
+    assert_eq!(args, step_argv(&preview, 0)[1..]);
+    assert_eq!(
+        args[0],
+        fs::read_to_string(work.0.join("prompt.md")).unwrap()
+    );
+    assert!(receive::verify(&work.0.join("bundle")).is_ok());
+    assert_eq!(
+        fs::read_to_string(work.0.join("source/a.txt")).unwrap(),
+        "result\n"
+    );
+}
+
+#[test]
+fn launch_refuses_mismatched_or_stale_confirmation_before_writing() {
+    let work = launchable();
+    let bin = fake_agent(&work, "claude");
+    let confirmation = token(&work, "claude");
+    let (code, _, stderr) = work.run_path(
+        &launch_args("claude", "p1.md", "0000000000000000"),
+        Some(&bin),
+    );
+    assert_eq!(code, 1, "{stderr}");
+    assert!(stderr.contains("confirmation"), "{stderr}");
+    // Target change alters the preparation: the claude token cannot launch codex.
+    let codex = fake_agent(&work, "codex");
+    assert_eq!(
+        work.run_path(&launch_args("codex", "p2.md", &confirmation), Some(&codex))
+            .0,
+        1
+    );
+    // State change between preview and launch invalidates the token.
+    fs::write(work.0.join("target/a.txt"), "edited after preview\n").unwrap();
+    assert_eq!(
+        work.run_path(&launch_args("claude", "p3.md", &confirmation), Some(&bin))
+            .0,
+        1
+    );
+    assert!(recorded(&work).is_none());
+    for file in ["p1.md", "p2.md", "p3.md"] {
+        assert!(
+            !work.0.join(file).exists(),
+            "{file} written despite refusal"
+        );
+    }
+}
+
+#[test]
+fn launch_refuses_pending_apply_and_worktree_mode() {
+    let work = Workspace::with_changes();
+    let bin = fake_agent(&work, "claude");
+    let confirmation = token(&work, "claude");
+    let (code, _, stderr) =
+        work.run_path(&launch_args("claude", "p.md", &confirmation), Some(&bin));
+    assert_eq!(code, 1);
+    assert!(stderr.contains("pending"), "{stderr}");
+    let (_, preview, _) = work.run(&[
+        "prepare-resume",
+        "bundle",
+        "--target",
+        "claude",
+        "--project",
+        "source",
+        "--worktree",
+        "tree",
+        "--preview",
+    ]);
+    let tree_token = preview["confirmation"].as_str().unwrap();
+    let (code, _, stderr) = work.run_path(
+        &[
+            "prepare-resume",
+            "bundle",
+            "--target",
+            "claude",
+            "--project",
+            "source",
+            "--worktree",
+            "tree",
+            "--output",
+            "p.md",
+            "--launch",
+            tree_token,
+        ],
+        Some(&bin),
+    );
+    assert_eq!(code, 1);
+    assert!(stderr.contains("same-checkout"), "{stderr}");
+    assert!(recorded(&work).is_none() && !work.0.join("tree").exists());
+}
+
+#[test]
+fn launch_usage_errors() {
+    let work = launchable();
+    let confirmation = token(&work, "claude");
+    for args in [
+        vec![
+            "prepare-resume",
+            "bundle",
+            "--target",
+            "claude",
+            "--project",
+            "target",
+            "--preview",
+            "--launch",
+            &confirmation,
+        ],
+        vec![
+            "prepare-resume",
+            "bundle",
+            "--target",
+            "claude",
+            "--project",
+            "target",
+            "--launch",
+            &confirmation,
+        ],
+        launch_args("claude", "p.md", "short"),
+        launch_args("claude", "p.md", "zzzzzzzzzzzzzzzz"),
+    ] {
+        assert_eq!(work.run(&args).0, 64, "{args:?}");
+    }
+}
+
+#[test]
+fn failed_or_unavailable_agent_preserves_prompt_and_bundle() {
+    let work = launchable();
+    let bin = fake_agent(&work, "codex");
+    fs::write(work.0.join("exit-code"), "3").unwrap();
+    let confirmation = token(&work, "codex");
+    let (code, report, _) =
+        work.run_path(&launch_args("codex", "p1.md", &confirmation), Some(&bin));
+    assert_eq!(code, 4);
+    assert_eq!(report["launched"], true);
+    assert_eq!(report["launch_exit_code"], 3);
+    let (cwd, args) = recorded(&work).unwrap();
+    assert_eq!(fs::canonicalize(cwd).unwrap(), work.0.join("target"));
+    assert_eq!(args[..2], ["-C".to_string(), work.path("target")]);
+    assert!(work.0.join("p1.md").exists());
+
+    let empty = work.0.join("empty-bin");
+    fs::create_dir(&empty).unwrap();
+    let (code, report, stderr) =
+        work.run_path(&launch_args("codex", "p2.md", &confirmation), Some(&empty));
+    assert_eq!(code, 1, "{stderr}");
+    assert!(stderr.contains("preserved"), "{stderr}");
+    assert_eq!(report["launched"], false);
+    assert!(work.0.join("p2.md").exists());
+    assert!(receive::verify(&work.0.join("bundle")).is_ok());
 }

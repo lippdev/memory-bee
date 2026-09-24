@@ -5,7 +5,7 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex sem lançamento implementada; TUI e contas pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex e lançamento confirmado por token implementados, experimentais; TUI e contas pendentes.
 - Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
@@ -26,13 +26,13 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Etapa 05 — Lançamento explícito opcional.** Definir uma entrega pequena que
-execute somente o passo final preparado por prepare-resume, apenas com opção
-explícita e confirmação, depois de conferir de novo pacote e projeto. Falhas de
-lançamento devem preservar pacote e prompt e não encerrar a origem. Continuar sem
-criar worktrees, aplicar código, criar contas ou executar texto do histórico
-implicitamente. Validar flags reais no item 38 do roteiro antes de certificar;
-enquanto isso, a instrução manual continua sendo o caminho suportado. Sem TUI.
+**Etapa 06 — Primeiro recorte do dashboard terminal.** A etapa 05 tem todas as
+entregas implementadas; resta a validação real com os agentes (itens 38–40), que
+por orientação do mantenedor não bloqueia a implementação. Propor em ADR a
+biblioteca TUI, com justificativa e impacto em dependências/CI, e entregar uma
+tela somente leitura que liste sessões Claude/Codex de um projeto sob raízes
+explícitas e mostre o relatório de prepare-resume. Sem executar exportação, apply
+ou lançamento pela TUI neste recorte; sem contas, uso ou alertas.
 
 Compatibilidade real de Claude Code e ensaios de leitura/retomada do pacote estão
 pendentes com o mantenedor em [docs/MANUAL_TESTS.md](MANUAL_TESTS.md), sem bloquear
@@ -68,7 +68,7 @@ substituída pela revisão de sequência do mantenedor registrada acima.
 | 02 Leitor de sessão | P0 | Em andamento | Leitor, descoberta e seleção de ramo testados com fixtures; validação controlada de compatibilidade real pendente. |
 | 03 Exportação revisável | P0 | Em andamento | Exportador somente contexto com prévia, exclusões e testes implementado; ensaios manuais de pacote/retomada pendentes. |
 | 04 Estado do código | P0 | Em andamento | Referência Git, código selecionado, verify e apply explícito implementados; ensaios manuais/M1 pendentes. |
-| 05 Troca de agente | P1 | Em andamento | Inspeção/exportação Codex, descoberta sob raiz explícita e preparação de retomada (mesmo checkout/nova worktree) experimentais; lançamento pendente. |
+| 05 Troca de agente | P1 | Em andamento | Inspeção/exportação Codex, descoberta, preparação de retomada e lançamento confirmado implementados, experimentais; validação real com os agentes pendente (itens 38–40). |
 | 06 Dashboard terminal | P1 | Pendente | Depende de 05. HTML existente é planejamento, não implementação. |
 | 07 Uso e alertas | P1 | Pendente | Depende de 01 e 06; falta referência de consumo. |
 | 08 Perfis de conta | P1 | Pendente | Depende de 05–06 e prova de isolamento. |
@@ -387,5 +387,27 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   distingue alterações extras fora da seleção; leitura do pacote pelo Codex depende
   da sandbox; --add-dir do Claude dá acesso de ferramenta ao pacote. Roteiro manual
   ampliado com itens 35–38, pendentes. Nenhuma conversa real lida.
-- Próximo passo: lançamento explícito opcional descrito em "Próxima tarefa".
+- Próximo passo: lançamento explícito opcional (entregue na seção seguinte).
 - Publicação e verificações remotas vinculadas ao [PR #13](https://github.com/lippdev/memory-pier/pull/13).
+
+## Etapa 05 — Lançamento confirmado
+
+- Recorte: prepare-resume --output <arquivo> --launch <confirmação> inicia o agente
+  do passo final. ADR 0014 registra token, pré-condições, códigos de saída e
+  alternativas descartadas (pergunta interativa, --yes sem vínculo, encadeamento).
+- Aceite: a prévia informa confirmation; o lançamento refaz verificação e
+  observação e recusa token divergente antes de gravar. Só modo mesmo checkout sem
+  passos pendentes. Prompt gravado antes de iniciar; argv sem shell, terminal
+  herdado. Falha ao iniciar (1) ou saída não zero do agente (4) preservam pacote,
+  prompt e origem.
+- Validação local macOS: 129 testes Rust (5 novos, com agentes falsos no PATH),
+  build, fmt e Clippy aprovados; validação Python dos pacotes aprovada. Comandos
+  dos itens 35, 36 e 39 conferidos pelo agente em pasta temporária; isso não
+  substitui o ensaio do mantenedor. Links relativos e git diff --check conferidos.
+- Autorrevisão do vínculo do token, da ordem recusa/gravação/lançamento e dos
+  caminhos de falha; sem revisão independente.
+- Limitações: token detecta mudança, mas não é segredo nem assinatura; janela entre
+  observação e início do agente; nenhum agente real foi lançado nesta entrega.
+  Roteiro manual ampliado com itens 39–40, pendentes.
+- Próximo passo: primeiro recorte do dashboard terminal descrito em "Próxima tarefa".
+- Publicação e verificações remotas vinculadas ao [PR #14](https://github.com/lippdev/memory-pier/pull/14).

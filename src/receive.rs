@@ -76,6 +76,7 @@ struct Decoded {
 pub struct Verified {
     manifest: Manifest,
     decoded: Vec<Decoded>,
+    manifest_sha256: String,
 }
 #[derive(Debug, Serialize)]
 pub struct Report {
@@ -470,7 +471,11 @@ pub fn verify(directory: &Path) -> Result<Verified> {
             "v1 code application unsupported",
         )?;
     }
-    Ok(Verified { manifest, decoded })
+    Ok(Verified {
+        manifest,
+        decoded,
+        manifest_sha256: hash(&bytes),
+    })
 }
 
 // Decode only the full replacement dialect emitted by Memory Pier. Canonical re-encoding
@@ -532,6 +537,10 @@ impl Verified {
     /// Base commit, already validated as full lowercase hexadecimal.
     pub fn base_commit(&self) -> Option<&str> {
         self.manifest.project.base_commit.as_deref()
+    }
+    /// SHA-256 of the verified manifest bytes; payload hashes are bound through it.
+    pub fn manifest_sha256(&self) -> &str {
+        &self.manifest_sha256
     }
     pub fn has_changes(&self) -> bool {
         !self.decoded.is_empty()
