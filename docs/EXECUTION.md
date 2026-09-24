@@ -188,3 +188,14 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   Git e patches continuam pendentes. O marco M1 não está concluído.
 - Próximo passo de implementação: referência Git, descrita acima. Roteiro manual
   separado permite testar as funcionalidades uma por uma posteriormente.
+
+### Retomada e fechamento da exportação
+
+- Sessão anterior deixou o commit `0579a7f` publicado na branch, sem PR.
+  Retomada conferiu árvore limpa, implementação, contrato e testes; nenhuma
+  alteração de comportamento foi necessária.
+- Reexecutados com sucesso: 49 testes Rust, build, fmt, Clippy, validação Python
+  de quatro pacotes (schema, proveniência, exclusões e hashes), links Markdown
+  e `git diff --check`. Revisão feita pelo próprio agente, sem revisão independente.
+- CI remoto e integração vinculados ao [PR #6](https://github.com/lippdev/memory-pier/pull/6).
+  Ensaios manuais continuam pendentes; próxima entrega permanece referência Git.
