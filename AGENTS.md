@@ -39,4 +39,11 @@ Não presumir acesso às conversas anteriores. O Markdown é a referência opera
 
 ## Validação atual
 
-Stack escolhida: Rust; ainda não há projeto Cargo, build ou testes de aplicação. O contrato inicial está em `docs/specs/bundle-v1.md`, com schema em `schemas/` e exemplos sintéticos em `examples/` e `testdata/`. Para mudanças documentais, verificar links relativos e executar `git diff --check`. Atualize esta seção quando os comandos reais do projeto existirem.
+Stack: Rust 1.98.1 fixada, projeto Cargo com biblioteca e CLI de inspeção.
+Comandos canônicos: `cargo build --locked`, `cargo fmt --all -- --check`,
+`cargo clippy --locked --all-targets -- -D warnings` e `cargo test --locked`.
+CI executa esses checks em macOS e Linux. O leitor usa fixtures sintéticas;
+compatibilidade real e descoberta por projeto ainda pendentes.
+Contrato de inspeção em `docs/specs/claude-reader.md`; pacote futuro em
+`docs/specs/bundle-v1.md`, com schema em `schemas/` e exemplos em `examples/`.
+Para documentação, verificar links relativos e executar `git diff --check`.

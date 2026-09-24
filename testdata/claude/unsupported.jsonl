@@ -1,0 +1,2 @@
+{"type": "future_record", "payload": "SYNTHETIC_UNKNOWN_PAYLOAD", "version": "999.0"}
+{"type": "assistant", "uuid": "a1", "parentUuid": null, "sessionId": "synthetic-reader", "timestamp": "2026-09-24T12:00:00Z", "message": {"role": "assistant", "content": [{"type": "thinking", "thinking": "SYNTHETIC_THINKING_PAYLOAD"}, {"type": "image", "source": {"data": "SYNTHETIC_IMAGE_PAYLOAD"}}, {"type": "text", "text": "Texto disponível."}]}}

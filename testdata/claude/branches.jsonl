@@ -1,0 +1,3 @@
+{"type": "user", "uuid": "u1", "parentUuid": null, "sessionId": "synthetic-reader", "timestamp": "2026-09-24T12:00:00Z", "message": {"role": "user", "content": "Pedido sintético"}}
+{"type": "assistant", "uuid": "a1", "parentUuid": "u1", "sessionId": "synthetic-reader", "timestamp": "2026-09-24T12:00:00Z", "message": {"role": "assistant", "content": "Ramo A"}}
+{"type": "assistant", "uuid": "a2", "parentUuid": "u1", "sessionId": "synthetic-reader", "timestamp": "2026-09-24T12:00:00Z", "message": {"role": "assistant", "content": "Ramo B"}, "isSidechain": true, "agentId": "synthetic-agent"}

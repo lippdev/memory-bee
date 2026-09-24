@@ -42,6 +42,19 @@ Integrar apenas quando os critérios de aceite estiverem atendidos, não houver 
 
 Ao terminar, atualizar `docs/EXECUTION.md` com resultado, evidência de validação, tipo de revisão, limitações e próximo passo. Status permitidos: pendente, em andamento, bloqueado e concluído. Um bloqueio deve indicar o que falta e como destravá-lo; a conclusão exige evidência dos critérios de aceite.
 
+## Comandos de validação
+
+```sh
+cargo fmt --all -- --check
+cargo clippy --locked --all-targets -- -D warnings
+cargo test --locked
+cargo build --locked
+```
+
+Toolchain em `rust-toolchain.toml`; versionar mudanças de dependências no
+`Cargo.lock`. CI em `.github/workflows/ci.yml` executa os mesmos comandos.
+Usar apenas fixtures sintéticas em `testdata/` e testes temporários.
+
 ## Registro do PR
 
 O corpo deve conter problema e resultado, escopo, validação, revisão e limitações relevantes. Preferir uma explicação curta e concreta. Manter título e descrição atualizados com a implementação final.

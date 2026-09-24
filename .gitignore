@@ -9,3 +9,6 @@
 
 # Operating-system metadata
 .DS_Store
+
+# Rust build artifacts
+/target/

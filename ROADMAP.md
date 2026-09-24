@@ -189,7 +189,7 @@ Preparar lançamento público após o marco escolhido.
 | Decisão | Encaminhamento |
 |---|---|
 | Stack e primeiro SO | Decidido: Rust, macOS arm64 primeiro; ver [ADR 0004](docs/decisions/0004-rust-stack.md). |
-| Primeiro leitor | Claude Code escolhido; formato pesquisado, compatibilidade de execução ainda pendente. Codex seguinte. |
+| Primeiro leitor | Claude Code implementado por arquivo explícito e fixtures sintéticas; descoberta por projeto e compatibilidade real pendentes. Codex seguinte. |
 | Contrato do pacote | Contrato v1 definido em docs/specs/bundle-v1.md; exportador ainda pendente. |
 | Uso e limites | Repositório de referência prometido pelo mantenedor ainda não foi fornecido. Não bloquear M1 por isso. |
 | Contas | Investigar isolamento e login oficial por ferramenta. Não prometer suporte universal. |

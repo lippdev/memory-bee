@@ -20,9 +20,28 @@ A exportação básica funciona sem chamadas a modelos. Sínteses semânticas de
 
 ## Estado
 
-Etapa 01 concluída: stack e contrato inicial definidos, com exemplos sintéticos. Ainda não há CLI implementada. Exemplos de comandos discutidos são propostas, não interfaces disponíveis.
+Etapa 01 concluída. Etapa 02 em andamento: projeto Cargo e primeiro leitor Claude
+Code disponíveis por arquivo explícito, testados com fixtures sintéticas. Ainda
+não há descoberta por projeto, exportador ou TUI; compatibilidade real não certificada.
+
+```sh
+cargo run --locked -- inspect testdata/claude/basic.jsonl
+```
+
+A saída é um relatório JSON local com eventos, proveniência e diagnósticos.
+Veja [uso, limites e códigos de saída](docs/specs/claude-reader.md).
 
 ## Desenvolvimento
+
+A toolchain Rust 1.98.1 está fixada em `rust-toolchain.toml`; instale Rust via rustup.
+
+```sh
+cargo build --locked
+cargo fmt --all -- --check
+cargo clippy --locked --all-targets -- -D warnings
+cargo test --locked
+```
+
 
 - Comece por [AGENTS.md](AGENTS.md), mesmo usando uma ferramenta que não carregue esse arquivo automaticamente.
 - [Roadmap canônico em Markdown](ROADMAP.md)
