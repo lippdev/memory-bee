@@ -54,6 +54,22 @@ with tempfile.TemporaryDirectory(prefix="memory-pier-schema-") as directory:
         assert result.returncode == code, result.stderr
         assert json.loads(result.stdout)["written"]
         check_bundle(output, excluded_lines)
+    for index, (fixture, code, excluded_lines) in enumerate([
+        ("basic.jsonl", 0, []), ("basic.jsonl", 0, [3]),
+        ("truncated.jsonl", 2, []), ("losses.jsonl", 2, []),
+    ]):
+        output = Path(directory) / f"codex-{index}"
+        extra = [argument for line in excluded_lines for argument in ("--exclude-line", str(line))]
+        result = subprocess.run(
+            [str(BINARY), "export-codex", str(ROOT / "testdata/codex" / fixture), "--output", str(output), *extra],
+            capture_output=True, text=True,
+        )
+        assert result.returncode == code, result.stderr
+        check_bundle(output, excluded_lines)
+        manifest = json.loads((output / "manifest.json").read_text())
+        assert manifest["source"]["agent"] == "codex"
+        events = [json.loads(line) for line in (output / "history.jsonl").read_text().splitlines()]
+        assert all("turn_id" in e["source"] and "parent_id" not in e["source"] for e in events)
     repo = Path(directory) / "repo"
     repo.mkdir()
     def git(*args):
@@ -104,6 +120,23 @@ with tempfile.TemporaryDirectory(prefix="memory-pier-schema-") as directory:
     invalid["project"]["base_commit"] = None
     assert not validator.is_valid(invalid)
     assert not VALIDATORS[1].is_valid(manifest)
+    # The same code payload core must remain usable with the Codex event contract.
+    codex_output = Path(directory) / "codex-code-bundle"
+    subprocess.run([str(BINARY), "export-codex", str(ROOT / "testdata/codex/basic.jsonl"), "--project", str(repo), "--include-path", "tracked.txt", "--include-path", "new.txt", "--output", str(codex_output)], check=True, capture_output=True)
+    check_bundle(codex_output, [], "changes-included")
+    codex_manifest = json.loads((codex_output / "manifest.json").read_text())
+    assert codex_manifest["source"]["agent"] == "codex"
+    assert codex_manifest["format_version"] == 2
+    assert codex_manifest["project"]["base_commit"] == commit
+    codex_target = Path(directory) / "codex-receiver"
+    git("clone", "--no-hardlinks", str(repo), str(codex_target))
+    for operation in ("--check", "--write"):
+        subprocess.run([str(BINARY), "apply", str(codex_output), "--project", str(codex_target), operation], check=True, capture_output=True)
+    for name in ("tracked.txt", "new.txt"):
+        assert (codex_target / name).read_bytes() == (repo / name).read_bytes()
+    codex_reference = Path(directory) / "codex-reference"
+    subprocess.run([str(BINARY), "export-codex", str(ROOT / "testdata/codex/basic.jsonl"), "--project", str(repo), "--output", str(codex_reference)], check=True, capture_output=True)
+    check_bundle(codex_reference, [], "base-reference")
     (repo / "binary").write_bytes(b"\0synthetic")
     output = Path(directory) / "omitted-bundle"
     result = subprocess.run([str(BINARY), "export", str(ROOT / "testdata/claude/basic.jsonl"), "--project", str(repo), "--include-path", "binary", "--output", str(output)], capture_output=True)

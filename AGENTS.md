@@ -54,4 +54,6 @@ Contrato de inspeção em `docs/specs/claude-reader.md`; contrato do pacote em
 Para documentação, verificar links relativos e executar `git diff --check`.
 
 Segundo leitor: `inspect-codex <rollout.jsonl>` experimental, apenas arquivo explícito;
-contrato em `docs/specs/codex-reader.md`. Exportação/descoberta Codex pendentes.
+contrato em `docs/specs/codex-reader.md`. Exportação Codex via `export-codex --preview/--output`, com exclusões e Git/código
+selecionado opcionais, implementada; descoberta e lançamento pendentes.
+Contrato de exportação em `docs/specs/codex-export.md` (ADR 0011).

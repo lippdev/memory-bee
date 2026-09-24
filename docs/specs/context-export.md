@@ -3,6 +3,9 @@
 Implementação inicial do [pacote v1](bundle-v1.md), sem exportar código nem chamar
 modelos no modo somente contexto. Para incluir código, veja a seção final. A compatibilidade real do leitor ainda não foi certificada.
 
+Este contrato descreve `export` (Claude Code). O comando [export-codex](codex-export.md)
+compartilha gravação, prévia, detecção e opções Git, com seleção e histórico próprios.
+
 ## Comandos
 
 ```sh

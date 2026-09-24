@@ -12,7 +12,7 @@ use std::{
     process::ExitCode,
 };
 
-const USAGE: &str = "Usage:\n  memory-pier inspect-codex <rollout.jsonl>\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier verify <bundle-dir>\n  memory-pier apply <bundle-dir> --project <checkout> (--check | --write)\nOffline; no model calls.\nExit: 0 success, 2 partial, 3 possible secrets, 1 I/O or selection error, 64 usage error.";
+const USAGE: &str = "Usage:\n  memory-pier export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier inspect-codex <rollout.jsonl>\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier verify <bundle-dir>\n  memory-pier apply <bundle-dir> --project <checkout> (--check | --write)\nOffline; no model calls.\nExit: 0 success, 2 partial, 3 possible secrets, 1 I/O or selection error, 64 usage error.";
 fn output(value: &impl Serialize) -> Result<(), (u8, String)> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -87,12 +87,15 @@ fn run() -> Result<u8, (u8, String)> {
         return Ok(0);
     }
     if args.first().is_some_and(|arg| arg == "export") {
-        return export(&args[1..]);
+        return export(&args[1..], false);
+    }
+    if args.first().is_some_and(|arg| arg == "export-codex") {
+        return export(&args[1..], true);
     }
     Err((64, USAGE.into()))
 }
 
-fn export(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
+fn export(args: &[std::ffi::OsString], codex: bool) -> Result<u8, (u8, String)> {
     if args.len() < 2 {
         return Err((64, USAGE.into()));
     }
@@ -146,15 +149,22 @@ fn export(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
             _ => return Err((64, USAGE.into())),
         }
     }
-    if preview == destination.is_some()
+    if (codex && options.leaf.is_some())
+        || preview == destination.is_some()
         || (!options.include_paths.is_empty() && options.project.is_none())
     {
         return Err((64, USAGE.into()));
     }
-    let report = inspect(Path::new(&args[0]), Limits::default())
-        .map_err(|e| (1, format!("Cannot inspect session: {e}")))?;
-    let prepared =
-        prepare(report, &options).map_err(|e| (1, format!("Cannot prepare bundle: {e}")))?;
+    let prepared = if codex {
+        let report = memory_pier::codex::inspect(Path::new(&args[0]), Limits::default())
+            .map_err(|e| (1, format!("Cannot inspect Codex session: {e}")))?;
+        memory_pier::bundle::prepare_codex(report, &options)
+    } else {
+        let report = inspect(Path::new(&args[0]), Limits::default())
+            .map_err(|e| (1, format!("Cannot inspect session: {e}")))?;
+        prepare(report, &options)
+    }
+    .map_err(|e| (1, format!("Cannot prepare bundle: {e}")))?;
     let code = if !prepared.findings().is_empty() {
         3
     } else if prepared.is_partial() {

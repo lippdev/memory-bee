@@ -5,7 +5,7 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção Codex experimental por arquivo explícito implementada; TUI e contas pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção e exportação Codex experimentais por arquivo explícito implementadas; TUI e contas pendentes.
 - Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
@@ -26,13 +26,13 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Etapa 05 — Exportação Codex revisável.** Definir adaptação explícita do relatório
-Codex ao núcleo de pacotes, preservando o perfil experimental, proveniência e
-omissões. Testar preview/exclusões/segredos e compatibilidade com verify, sem
-reinterpretar turnos como árvore Claude. Não lançar agentes nem descobrir arquivos
-implicitamente. Descoberta e lançamento continuam como entregas posteriores.
-Manter `docs/MANUAL_TESTS.md` atualizado; validação real e retomada humana de M1
-continuam pendentes sem bloquear implementação autorizada com testes/CI.
+**Etapa 05 — Descoberta Codex por projeto.** Definir busca limitada sob raiz
+explicitamente escolhida e classificação por metadados de projeto, preservando
+avisos do perfil experimental e sem misturar agentes/sessões. Usar fixtures
+sintéticas; nenhum scan implícito dos perfis pessoais. Seleção leva aos comandos
+inspect-codex/export-codex por arquivo explícito. Lançamento continua posterior.
+Manter roteiro manual atualizado; validação real e retomada humana de M1 permanecem
+pendentes sem bloquear implementação autorizada com testes/CI.
 
 Compatibilidade real de Claude Code e ensaios de leitura/retomada do pacote estão
 pendentes com o mantenedor em [docs/MANUAL_TESTS.md](MANUAL_TESTS.md), sem bloquear
@@ -68,7 +68,7 @@ substituída pela revisão de sequência do mantenedor registrada acima.
 | 02 Leitor de sessão | P0 | Em andamento | Leitor, descoberta e seleção de ramo testados com fixtures; validação controlada de compatibilidade real pendente. |
 | 03 Exportação revisável | P0 | Em andamento | Exportador somente contexto com prévia, exclusões e testes implementado; ensaios manuais de pacote/retomada pendentes. |
 | 04 Estado do código | P0 | Em andamento | Referência Git, código selecionado, verify e apply explícito implementados; ensaios manuais/M1 pendentes. |
-| 05 Troca de agente | P1 | Em andamento | Inspeção Codex explícita experimental; exportação, descoberta e lançamento pendentes. |
+| 05 Troca de agente | P1 | Em andamento | Inspeção/exportação Codex explícitas experimentais; descoberta e lançamento pendentes. |
 | 06 Dashboard terminal | P1 | Pendente | Depende de 05. HTML existente é planejamento, não implementação. |
 | 07 Uso e alertas | P1 | Pendente | Depende de 01 e 06; falta referência de consumo. |
 | 08 Perfis de conta | P1 | Pendente | Depende de 05–06 e prova de isolamento. |
@@ -308,3 +308,28 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   validação Python dos pacotes v1/v2 e hashes passou. Links Markdown, JS do roadmap,
   numeração 1–26 e sintaxe shell do roteiro manual conferidos; git diff --check limpo.
 - CI remoto e integração vinculados ao [PR #10](https://github.com/lippdev/memory-pier/pull/10).
+
+## Etapa 05 — Exportação Codex revisável
+
+- Recorte: export-codex por arquivo explícito, prévia/exclusões, pacotes v1/v2
+  com eventos nativos Codex e avisos do perfil experimental. ADR 0011 registra
+  adaptação ao núcleo existente; sem descoberta, seleção Claude ou lançamento.
+- Aceite: proveniência e perdas preservadas, detecção de segredos nos metadados,
+  verify e roundtrip de código selecionado com fixtures sintéticas; nenhuma escrita
+  na origem ou inferência de projeto.
+- Implementação concluída neste recorte: preview/output, exclusões, referência Git
+  v1 e código selecionado v2; histórico mantém todos os campos do leitor Codex,
+  renumerando apenas sequence. verify aceita os pacotes sem alterar o receptor.
+- Validação local: 103 testes Rust (8 novos), build, fmt e Clippy aprovados. Python
+  valida 13 pacotes sintéticos Claude/Codex com schemas v1/v2, hashes independentes,
+  exclusões e verify; roundtrip Codex aplica código em clone sintético separado.
+  Links Markdown, sintaxe JS, numeração 1–30/sintaxe shell do roteiro e diff conferidos.
+- Autorrevisão da adaptação, seleção, privacidade e contrato; sem revisão independente.
+  Detecção agora percorre todas as strings serializadas dos eventos, incluindo fase,
+  namespace e turno, preservando localização dos achados. Testes cobrem referências
+  sensíveis herdadas mesmo depois da exclusão de uma mensagem.
+- Roteiro manual ampliado com itens 27–30, todos pendentes. Compatibilidade real,
+  revisão humana e M1 permanecem pendentes; registro físico não reconstrói forks ou
+  rollback. Sem novas dependências, modelos, descoberta ou lançamento.
+- Próximo passo: descoberta Codex por projeto sob raiz explícita, descrita acima.
+- Publicação e verificações remotas vinculadas ao [PR #11](https://github.com/lippdev/memory-pier/pull/11).

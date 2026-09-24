@@ -41,7 +41,9 @@ use `export <arquivo> --output <pasta-nova>`; a pasta pai deve existir.
 
 O segundo leitor está disponível como `inspect-codex <rollout.jsonl>`, experimental
 e limitado a arquivo explícito. Veja o [contrato Codex](docs/specs/codex-reader.md).
-Exportação e descoberta Codex ainda não estão implementadas.
+`export-codex <rollout.jsonl> --preview` ou `--output <pasta-nova>` exporta
+contexto revisável com exclusões e referência/código Git opcionais, compatível com
+`verify`. Descoberta e lançamento Codex continuam pendentes.
 
 ## Desenvolvimento
 
