@@ -7,4 +7,5 @@ pub mod codex_discovery;
 pub mod discovery;
 pub mod git;
 pub mod receive;
+pub mod resume;
 pub mod selection;

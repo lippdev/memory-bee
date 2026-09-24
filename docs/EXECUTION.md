@@ -5,7 +5,7 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; TUI e contas pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex sem lançamento implementada; TUI e contas pendentes.
 - Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
@@ -26,13 +26,13 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Etapa 05 — Preparação de retomada Claude/Codex.** Definir uma entrega pequena
-para receber pacote verificado e preparar instrução de retomada para o agente de
-destino, com prévia e projeto explícito. Pesquisar interfaces oficiais antes de
-implementar lançamento; separar uso no mesmo diretório de nova worktree. Não
-encerrar a origem, criar contas ou executar texto do histórico implicitamente.
-Oferecer instrução manual enquanto lançamento não estiver validado. Manter o
-roteiro manual e as pendências reais de M1, sem iniciar a TUI nesta entrega.
+**Etapa 05 — Lançamento explícito opcional.** Definir uma entrega pequena que
+execute somente o passo final preparado por prepare-resume, apenas com opção
+explícita e confirmação, depois de conferir de novo pacote e projeto. Falhas de
+lançamento devem preservar pacote e prompt e não encerrar a origem. Continuar sem
+criar worktrees, aplicar código, criar contas ou executar texto do histórico
+implicitamente. Validar flags reais no item 38 do roteiro antes de certificar;
+enquanto isso, a instrução manual continua sendo o caminho suportado. Sem TUI.
 
 Compatibilidade real de Claude Code e ensaios de leitura/retomada do pacote estão
 pendentes com o mantenedor em [docs/MANUAL_TESTS.md](MANUAL_TESTS.md), sem bloquear
@@ -68,7 +68,7 @@ substituída pela revisão de sequência do mantenedor registrada acima.
 | 02 Leitor de sessão | P0 | Em andamento | Leitor, descoberta e seleção de ramo testados com fixtures; validação controlada de compatibilidade real pendente. |
 | 03 Exportação revisável | P0 | Em andamento | Exportador somente contexto com prévia, exclusões e testes implementado; ensaios manuais de pacote/retomada pendentes. |
 | 04 Estado do código | P0 | Em andamento | Referência Git, código selecionado, verify e apply explícito implementados; ensaios manuais/M1 pendentes. |
-| 05 Troca de agente | P1 | Em andamento | Inspeção/exportação Codex e descoberta sob raiz explícita experimentais; preparação/lançamento de destino pendentes. |
+| 05 Troca de agente | P1 | Em andamento | Inspeção/exportação Codex, descoberta sob raiz explícita e preparação de retomada (mesmo checkout/nova worktree) experimentais; lançamento pendente. |
 | 06 Dashboard terminal | P1 | Pendente | Depende de 05. HTML existente é planejamento, não implementação. |
 | 07 Uso e alertas | P1 | Pendente | Depende de 01 e 06; falta referência de consumo. |
 | 08 Perfis de conta | P1 | Pendente | Depende de 05–06 e prova de isolamento. |
@@ -361,5 +361,31 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - Roteiro manual ampliado com itens 31–34, todos pendentes. Compatibilidade real,
   aliases entre plataformas, snapshot atômico, identificação de forks/subagentes e
   lançamento não são certificados. Nenhuma conversa real lida nesta entrega.
-- Próximo passo: preparação explícita de retomada Claude/Codex descrita acima.
+- Próximo passo: preparação explícita de retomada Claude/Codex (entregue na seção seguinte).
 - Publicação e verificações remotas vinculadas ao [PR #12](https://github.com/lippdev/memory-pier/pull/12).
+
+## Etapa 05 — Preparação explícita de retomada
+
+- Recorte: prepare-resume verifica o pacote, observa o projeto explícito e gera
+  prompt e passos manuais para Claude ou Codex. Mesmo checkout e nova worktree são
+  modos separados por --worktree. ADR 0013 registra interfaces observadas, modos,
+  formato dos passos e alternativas descartadas.
+- Pesquisa de interfaces: ajuda local de Claude Code 2.1.282 e Codex CLI 0.156.1
+  em 2026-09-24. Nenhuma CLI foi executada com prompt; flags não certificadas.
+- Aceite: pacote inválido recusado; HEAD, sujeira e estado das mudanças v2
+  (base/aplicadas/mistas/desconhecidas) visíveis como pontos de atenção; apply só
+  sugerido com pré-condições observadas; prompt sem texto do histórico/manifesto;
+  nenhuma escrita além do arquivo de prompt novo 0600 fora do pacote.
+- Validação local macOS: 124 testes Rust (8 novos), build, fmt e Clippy aprovados;
+  Python confere os pacotes sintéticos com schemas/hashes. Teste de integração
+  executa os passos impressos do modo nova worktree (git worktree add, apply
+  --check/--write) e confere o resultado. Comandos dos itens 35–38 conferidos pelo
+  agente em pasta temporária; isso não substitui o ensaio do mantenedor.
+- Autorrevisão de segurança dos passos, quoting POSIX, ordem de argumentos do
+  Claude (--add-dir variádico) e ausência de escrita; sem revisão independente.
+- Limitações: observação não atômica; checkout sujo com mudanças aplicadas não
+  distingue alterações extras fora da seleção; leitura do pacote pelo Codex depende
+  da sandbox; --add-dir do Claude dá acesso de ferramenta ao pacote. Roteiro manual
+  ampliado com itens 35–38, pendentes. Nenhuma conversa real lida.
+- Próximo passo: lançamento explícito opcional descrito em "Próxima tarefa".
+- Publicação e verificações remotas vinculadas ao [PR #13](https://github.com/lippdev/memory-pier/pull/13).

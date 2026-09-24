@@ -45,7 +45,11 @@ e limitado a arquivo explícito. Veja o [contrato Codex](docs/specs/codex-reader
 contexto revisável com exclusões e referência/código Git opcionais, compatível com
 `verify`. `sessions-codex --root <pasta> --project <projeto>` descobre arquivos por
 metadados dentro de uma raiz explícita; veja o [contrato de descoberta](docs/specs/codex-discovery.md).
-Lançamento de agentes continua pendente.
+`prepare-resume <pacote> --target claude|codex --project <projeto>` verifica o
+pacote, compara o projeto com a base registrada e gera instrução de retomada e
+passos manuais, no mesmo checkout ou em nova worktree (`--worktree`). Veja a
+[preparação de retomada](docs/specs/resume-preparation.md). Lançamento automático
+de agentes continua pendente.
 
 ## Desenvolvimento
 
