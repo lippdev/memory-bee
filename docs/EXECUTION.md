@@ -410,3 +410,4 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   observação e início do agente; nenhum agente real foi lançado nesta entrega.
   Roteiro manual ampliado com itens 39–40, pendentes.
 - Próximo passo: primeiro recorte do dashboard terminal descrito em "Próxima tarefa".
+- Publicação e verificações remotas vinculadas ao [PR #14](https://github.com/lippdev/memory-pier/pull/14).
