@@ -215,3 +215,5 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - Limites: sem snapshot atômico, timeout ou verificação remota; apenas origin;
   arquivos ignorados não contam em dirty. Ensaios manuais continuam pendentes.
 - Próximo passo: alterações selecionadas e aplicação explícita, conforme acima.
+- CI remoto e integração vinculados ao [PR #7](https://github.com/lippdev/memory-pier/pull/7).
+  Links Markdown, sintaxe JavaScript do roadmap e `git diff --check` também passaram.
