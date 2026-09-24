@@ -46,7 +46,7 @@ Comandos canônicos: `cargo build --locked`, `cargo fmt --all -- --check`,
 CI executa esses checks em macOS e Linux, além de `python scripts/check_bundle.py`
 (com dependências de `scripts/requirements-validation.txt`) para schema e hashes. O leitor usa fixtures sintéticas;
 descoberta por projeto e seleção de ramo implementadas, compatibilidade real pendente.
-Exportação de contexto v1 com referência Git opcional (`--project`) e código selecionado v2 (`--include-path`) implementadas; roteiro manual em `docs/MANUAL_TESTS.md`.
+Exportação de contexto v1 com referência Git opcional (`--project`) e código selecionado v2 (`--include-path`) implementadas; `verify` confere pacotes e `apply --check/--write` exige checkout limpo/base exata; roteiro manual em `docs/MANUAL_TESTS.md`.
 Mantenedor adiou ensaios manuais e autorizou continuar implementações; registrar
 pendências sem usá-las como bloqueio automático (ADR 0006).
 Contrato de inspeção em `docs/specs/claude-reader.md`; contrato do pacote em

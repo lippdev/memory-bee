@@ -12,7 +12,7 @@ use std::{
     process::ExitCode,
 };
 
-const USAGE: &str = "Usage:\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\nOffline; no model calls.\nExit: 0 success, 2 partial, 3 possible secrets, 1 I/O or selection error, 64 usage error.";
+const USAGE: &str = "Usage:\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier verify <bundle-dir>\n  memory-pier apply <bundle-dir> --project <checkout> (--check | --write)\nOffline; no model calls.\nExit: 0 success, 2 partial, 3 possible secrets, 1 I/O or selection error, 64 usage error.";
 fn output(value: &impl Serialize) -> Result<(), (u8, String)> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -55,6 +55,26 @@ fn run() -> Result<u8, (u8, String)> {
         .map_err(|e| (1, format!("Cannot discover sessions: {e}")))?;
         output(&report)?;
         return Ok(if report.partial { 2 } else { 0 });
+    }
+    if args.len() == 2 && args[0] == "verify" {
+        let verified = memory_pier::receive::verify(Path::new(&args[1])).map_err(|e| (1, e))?;
+        output(&verified.report())?;
+        return Ok(0);
+    }
+    if args.len() == 5
+        && args[0] == "apply"
+        && args[2] == "--project"
+        && (args[4] == "--check" || args[4] == "--write")
+    {
+        let verified = memory_pier::receive::verify(Path::new(&args[1])).map_err(|e| (1, e))?;
+        let plan = verified.check(Path::new(&args[3])).map_err(|e| (1, e))?;
+        let report = if args[4] == "--write" {
+            plan.write().map_err(|e| (1, e))?
+        } else {
+            plan.report()
+        };
+        output(&report)?;
+        return Ok(0);
     }
     if args.first().is_some_and(|arg| arg == "export") {
         return export(&args[1..]);

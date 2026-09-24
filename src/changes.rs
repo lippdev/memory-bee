@@ -52,11 +52,11 @@ pub fn valid_path(path: &str) -> bool {
 }
 
 #[derive(Clone, PartialEq)]
-struct Snapshot {
-    content: String,
-    mode: String,
+pub(crate) struct Snapshot {
+    pub(crate) content: String,
+    pub(crate) mode: String,
 }
-fn working(root: &Path, path: &str) -> Result<Option<Snapshot>, &'static str> {
+pub(crate) fn working(root: &Path, path: &str) -> Result<Option<Snapshot>, &'static str> {
     let mut current = root.to_path_buf();
     let parts: Vec<_> = path.split('/').collect();
     for (index, component) in parts.iter().enumerate() {
@@ -114,7 +114,11 @@ fn text(bytes: Vec<u8>) -> Result<String, &'static str> {
     }
     String::from_utf8(bytes).map_err(|_| "non_utf8_unsupported")
 }
-fn base(root: &Path, commit: &str, path: &str) -> Result<Option<Snapshot>, &'static str> {
+pub(crate) fn base(
+    root: &Path,
+    commit: &str,
+    path: &str,
+) -> Result<Option<Snapshot>, &'static str> {
     let (status, bytes) =
         git::run(root, &["ls-tree", "-z", commit, "--", path]).map_err(|_| "base_unavailable")?;
     if status != 0 {
@@ -266,7 +270,7 @@ pub fn prepare(
 }
 
 // Whole-file replacement hunks avoid diff heuristics and filters; payload can be larger.
-fn patch(path: &str, before: &Snapshot, after: Option<&Snapshot>) -> String {
+pub(crate) fn patch(path: &str, before: &Snapshot, after: Option<&Snapshot>) -> String {
     let a = format!("\"a/{path}\"");
     let b = format!("\"b/{path}\"");
     let mut patch = format!("diff --git {a} {b}\n");
