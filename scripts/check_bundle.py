@@ -15,7 +15,7 @@ VALIDATOR = Draft202012Validator(SCHEMA, format_checker=FormatChecker())
 BINARY = ROOT / "target/debug/memory-pier"
 
 
-def check_bundle(path, excluded_lines):
+def check_bundle(path, excluded_lines, code_state="unknown"):
     manifest = json.loads((path / "manifest.json").read_text())
     VALIDATOR.validate(manifest)
     datetime.datetime.fromisoformat(manifest["created_at"].replace("Z", "+00:00"))
@@ -27,7 +27,7 @@ def check_bundle(path, excluded_lines):
     assert events and all(event["source"]["line"] > 0 for event in events)
     assert not any(event["source"]["line"] in excluded_lines for event in events)
     assert manifest["redaction"] == "pending-review"
-    assert manifest["code_state"] == "unknown"
+    assert manifest["code_state"] == code_state
     invalid = dict(manifest, format_version=99)
     assert not VALIDATOR.is_valid(invalid)
 
@@ -46,4 +46,19 @@ with tempfile.TemporaryDirectory(prefix="memory-pier-schema-") as directory:
         assert result.returncode == code, result.stderr
         assert json.loads(result.stdout)["written"]
         check_bundle(output, excluded_lines)
+    repo = Path(directory) / "repo"
+    repo.mkdir()
+    def git(*args):
+        return subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True, text=True).stdout.strip()
+    git("init", "-b", "synthetic")
+    git("config", "user.name", "Synthetic")
+    git("config", "user.email", "synthetic@example.invalid")
+    git("-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "--allow-empty", "-m", "synthetic")
+    commit = git("rev-parse", "HEAD")
+    output = Path(directory) / "git-bundle"
+    subprocess.run([str(BINARY), "export", str(ROOT / "testdata/claude/basic.jsonl"), "--project", str(repo), "--output", str(output)], check=True, capture_output=True)
+    check_bundle(output, [], "base-reference")
+    manifest = json.loads((output / "manifest.json").read_text())
+    assert manifest["project"]["base_commit"] == commit
+    assert manifest["project"]["dirty"] is False
 print("Generated bundles: schema v1, timestamps, provenance, exclusions and independent hashes OK")

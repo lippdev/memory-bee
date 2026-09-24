@@ -5,7 +5,7 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; estado Git, TUI e contas pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; patches, TUI e contas pendentes.
 - Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
@@ -26,12 +26,11 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Etapa 04 — Referência verificável do estado Git.** Adicionar leitura explícita
-por projeto de repositório/branch/commit/estado local e incorporá-la ao pacote
-somente contexto, com tratamento de repositório ausente, detached HEAD e erros.
-Não inferir código por falas do agente nem fazer commit/push do projeto exportado.
-Dividir patches e arquivos novos em uma entrega posterior, com base e aplicação
-explícita. Manter testes automatizados/CI e atualizar o roteiro manual.
+**Etapa 04 — Alterações locais selecionadas.** Definir contrato de patches e
+mapeamento de arquivos novos; implementar seleção explícita para exportação,
+registrando omissões (incluindo binários não suportados). Depois, verificar base
+e conflitos em checkout separado antes de aplicação explícita. Não fazer push
+implícito nem sobrescrever arquivos existentes. Referência Git já implementada.
 
 Compatibilidade real de Claude Code e ensaios de leitura/retomada do pacote estão
 pendentes com o mantenedor em [docs/MANUAL_TESTS.md](MANUAL_TESTS.md), sem bloquear
@@ -66,7 +65,7 @@ substituída pela revisão de sequência do mantenedor registrada acima.
 | 01 Pesquisa e contrato | P0 | Concluído | ADR 0003 substituído pelo ADR 0004, matriz de investigação, contrato v1, fixtures e cenário M1; compatibilidade real do leitor ainda não certificada. |
 | 02 Leitor de sessão | P0 | Em andamento | Leitor, descoberta e seleção de ramo testados com fixtures; validação controlada de compatibilidade real pendente. |
 | 03 Exportação revisável | P0 | Em andamento | Exportador somente contexto com prévia, exclusões e testes implementado; ensaios manuais de pacote/retomada pendentes. |
-| 04 Estado do código | P0 | Pendente | Depende de 03; fecha M1. |
+| 04 Estado do código | P0 | Em andamento | Referência Git opcional implementada; patches e aplicação pendentes. |
 | 05 Troca de agente | P1 | Pendente | Depende de 03–04. |
 | 06 Dashboard terminal | P1 | Pendente | Depende de 05. HTML existente é planejamento, não implementação. |
 | 07 Uso e alertas | P1 | Pendente | Depende de 01 e 06; falta referência de consumo. |
@@ -199,3 +198,20 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   e `git diff --check`. Revisão feita pelo próprio agente, sem revisão independente.
 - CI remoto e integração vinculados ao [PR #6](https://github.com/lippdev/memory-pier/pull/6).
   Ensaios manuais continuam pendentes; próxima entrega permanece referência Git.
+
+## Etapa 04 — Referência Git explícita
+
+- Recorte: `export --project <pasta>` observa origin, branch, commit e dirty,
+  registrando estado e avisos no manifesto v1 e HANDOFF. Sem opção, não consulta Git.
+  ADR 0007 documenta CLI Git local, privacidade, limites e semântica.
+- Não publica nem inclui código. URLs sensíveis/locais são omitidas; branch/remoto
+  passam pela detecção existente. Erros deixam campos desconhecidos e saída parcial;
+  detached HEAD e repositório sem commit têm representações distintas.
+- Validação local: 58 testes Rust, build, fmt, Clippy; Python valida cinco pacotes
+  contra schema v1 e hashes independentes, incluindo base Git sintética. Casos
+  incluem índice corrompido, Git ausente, conflitos, worktree e ambiente GIT_*.
+- Autorrevisão de falhas, privacidade e compatibilidade do contrato; sem revisão
+  independente. Índice e arquivo fonte preservados no teste de observação limpa.
+- Limites: sem snapshot atômico, timeout ou verificação remota; apenas origin;
+  arquivos ignorados não contam em dirty. Ensaios manuais continuam pendentes.
+- Próximo passo: alterações selecionadas e aplicação explícita, conforme acima.
