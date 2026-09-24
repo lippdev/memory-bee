@@ -136,7 +136,7 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - Validação local macOS arm64: 34 testes (`cargo test --locked`), Clippy sem warnings,
   build, formatação, links Markdown, sintaxe JS do roadmap e `git diff --check`.
   Demonstração de descoberta e seleção executada na árvore sintética versionada.
-  CI remoto e integração registrados no PR desta entrega.
+  CI remoto e integração vinculados ao [PR #5](https://github.com/lippdev/memory-pier/pull/5).
 - Revisão: autorrevisão de limites, identidade, omissões, caminhos e falhas. Corrigida
   consulta quadrática de diagnósticos por registro e sinalização de arquivos
   parciais fora do projeto pesquisado; testes ajustados para caminhos
