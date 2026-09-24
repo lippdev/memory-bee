@@ -373,3 +373,75 @@ suporte geral. Descoberta, exportação Codex e lançamento continuam fora deste
 |---|---|---|
 | 23–25: inspeção Codex sintética, perdas e erros | Pendente | — |
 | 26: compatibilidade real controlada Codex | Pendente | — |
+
+## 27. Prévia, gravação e verify Codex (pendente)
+
+```sh
+cargo run --locked -- export-codex testdata/codex/basic.jsonl --preview
+mkdir -p exports
+cargo run --locked -- export-codex testdata/codex/basic.jsonl --output exports/manual-codex
+cargo run --locked -- verify exports/manual-codex
+```
+
+Esperado: saída 0; manifesto v1 com source.agent codex, cinco eventos, Git desconhecido,
+redaction pending-review. HANDOFF abre sem Memory Pier, informa perfil experimental
+não certificado e registro físico. history preserva sessão/turno, linha/bloco e
+ferramentas. verify informa valid true. Repetir gravação deve falhar (saída 1), sem
+modificar destino. Comparar bytes/hash da origem antes/depois. Escolher pasta nova
+se já houver exports/manual-codex de um ensaio anterior.
+
+## 28. Exclusões e perdas Codex (pendente)
+
+```sh
+cargo run --locked -- export-codex testdata/codex/basic.jsonl --exclude-line 3 --preview
+cargo run --locked -- export-codex testdata/codex/losses.jsonl --preview
+cargo run --locked -- export-codex testdata/codex/empty.jsonl --preview
+cargo run --locked -- export-codex testdata/codex/basic.jsonl --preview --leaf synthetic-turn
+```
+
+Esperado: respectivamente saída 0 (quatro eventos, sequência 1–4, linhas originais
+4–7, sem pedido humano retido); saída 2 (três eventos, checkpoint e omissões,
+sem NOT-REPLAYED); saída 1 (vazio); saída 64 (--leaf não suportado). Excluir linha
+1 de basic deve falhar com 1, porque contém metadados e nenhum evento exportável.
+
+## 29. Detecção de segredos Codex (pendente)
+
+Usar apenas o marcador sintético abaixo, sem credenciais reais:
+
+```sh
+mkdir -p exports
+cat > exports/manual-codex-secret.jsonl <<'JSONL'
+{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"password=synthetic-only-value"}]}}
+{"type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Resposta sintética."}]}}
+JSONL
+cargo run --locked -- export-codex exports/manual-codex-secret.jsonl --output exports/manual-codex-blocked
+cargo run --locked -- export-codex exports/manual-codex-secret.jsonl --exclude-line 1 --preview
+```
+
+Esperado: primeira saída 3, written false, achado na linha 1 sem ecoar valor e sem
+criar destino. Segunda prévia não contém o texto excluído nem findings. IDs sensíveis
+em fase/turno/namespace também bloqueiam; excluir só a mensagem não remove um ID
+herdado que continue em outros eventos. A ausência de achados não dispensa revisão.
+
+## 30. Referência e código selecionado Codex (pendente)
+
+Usar o repositório sintético e clone limpo do roteiro 10–19, com mudanças em
+tracked.txt/new.txt e base exata no clone. Substituir os caminhos abaixo pelos
+diretórios descartáveis preparados; não usar projeto real para este ensaio.
+
+```sh
+cargo run --locked -- export-codex testdata/codex/basic.jsonl --project /caminho/sintetico/origem --include-path tracked.txt --include-path new.txt --output exports/manual-codex-code
+cargo run --locked -- verify exports/manual-codex-code
+cargo run --locked -- apply exports/manual-codex-code --project /caminho/sintetico/clone --check
+cargo run --locked -- apply exports/manual-codex-code --project /caminho/sintetico/clone --write
+```
+
+Esperado: manifesto v2 com agent codex, commit base e payloads selecionados; check
+não escreve; write reproduz conteúdo selecionado no clone. Origem, índice e commit
+não são alterados pela exportação/aplicação. Retirar --include-path em novo destino
+produz v1/base-reference e não inclui código. Descoberta e lançamento não ocorrem.
+
+| Itens novos | Estado | Evidência manual |
+|---|---|---|
+| 27–29: pacotes Codex, exclusões, perdas e segredos | Pendente | — |
+| 30: referência Git e roundtrip Codex | Pendente | — |

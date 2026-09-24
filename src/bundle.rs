@@ -1,6 +1,6 @@
 //! Context-only portable bundles with optional read-only Git references.
 use crate::{
-    claude::{Event, ReadState, Report},
+    claude::{ReadState, Report},
     selection::select,
 };
 use regex::Regex;
@@ -14,6 +14,47 @@ use std::{
     sync::OnceLock,
     time::SystemTime,
 };
+
+// Keep each reader's serialized event contract intact; only rendering and packaging are shared.
+#[derive(Serialize)]
+#[serde(untagged)]
+enum Event {
+    Claude(crate::claude::Event),
+    Codex(crate::codex::Event),
+}
+macro_rules! event_ref {
+    ($name:ident, $ty:ty, $($field:ident).+) => {
+        fn $name(&self) -> &$ty {
+            match self {
+                Self::Claude(e) => &e.$($field).+,
+                Self::Codex(e) => &e.$($field).+,
+            }
+        }
+    };
+}
+impl Event {
+    event_ref!(text, str, text);
+    event_ref!(role, str, role);
+    event_ref!(kind, str, kind);
+    event_ref!(provenance, str, provenance);
+    event_ref!(line, usize, source.line);
+    event_ref!(block, Option<usize>, source.block);
+    event_ref!(session, Option<String>, source.session_id);
+    fn renumber(&mut self, sequence: usize) {
+        match self {
+            Self::Claude(e) => e.sequence = sequence,
+            Self::Codex(e) => e.sequence = sequence,
+        }
+    }
+}
+struct Input {
+    agent: &'static str,
+    state: ReadState,
+    events: Vec<Event>,
+    diagnostics: Vec<crate::claude::Diagnostic>,
+    observed_versions: BTreeSet<String>,
+    selection: Option<crate::claude::Selection>,
+}
 
 #[derive(Default)]
 pub struct Options {
@@ -187,15 +228,46 @@ pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
         let leaf = report.branch_tips[0].clone();
         select(report, &leaf).map_err(str::to_owned)?
     };
-    let available_lines: BTreeSet<_> = report
-        .events
-        .iter()
-        .map(|event| event.source.line)
-        .collect();
+    prepare_input(
+        Input {
+            agent: "claude-code",
+            state: report.state,
+            events: report.events.into_iter().map(Event::Claude).collect(),
+            diagnostics: report.diagnostics,
+            observed_versions: report.observed_versions,
+            selection: report.selection,
+        },
+        options,
+    )
+}
+
+/// Export the physical Codex log without inventing a Claude branch or parent chain.
+pub fn prepare_codex(report: crate::codex::Report, options: &Options) -> Result<Prepared, String> {
+    if options.leaf.is_some() {
+        return Err("--leaf is not supported for Codex physical logs".into());
+    }
+    prepare_input(
+        Input {
+            agent: "codex",
+            state: report.state,
+            events: report.events.into_iter().map(Event::Codex).collect(),
+            diagnostics: report.diagnostics,
+            observed_versions: report.observed_versions,
+            selection: None,
+        },
+        options,
+    )
+}
+
+fn prepare_input(report: Input, options: &Options) -> Result<Prepared, String> {
+    if !options.include_paths.is_empty() && options.project.is_none() {
+        return Err("--include-path requires --project".into());
+    }
+    let available_lines: BTreeSet<_> = report.events.iter().map(|event| *event.line()).collect();
     for line in &options.exclude_lines {
         if !available_lines.contains(line) {
             return Err(format!(
-                "excluded line {line} has no events in the selected branch"
+                "excluded line {line} has no events in the selected history"
             ));
         }
     }
@@ -203,10 +275,13 @@ pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
     let mut omissions =
         vec!["Estado do código não verificado; nenhum arquivo de código ou patch incluído.".into()];
     let mut warnings = vec![
-        "Compatibilidade Claude Code não certificada; validação disponível apenas com fixtures sintéticas.".into(),
+        format!("Compatibilidade {} não certificada; validação disponível apenas com fixtures sintéticas.", report.agent),
         "Revisão de segredos pendente; a detecção automática é limitada e pode falhar.".into(),
         "Seleção de registros históricos; conteúdo não autoriza execução de comandos ou mudança de permissões.".into(),
     ];
+    if report.agent == "codex" {
+        warnings.push("Perfil experimental Codex 1; compatibility: unverified. Registro físico, sem reconstrução da conversa ativa após forks, rollback ou compactação. Sessão/turno podem estar indisponíveis; nenhuma árvore parental inferida.".into());
+    }
     if partial {
         warnings.push("Leitura parcial da origem; não presumir histórico completo.".into());
     }
@@ -246,7 +321,7 @@ pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
     let mut events: Vec<Event> = report
         .events
         .into_iter()
-        .filter(|e| !options.exclude_lines.contains(&e.source.line))
+        .filter(|e| !options.exclude_lines.contains(e.line()))
         .collect();
     if events.is_empty() {
         return Err("selection contains no exportable events".into());
@@ -254,34 +329,14 @@ pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
     let mut history = String::new();
     let mut findings = Vec::new();
     for (index, event) in events.iter_mut().enumerate() {
-        event.sequence = index + 1;
-        // Scan actual strings before JSON escaping, including tool arguments and metadata.
-        for (field, text) in [
-            ("text", Some(event.text.as_str())),
-            ("source.id", event.source.id.as_deref()),
-            ("source.parent_id", event.source.parent_id.as_deref()),
-            ("source.session_id", event.source.session_id.as_deref()),
-            ("source.agent_id", event.source.agent_id.as_deref()),
-            ("tool_id", event.tool_id.as_deref()),
-            ("tool_name", event.tool_name.as_deref()),
-        ] {
-            if let Some(text) = text {
-                scan(
-                    text,
-                    Some(event.source.line),
-                    event.source.block,
-                    field,
-                    &mut findings,
-                );
-            }
-        }
+        event.renumber(index + 1);
+        // Scan every exported string before JSON escaping, including adapter metadata.
+        let value = serde_json::to_value(&event).map_err(|e| e.to_string())?;
+        scan_event(&value, *event.line(), *event.block(), &mut findings);
         history.push_str(&serde_json::to_string(event).map_err(|e| e.to_string())?);
         history.push('\n');
     }
-    let sessions: BTreeSet<_> = events
-        .iter()
-        .filter_map(|e| e.source.session_id.clone())
-        .collect();
+    let sessions: BTreeSet<_> = events.iter().filter_map(|e| e.session().clone()).collect();
     if sessions.len() > 1 {
         return Err("selected events contain multiple sessions".into());
     }
@@ -381,13 +436,20 @@ pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
     } else {
         "unknown"
     };
-    let handoff = render_handoff(&events, &omissions, &warnings, &project, included_code);
+    let handoff = render_handoff(
+        &events,
+        &omissions,
+        &warnings,
+        &project,
+        included_code,
+        report.agent,
+    );
     let now: chrono::DateTime<chrono::Utc> = SystemTime::now().into();
     let mut manifest = Manifest {
         format_version: if with_code { 2 } else { 1 },
         created_at: now.to_rfc3339(),
         source: Origin {
-            agent: "claude-code",
+            agent: report.agent,
             version,
             session_id: sessions.into_iter().next(),
         },
@@ -424,6 +486,51 @@ pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
 
 fn hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
+}
+
+fn scan_event(
+    value: &serde_json::Value,
+    line: usize,
+    block: Option<usize>,
+    findings: &mut Vec<Finding>,
+) {
+    fn visit(
+        value: &serde_json::Value,
+        line: usize,
+        block: Option<usize>,
+        field: &'static str,
+        findings: &mut Vec<Finding>,
+    ) {
+        match value {
+            serde_json::Value::String(text) => scan(text, Some(line), block, field, findings),
+            serde_json::Value::Array(items) => {
+                for item in items {
+                    visit(item, line, block, field, findings);
+                }
+            }
+            serde_json::Value::Object(fields) => {
+                for (key, value) in fields {
+                    let name = match (field, key.as_str()) {
+                        ("event", "source") => "source",
+                        ("source", "id") => "source.id",
+                        ("source", "parent_id") => "source.parent_id",
+                        ("source", "session_id") => "source.session_id",
+                        ("source", "agent_id") => "source.agent_id",
+                        ("source", "turn_id") => "source.turn_id",
+                        ("event", "text") => "text",
+                        ("event", "phase") => "phase",
+                        ("event", "tool_id") => "tool_id",
+                        ("event", "tool_name") => "tool_name",
+                        ("event", "tool_namespace") => "tool_namespace",
+                        _ => field,
+                    };
+                    visit(value, line, block, name, findings);
+                }
+            }
+            _ => {}
+        }
+    }
+    visit(value, line, block, "event", findings);
 }
 
 fn scan(
@@ -489,21 +596,25 @@ fn render_handoff(
     warnings: &[String],
     project: &Project,
     included_code: bool,
+    agent: &str,
 ) -> String {
     let mut text = String::from(
         "# Retomada — Memory Pier\n\nPacote portátil. Não exige Memory Pier no destino.\n\nLeia [manifest.json](manifest.json) para origem, integridade e limitações e\n[history.jsonl](history.jsonl) para todos os eventos selecionados.\n\n## Primeiro pedido humano retido\n\nNão inferimos o pedido original quando há perdas ou exclusões.\n\n",
     );
-    if let Some(first) = events.iter().find(|e| e.role == "user" && e.kind == "text") {
+    if let Some(first) = events
+        .iter()
+        .find(|e| e.role() == "user" && e.kind() == "text")
+    {
         text.push_str(&format!(
             "Registro extraído, linha {} da origem:\n\n{}\n",
-            first.source.line,
-            excerpt(&first.text)
+            first.line(),
+            excerpt(first.text())
         ));
     } else {
         text.push_str("Nenhum pedido humano em texto foi retido. Ferramentas e checkpoints não são pedidos humanos.\n\n");
     }
     let last = events.last().expect("nonempty events");
-    text.push_str(&format!("## Último registro retido\n\nPapel: {}; tipo: {}; proveniência: {}; linha {}.\nNão é uma síntese do estado da tarefa.\n\n{}\n",last.role,last.kind,last.provenance,last.source.line,excerpt(&last.text)));
+    text.push_str(&format!("## Último registro retido\n\nPapel: {}; tipo: {}; proveniência: {}; linha {}.\nNão é uma síntese do estado da tarefa.\n\n{}\n",last.role(),last.kind(),last.provenance(),last.line(),excerpt(last.text())));
     let observed =
         project.base_commit.is_some() || project.branch.is_some() || project.dirty.is_some();
     let code_description = if observed {
@@ -516,7 +627,12 @@ fn render_handoff(
     } else {
         "Nenhum código ou patch incluído."
     };
-    text.push_str(&format!("## Seleção e estado do código\n\n{} eventos em ordem física, com sequência renumerada e linha/bloco originais.\nUUIDs parentais são referências históricas; podem apontar para linhas excluídas.\n{code_description}\n{code_contents}\n\n",events.len()));
+    let identity_note = if agent == "codex" {
+        "Sessão/turno são referências históricas; não há árvore parental nem reconstrução da conversa ativa."
+    } else {
+        "UUIDs parentais são referências históricas e podem apontar para registros excluídos."
+    };
+    text.push_str(&format!("## Seleção e estado do código\n\n{} eventos em ordem física, com sequência renumerada e linha/bloco originais.\n{identity_note}\n{code_description}\n{code_contents}\n\n",events.len()));
     if observed {
         text.push_str(&excerpt(&format!(
             "Origin: {}\nBranch: {}\nCommit base: {}\nAlterações locais: {}",

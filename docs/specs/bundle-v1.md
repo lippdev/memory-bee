@@ -22,7 +22,15 @@ Ver [schema JSON](../../schemas/bundle-v1.schema.json). `format_version` é exat
 
 ## Eventos normalizados
 
-Cada linha é objeto JSON: `sequence` (inteiro crescente a partir de 1), `role` (`user`, `assistant`, `tool` ou `system`), `kind` (`text`, `tool_call`, `tool_result` ou `checkpoint`), `text`, `timestamp` (RFC3339 ou null), `source` (linha original, ID e parent ID opcionais) e `provenance` (`extracted` ou `checkpoint`). Campo ausente na origem fica null; não fabricar datas ou decisões.
+Cada linha é objeto JSON: `sequence` (inteiro crescente a partir de 1), `role` (`user`, `assistant`, `tool`, `system` ou `developer` (Codex)), `kind` (`text`, `tool_call`, `tool_result` ou `checkpoint`), `text`, `timestamp` (RFC3339 ou null), `source` (linha original, ID e parent ID opcionais) e `provenance` (`extracted` ou `checkpoint`). Campo ausente na origem fica null; não fabricar datas ou decisões.
+
+O perfil do histórico é identificado por `source.agent` no manifesto. Claude Code
+mantém seu [contrato de eventos](claude-reader.md). Com agente `codex`, os eventos
+mantêm o [perfil experimental Codex](codex-reader.md): source inclui record_type,
+item_type, id, session_id e turn_id, sem parent_id; phase e tool_namespace também
+são preservados. IDs desconhecidos ficam null. O histórico é um registro físico,
+sem reconstruir conversa ativa após rollback/forks. A [exportação Codex](codex-export.md)
+renumera apenas sequence, preservando os demais campos dos eventos retidos.
 
 Texto de ferramenta é dado histórico, nunca comando executável automaticamente. Síntese por modelo fica fora do v1 básico. Checkpoints existentes devem ser rotulados, não apresentados como transcrição integral. Registrar perdas de blocos e registros no manifesto e no Markdown.
 

@@ -11,7 +11,7 @@ O parser do Orca, no commit `adc0c67f75dd44ee5b771faf3372e7dba3c73fa0`, observa 
 | Agente | Ler contexto | Iniciar destino | Cotas | Perfis isolados |
 |---|---|---|---|---|
 | Claude Code | JSONL documentado; primeiro leitor escolhido | Retomada nativa documentada; injeção de pacote ainda por validar | Não investigado; não inferir por contagem de tokens | Não comprovado; login global não basta |
-| Codex | Inspeção experimental por arquivo explícito; fixtures sintéticas, compatibilidade real pendente | Integração da etapa 05 | Aguardar pesquisa da fonte | Não comprovado |
+| Codex | Inspeção e exportação experimentais por arquivo explícito; fixtures sintéticas, compatibilidade real pendente | Integração da etapa 05 | Aguardar pesquisa da fonte | Não comprovado |
 | Cursor | Parser identificado no Orca; CLI e IDE precisam ser distinguidas | Não investigado | Não investigado | Não comprovado |
 | Pi | Parser identificado no Orca; não validado aqui | Não investigado | Dependente de provedor; não investigado | Não comprovado |
 | Hermes | Parser identificado no Orca; não validado aqui | Não investigado | Dependente de provedor; não investigado | Não comprovado |

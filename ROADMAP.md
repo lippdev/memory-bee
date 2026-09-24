@@ -103,7 +103,7 @@ Conectar a exportação à retomada no mesmo projeto.
 
 **Entregas:**
 
-- Adicionar segundo leitor e adaptadores de lançamento, começando por Claude ↔ Codex após validação.
+- Adicionar segundo leitor, exportação do seu contexto e adaptadores de lançamento, começando por Claude ↔ Codex após validação.
 - Receber pacote e conferir contexto/código; fornecer instrução manual quando lançamento não for suportado.
 - Separar continuar no mesmo diretório de bifurcar em outra worktree.
 
