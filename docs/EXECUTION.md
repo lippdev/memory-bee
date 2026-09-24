@@ -362,3 +362,4 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   aliases entre plataformas, snapshot atômico, identificação de forks/subagentes e
   lançamento não são certificados. Nenhuma conversa real lida nesta entrega.
 - Próximo passo: preparação explícita de retomada Claude/Codex descrita acima.
+- Publicação e verificações remotas vinculadas ao [PR #12](https://github.com/lippdev/memory-pier/pull/12).
