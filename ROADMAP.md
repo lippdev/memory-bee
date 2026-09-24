@@ -199,7 +199,7 @@ Preparar lançamento público após o marco escolhido.
 |---|---|
 | Stack e primeiro SO | Decidido: Rust, macOS arm64 primeiro; ver [ADR 0004](docs/decisions/0004-rust-stack.md). |
 | Primeiro leitor | Claude Code com descoberta por projeto e seleção de ramo em fixtures sintéticas; compatibilidade real pendente. Codex seguinte. |
-| Contrato do pacote | Exportador somente contexto v1 implementado; referência Git opcional implementada; transporte e aplicação de mudanças pendentes. |
+| Contrato do pacote | Exportador somente contexto v1 implementado; referência Git e exportação de alterações selecionadas v2 implementadas; recebimento e aplicação pendentes. |
 | Uso e limites | Repositório de referência prometido pelo mantenedor ainda não foi fornecido. Não bloquear M1 por isso. |
 | Contas | Investigar isolamento e login oficial por ferramenta. Não prometer suporte universal. |
 | Nome e licença | Nome escolhido: Memory Pier (`memory-pier`). Licença pendente antes da distribuição pública. |

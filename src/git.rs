@@ -21,16 +21,40 @@ pub struct Observation {
 }
 
 // Bound captured output, discard stderr (it may contain private paths/configuration).
-fn run(path: &Path, args: &[&str]) -> Result<(i32, Vec<u8>), ()> {
+pub(crate) fn run(path: &Path, args: &[&str]) -> Result<(i32, Vec<u8>), ()> {
     let mut command = Command::new("git");
     for (key, _) in std::env::vars_os() {
         if key.to_string_lossy().starts_with("GIT_") {
             command.env_remove(key);
         }
     }
+    // Status can otherwise execute configured clean/process filters while comparing files.
+    if args.first() == Some(&"status") {
+        let (status, keys) = run(
+            path,
+            &[
+                "config",
+                "--name-only",
+                "--get-regexp",
+                r"^filter\..*\.(clean|smudge|process|required)$",
+            ],
+        )?;
+        if status != 0 && status != 1 {
+            return Err(());
+        }
+        for key in std::str::from_utf8(&keys).map_err(|_| ())?.lines() {
+            let value = if key.ends_with(".required") {
+                "false"
+            } else {
+                ""
+            };
+            command.arg("-c").arg(format!("{key}={value}"));
+        }
+    }
     let mut child = command
         .args([
             "--no-optional-locks",
+            "--literal-pathspecs",
             "-c",
             "core.fsmonitor=false",
             "-c",
@@ -40,6 +64,7 @@ fn run(path: &Path, args: &[&str]) -> Result<(i32, Vec<u8>), ()> {
         .arg(path)
         .args(args)
         .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_NO_LAZY_FETCH", "1")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
@@ -60,7 +85,7 @@ fn run(path: &Path, args: &[&str]) -> Result<(i32, Vec<u8>), ()> {
     let status = child.wait().map_err(|_| ())?;
     Ok((status.code().unwrap_or(-1), bytes))
 }
-fn text(path: &Path, args: &[&str]) -> Result<String, ()> {
+pub(crate) fn text(path: &Path, args: &[&str]) -> Result<String, ()> {
     let (code, bytes) = run(path, args)?;
     if code != 0 {
         return Err(());
@@ -122,7 +147,7 @@ pub fn inspect(path: &Path) -> Observation {
             "--porcelain=v1",
             "-z",
             "--untracked-files=normal",
-            "--ignore-submodules=none",
+            "--ignore-submodules=all",
         ],
     ) {
         Ok((0, bytes)) => observation.project.dirty = Some(!bytes.is_empty()),
@@ -131,6 +156,20 @@ pub fn inspect(path: &Path) -> Observation {
             observation
                 .warnings
                 .push("git_status_unavailable: alterações locais não verificadas.".into());
+        }
+    }
+    // Do not recurse into submodules: their own filter configuration could execute.
+    match run(root, &["ls-files", "--stage", "-z"]) {
+        Ok((0, bytes))
+            if !bytes
+                .split(|b| *b == 0)
+                .any(|record| record.starts_with(b"160000 ")) => {}
+        _ => {
+            if observation.project.dirty != Some(true) {
+                observation.project.dirty = None;
+            }
+            observation.partial = true;
+            observation.warnings.push("git_submodules_unverified: submódulos ou inventário indisponível; estado interno não consultado.".into());
         }
     }
     match run(root, &["config", "--get", "remote.origin.url"]) {

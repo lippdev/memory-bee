@@ -17,6 +17,7 @@ Não presumir acesso às conversas anteriores. O Markdown é a referência opera
 - Antes de editar, conferir branch, alterações locais, histórico recente e remoto. O estado do Git deve ser observado, não inferido deste documento.
 - Executar a tarefa solicitada; para um pedido aberto de continuação, usar o próximo passo em `docs/EXECUTION.md`, respeitando dependências do roadmap.
 - Dividir etapas grandes em entregas revisáveis. Escolhas rotineiras dentro do escopo não exigem nova aprovação; decisões de arquitetura precisam de justificativa registrada.
+- A cada implementação, atualizar `docs/MANUAL_TESTS.md` com comandos, resultados esperados e pendências para o mantenedor testar depois; não marcar ensaios manuais como executados por terem testes automatizados.
 - Ao encerrar trabalho de produto, atualizar status, evidências, limitações e próximo passo em `docs/EXECUTION.md`. Preservar o registro de trabalhos anteriores.
 - Não marcar funcionalidades como prontas por haver apenas planejamento, mockup ou documentação. Não iniciar outras fases quando o pedido é apenas revisar ou documentar o plano.
 
@@ -45,9 +46,9 @@ Comandos canônicos: `cargo build --locked`, `cargo fmt --all -- --check`,
 CI executa esses checks em macOS e Linux, além de `python scripts/check_bundle.py`
 (com dependências de `scripts/requirements-validation.txt`) para schema e hashes. O leitor usa fixtures sintéticas;
 descoberta por projeto e seleção de ramo implementadas, compatibilidade real pendente.
-Exportação somente contexto com referência Git opcional (`--project`) implementada; roteiro manual em `docs/MANUAL_TESTS.md`.
+Exportação de contexto v1 com referência Git opcional (`--project`) e código selecionado v2 (`--include-path`) implementadas; roteiro manual em `docs/MANUAL_TESTS.md`.
 Mantenedor adiou ensaios manuais e autorizou continuar implementações; registrar
 pendências sem usá-las como bloqueio automático (ADR 0006).
 Contrato de inspeção em `docs/specs/claude-reader.md`; contrato do pacote em
-`docs/specs/bundle-v1.md`, com schema em `schemas/` e exemplos em `examples/`.
+`docs/specs/bundle-v1.md` e `docs/specs/bundle-v2.md`, com schemas em `schemas/` e exemplos em `examples/`.
 Para documentação, verificar links relativos e executar `git diff --check`.

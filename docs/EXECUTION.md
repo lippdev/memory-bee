@@ -5,7 +5,7 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; patches, TUI e contas pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; aplicação, TUI e contas pendentes.
 - Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
@@ -26,11 +26,13 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Etapa 04 — Alterações locais selecionadas.** Definir contrato de patches e
-mapeamento de arquivos novos; implementar seleção explícita para exportação,
-registrando omissões (incluindo binários não suportados). Depois, verificar base
-e conflitos em checkout separado antes de aplicação explícita. Não fazer push
-implícito nem sobrescrever arquivos existentes. Referência Git já implementada.
+**Etapa 04 — Recebimento e aplicação explícita.** Implementar validação de pacotes
+v1/v2 (versão, hashes, caminhos, colisões, mapeamentos), checagem do commit/base e
+conflitos em checkout separado antes de aplicação solicitada explicitamente.
+Preservar alterações preexistentes e recusar sobrescrita de novos arquivos.
+Exportação de referência Git e alterações textuais selecionadas já implementadas.
+Atualizar sempre `docs/MANUAL_TESTS.md` com comandos e expectativas, conforme pedido
+atual do mantenedor; ensaios pessoais continuam separados dos testes automatizados.
 
 Compatibilidade real de Claude Code e ensaios de leitura/retomada do pacote estão
 pendentes com o mantenedor em [docs/MANUAL_TESTS.md](MANUAL_TESTS.md), sem bloquear
@@ -65,7 +67,7 @@ substituída pela revisão de sequência do mantenedor registrada acima.
 | 01 Pesquisa e contrato | P0 | Concluído | ADR 0003 substituído pelo ADR 0004, matriz de investigação, contrato v1, fixtures e cenário M1; compatibilidade real do leitor ainda não certificada. |
 | 02 Leitor de sessão | P0 | Em andamento | Leitor, descoberta e seleção de ramo testados com fixtures; validação controlada de compatibilidade real pendente. |
 | 03 Exportação revisável | P0 | Em andamento | Exportador somente contexto com prévia, exclusões e testes implementado; ensaios manuais de pacote/retomada pendentes. |
-| 04 Estado do código | P0 | Em andamento | Referência Git opcional implementada; patches e aplicação pendentes. |
+| 04 Estado do código | P0 | Em andamento | Referência Git e exportação de código selecionado implementadas; recebimento/aplicação pendentes. |
 | 05 Troca de agente | P1 | Pendente | Depende de 03–04. |
 | 06 Dashboard terminal | P1 | Pendente | Depende de 05. HTML existente é planejamento, não implementação. |
 | 07 Uso e alertas | P1 | Pendente | Depende de 01 e 06; falta referência de consumo. |
@@ -217,3 +219,27 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - Próximo passo: alterações selecionadas e aplicação explícita, conforme acima.
 - CI remoto e integração vinculados ao [PR #7](https://github.com/lippdev/memory-pier/pull/7).
   Links Markdown, sintaxe JavaScript do roadmap e `git diff --check` também passaram.
+
+## Etapa 04 — Exportação de alterações selecionadas
+
+- Recorte: `--include-path` repetível, com projeto/base explícitos. Patches de
+  arquivos da base e arquivos novos mapeados em files/. Manifesto v2 separado,
+  mantendo v1 para contexto. Modos e SHA-256 antes/depois; nenhum código aplicado.
+- Leitura de blobs/disco sem filtros Git, seleção literal, limites, exclusão de
+  tipos não suportados e detector de segredos incluindo texto removido. Omissões
+  geram saída parcial, sem afirmar captura completa do estado local.
+- Validação local: 69 testes Rust, build, fmt, Clippy e sete pacotes verificados
+  em Python (schemas v1/v2, metadados e hashes). Reconstrução sintética com git apply
+  em clone separado confere bytes, exclusões, nomes com espaço, CRLF, falta de
+  newline, arquivos vazios e modo executável; origem/índice preservados.
+- Autorrevisão: desabilitados filtros de status que poderiam executar configuração
+  local; testes cobrem filtros na raiz e submódulos. Submódulos não são percorridos; estado interno é explicitamente não verificado. Sem revisão independente.
+- Limitações: nomes ASCII restritos, 64 seletores, 1 MiB por versão, 8 MiB total;
+  sem snapshot atômico, timeout, binários, submódulos, filtros ou importador.
+  Staging não é preservado; captura é disco contra base. ADR 0008 detalha decisões.
+- Pedido persistente do mantenedor registrado em AGENTS: atualizar sempre roteiro
+  manual. Itens 10–16 adicionados com preparação e expectativas; numeração anterior
+  corrigida. Ensaios manuais continuam pendentes; M1 não concluído.
+- Próximo recorte: recebimento e aplicação explícita, descrito acima.
+- Verificações documentais: links locais, JS do roadmap, numeração e sintaxe shell
+  dos exemplos do roteiro manual, além de `git diff --check`, aprovados.

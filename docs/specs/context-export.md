@@ -1,7 +1,7 @@
 # Exportação local de contexto
 
 Implementação inicial do [pacote v1](bundle-v1.md), sem exportar código nem chamar
-modelos. A compatibilidade real do leitor ainda não foi certificada.
+modelos no modo somente contexto. Para incluir código, veja a seção final. A compatibilidade real do leitor ainda não foi certificada.
 
 ## Comandos
 
@@ -109,7 +109,7 @@ O manifesto registra `remote` (origin), `branch`, `base_commit` e `dirty`. Com c
 observado, `code_state` é `base-reference`, inclusive quando dirty é true. Isso
 não significa que mudanças locais foram incluídas ou que o commit está publicado.
 O HANDOFF mostra os valores e avisa sobre alterações que não acompanham o pacote.
-Não exporta nomes de arquivos, patches nem caminhos absolutos da working tree.
+Sem --include-path, não exporta nomes de arquivos nem patches. Caminhos absolutos da working tree não são copiados como metadados.
 
 - Detached HEAD: branch null, commit preservado e aviso.
 - Sem commit: base null, branch quando disponível, estado unknown e saída 2.
@@ -121,9 +121,18 @@ Não exporta nomes de arquivos, patches nem caminhos absolutos da working tree.
 - Branch e remoto passam pelo detector de segredos: achados bloqueiam escrita
   com saída 3, com precedência sobre saída parcial.
 
-Dirty inclui staged, unstaged, conflitos, submódulos e não rastreados; ignorados
-não contam. É observado antes da gravação do pacote, que pode alterar o status se
+Dirty inclui staged, unstaged, conflitos e não rastreados; ignorados
+não contam. Submódulos não são consultados internamente: geram aviso e saída parcial; dirty fica null se nenhuma outra mudança for observada. Filtros clean/process/smudge são desabilitados no status. É observado antes da gravação do pacote, que pode alterar o status se
 seu destino estiver dentro do projeto. Consultas não formam snapshot atômico;
 HEAD/branch são relidos e descartados se mudarem. Não há fetch nem verificação de
 existência remota. Limite de stdout por comando: 1 MiB; sem timeout nesta entrega.
 Veja o [ADR 0007](../decisions/0007-explicit-git-reference.md).
+
+## Incluir arquivos selecionados
+
+Com `--project`, repetir `--include-path <arquivo-relativo-à-raiz-Git>` para incluir
+mudanças textuais e novos arquivos. Isso produz manifesto v2, changes.patch e/ou
+files/, conforme [contrato de código selecionado](bundle-v2.md). Sem seletores,
+permanece v1. Não há aplicação automática. Omissões de código também dão saída 2;
+achados de segredos dão saída 3, com `selection` apontando ao índice de selected_paths.
+Os itens 10–15 do [roteiro manual](../MANUAL_TESTS.md) demonstram o fluxo sintético.
