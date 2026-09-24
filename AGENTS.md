@@ -59,3 +59,6 @@ selecionado opcionais, implementada. Descoberta via `sessions-codex --root <past
 --project <projeto>` implementada com limites e metadados; lançamento pendente.
 Contrato em `docs/specs/codex-discovery.md` (ADR 0012).
 Contrato de exportação em `docs/specs/codex-export.md` (ADR 0011).
+Preparação de retomada via `prepare-resume <pacote> --target claude|codex --project
+<projeto> [--worktree <pasta>] (--preview | --output <arquivo>)` implementada, sem
+lançar agentes; contrato em `docs/specs/resume-preparation.md` (ADR 0013).

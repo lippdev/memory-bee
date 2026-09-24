@@ -12,7 +12,7 @@ use std::{
     process::ExitCode,
 };
 
-const USAGE: &str = "Usage:\n  memory-pier export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier inspect-codex <rollout.jsonl>\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier verify <bundle-dir>\n  memory-pier apply <bundle-dir> --project <checkout> (--check | --write)\nOffline; no model calls.\nExit: 0 success, 2 partial, 3 possible secrets, 1 I/O or selection error, 64 usage error.";
+const USAGE: &str = "Usage:\n  memory-pier export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier inspect-codex <rollout.jsonl>\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier verify <bundle-dir>\n  memory-pier apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-pier prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file>)\nOffline; no model calls.\nNever launches agents. Exit: 0 success, 2 partial or attention needed, 3 possible secrets, 1 I/O or selection error, 64 usage error.";
 fn output(value: &impl Serialize) -> Result<(), (u8, String)> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -97,6 +97,9 @@ fn run() -> Result<u8, (u8, String)> {
         };
         output(&report)?;
         return Ok(0);
+    }
+    if args.first().is_some_and(|arg| arg == "prepare-resume") {
+        return prepare_resume(&args[1..]);
     }
     if args.first().is_some_and(|arg| arg == "export") {
         return export(&args[1..], false);
@@ -206,4 +209,69 @@ fn main() -> ExitCode {
             ExitCode::from(code)
         }
     }
+}
+
+fn prepare_resume(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
+    let Some(bundle) = args.first() else {
+        return Err((64, USAGE.into()));
+    };
+    let (mut target, mut project, mut worktree, mut prompt_file) = (None, None, None, None);
+    let mut preview = false;
+    let mut index = 1;
+    while index < args.len() {
+        match args[index].to_str() {
+            Some("--preview") if !preview => {
+                preview = true;
+                index += 1;
+            }
+            Some(flag @ ("--target" | "--project" | "--worktree" | "--output"))
+                if index + 1 < args.len() =>
+            {
+                let value = &args[index + 1];
+                let slot_empty = match flag {
+                    "--target" => target.is_none(),
+                    "--project" => project.is_none(),
+                    "--worktree" => worktree.is_none(),
+                    _ => prompt_file.is_none(),
+                };
+                if !slot_empty {
+                    return Err((64, USAGE.into()));
+                }
+                match flag {
+                    "--target" => {
+                        target = Some(
+                            value
+                                .to_str()
+                                .and_then(memory_pier::resume::Target::parse)
+                                .ok_or((64, "target must be claude or codex".into()))?,
+                        )
+                    }
+                    "--project" => project = Some(PathBuf::from(value)),
+                    "--worktree" => worktree = Some(PathBuf::from(value)),
+                    _ => prompt_file = Some(PathBuf::from(value)),
+                }
+                index += 2;
+            }
+            _ => return Err((64, USAGE.into())),
+        }
+    }
+    let (Some(target), Some(project)) = (target, project) else {
+        return Err((64, USAGE.into()));
+    };
+    if preview == prompt_file.is_some() {
+        return Err((64, USAGE.into()));
+    }
+    let request = memory_pier::resume::Request {
+        bundle: bundle.into(),
+        target,
+        project,
+        worktree,
+    };
+    let preparation = memory_pier::resume::prepare(&request, prompt_file.as_deref())
+        .map_err(|e| (1, format!("Cannot prepare resume: {e}")))?;
+    if prompt_file.is_some() {
+        memory_pier::resume::write_prompt(&preparation).map_err(|e| (1, e))?;
+    }
+    output(&preparation)?;
+    Ok(if preparation.needs_attention() { 2 } else { 0 })
 }

@@ -77,7 +77,7 @@ pub struct Verified {
     manifest: Manifest,
     decoded: Vec<Decoded>,
 }
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Report {
     pub valid: bool,
     pub format_version: u8,
@@ -505,7 +505,64 @@ fn decode_hunk(fragment: &str) -> Result<(String, String, bool)> {
     Ok((old, new, false))
 }
 
+/// Read-only comparison of included changes with an explicit checkout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ChangeState {
+    /// Bundle carries no code changes.
+    None,
+    /// Every selected file matches the recorded base bytes and mode.
+    Base,
+    /// Every selected file matches the recorded result bytes and mode.
+    Applied,
+    /// Files match neither side consistently.
+    Mixed,
+    /// Some file could not be read safely.
+    Unknown,
+}
 impl Verified {
+    /// Source agent declared in the manifest, only when it is a known value.
+    pub fn known_source(&self) -> Option<&'static str> {
+        match self.manifest.source.agent.as_str() {
+            "claude-code" => Some("claude-code"),
+            "codex" => Some("codex"),
+            _ => None,
+        }
+    }
+    /// Base commit, already validated as full lowercase hexadecimal.
+    pub fn base_commit(&self) -> Option<&str> {
+        self.manifest.project.base_commit.as_deref()
+    }
+    pub fn has_changes(&self) -> bool {
+        !self.decoded.is_empty()
+    }
+    /// Compares working files with recorded hashes/modes. Never writes or follows symlinks.
+    pub fn observe_changes(&self, root: &Path) -> ChangeState {
+        let Some(entries) = self.manifest.changes.as_ref().filter(|c| !c.is_empty()) else {
+            return ChangeState::None;
+        };
+        let (mut base, mut applied) = (true, true);
+        for change in entries {
+            if safe_parents(root, &change.path).is_err() {
+                return ChangeState::Unknown;
+            }
+            let observed = match changes::working(root, &change.path) {
+                Ok(observed) => observed.map(|s| (hash(s.content.as_bytes()), s.mode)),
+                Err(_) => return ChangeState::Unknown,
+            };
+            let side = |sha: &Option<String>, mode: &Option<String>| match (sha, mode) {
+                (Some(sha), Some(mode)) => Some((sha.clone(), mode.clone())),
+                _ => None,
+            };
+            base &= observed == side(&change.base_sha256, &change.base_mode);
+            applied &= observed == side(&change.result_sha256, &change.result_mode);
+        }
+        match (base, applied) {
+            (true, false) => ChangeState::Base,
+            (false, true) => ChangeState::Applied,
+            _ => ChangeState::Mixed,
+        }
+    }
     pub fn report(&self) -> Report {
         Report {
             valid: true,

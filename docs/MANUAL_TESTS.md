@@ -522,3 +522,74 @@ Compatibilidade real não é certificada pelos testes sintéticos.
 |---|---|---|
 | 31–33: descoberta sintética, seleção, profundidade e ambiguidades | Pendente | — |
 | 34: uso inválido e descoberta real controlada | Pendente | — |
+
+## 35. Preparar retomada no mesmo checkout (pendente)
+
+Cria um repositório sintético, um pacote v2 e um clone limpo na base:
+
+```sh
+mkdir -p exports/manual-resume
+git init -q -b synthetic exports/manual-resume/source
+printf 'base\n' > exports/manual-resume/source/a.txt
+git -C exports/manual-resume/source add a.txt
+git -C exports/manual-resume/source -c user.name=Synthetic -c user.email=synthetic@example.invalid commit -q -m base
+git clone -q exports/manual-resume/source exports/manual-resume/target
+printf 'result\n' > exports/manual-resume/source/a.txt
+cargo run --locked -- export testdata/claude/basic.jsonl --output exports/manual-resume/bundle --project exports/manual-resume/source --include-path a.txt
+cargo run --locked -- prepare-resume exports/manual-resume/bundle --target claude --project exports/manual-resume/target --preview
+```
+
+Esperado: saída 0, mode same-checkout, base_match match, changes base, attention
+vazio e três passos: apply --check, apply --write e claude com o prompt antes de
+--add-dir. O prompt não contém o pedido do histórico. target/a.txt continua "base"
+e nada é lançado. Os passos usam `memory-pier` instalado; com cargo, substitua por
+`cargo run --locked --`.
+
+## 36. Mudanças aplicadas e arquivo de prompt (pendente; depende do 35)
+
+```sh
+cargo run --locked -- apply exports/manual-resume/bundle --project exports/manual-resume/target --write
+cargo run --locked -- prepare-resume exports/manual-resume/bundle --target claude --project exports/manual-resume/target --output exports/manual-resume/prompt.md
+ls -l exports/manual-resume/prompt.md
+cargo run --locked -- prepare-resume exports/manual-resume/bundle --target claude --project exports/manual-resume/target --output exports/manual-resume/prompt.md
+```
+
+Esperado: primeira preparação com saída 0, changes applied e um único passo, cujo
+shell usa `"$(cat …/prompt.md)"`; arquivo com permissão -rw-------. A repetição
+retorna 1 sem sobrescrever. Alterar target/a.txt para outro conteúdo e repetir com
+novo arquivo deve dar saída 2 com project_dirty e changes_mixed.
+
+## 37. Preparar nova worktree para Codex (pendente; depende do 35)
+
+```sh
+cargo run --locked -- prepare-resume exports/manual-resume/bundle --target codex --project exports/manual-resume/source --worktree exports/manual-resume/tree --preview
+```
+
+Esperado: saída 2 apenas com codex_bundle_read, mode new-worktree e passos
+`git worktree add --detach <tree> <base>`, apply --check/--write na nova pasta e
+`codex -C <tree> <prompt>`. A pasta tree não é criada pela preparação. Executar os
+passos manualmente, conferir tree/a.txt = "result" e a origem inalterada. Depois:
+`git -C exports/manual-resume/source worktree remove --force ../tree` antes de
+apagar exports/manual-resume.
+
+## 38. Erros e lançamento real controlado (pendente)
+
+```sh
+cargo run --locked -- prepare-resume examples/bundle-v1 --target gemini --project . --preview
+cargo run --locked -- prepare-resume examples/bundle-v1 --target claude --project . --worktree exports/x --preview
+cargo run --locked -- prepare-resume examples/bundle-v1 --target claude --project . --preview --output exports/p.md
+```
+
+Esperado: saídas 64, 1 (pacote v1 sem base não permite nova worktree) e 64.
+
+Posteriormente, com pacote sintético e conta de teste, executar manualmente o passo
+final para Claude Code e Codex. Anotar versões, se o prompt foi recebido inteiro,
+se o agente leu HANDOFF.md fora da raiz (sandbox do Codex), se pediu confirmação
+antes de editar e se a origem continuou intacta. Registrar diferenças de flags. Não
+usar conversas reais nem publicar prompts ou pacotes. Lançamento não é certificado
+pelos testes automatizados.
+
+| Itens novos | Estado | Evidência manual |
+|---|---|---|
+| 35–37: retomada no mesmo checkout, prompt em arquivo e nova worktree | Pendente | — |
+| 38: uso inválido e lançamento real controlado | Pendente | — |
