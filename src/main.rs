@@ -1,4 +1,5 @@
 use memory_pier::{
+    bundle::{Options, prepare},
     claude::{Limits, ReadState, inspect},
     discovery::{DiscoveryLimits, discover},
     selection::select,
@@ -7,11 +8,11 @@ use serde::Serialize;
 use std::{
     env,
     io::{self, Write},
-    path::Path,
+    path::{Path, PathBuf},
     process::ExitCode,
 };
 
-const USAGE: &str = "Usage:\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions --root <projects-dir> --project <project-dir>\nLocal JSON only; no export or model calls.\nExit: 0 read/empty, 2 partial, 1 I/O or selection error, 64 usage error.";
+const USAGE: &str = "Usage:\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]...\nOffline; no model calls.\nExit: 0 success, 2 partial, 3 possible secrets, 1 I/O or selection error, 64 usage error.";
 fn output(value: &impl Serialize) -> Result<(), (u8, String)> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -55,7 +56,80 @@ fn run() -> Result<u8, (u8, String)> {
         output(&report)?;
         return Ok(if report.partial { 2 } else { 0 });
     }
+    if args.first().is_some_and(|arg| arg == "export") {
+        return export(&args[1..]);
+    }
     Err((64, USAGE.into()))
+}
+
+fn export(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
+    if args.len() < 2 {
+        return Err((64, USAGE.into()));
+    }
+    let mut options = Options::default();
+    let mut destination: Option<PathBuf> = None;
+    let mut preview = false;
+    let mut index = 1;
+    while index < args.len() {
+        match args[index].to_str() {
+            Some("--preview") if !preview => {
+                preview = true;
+                index += 1;
+            }
+            Some(flag @ ("--output" | "--leaf" | "--exclude-line")) if index + 1 < args.len() => {
+                let value = &args[index + 1];
+                match flag {
+                    "--output" if destination.is_none() => destination = Some(value.into()),
+                    "--leaf" if options.leaf.is_none() => {
+                        options.leaf = Some(
+                            value
+                                .to_str()
+                                .ok_or((64, "UUID must be UTF-8".into()))?
+                                .into(),
+                        )
+                    }
+                    "--exclude-line" => {
+                        let line = value
+                            .to_str()
+                            .and_then(|v| v.parse::<usize>().ok())
+                            .filter(|n| *n > 0)
+                            .ok_or((64, "excluded line must be a positive integer".into()))?;
+                        options.exclude_lines.insert(line);
+                    }
+                    _ => return Err((64, USAGE.into())),
+                }
+                index += 2;
+            }
+            _ => return Err((64, USAGE.into())),
+        }
+    }
+    if preview == destination.is_some() {
+        return Err((64, USAGE.into()));
+    }
+    let report = inspect(Path::new(&args[0]), Limits::default())
+        .map_err(|e| (1, format!("Cannot inspect session: {e}")))?;
+    let prepared =
+        prepare(report, &options).map_err(|e| (1, format!("Cannot prepare bundle: {e}")))?;
+    let code = if !prepared.findings().is_empty() {
+        3
+    } else if prepared.is_partial() {
+        2
+    } else {
+        0
+    };
+    if preview {
+        output(&prepared)?;
+    } else if code == 3 {
+        output(&serde_json::json!({"written":false,"findings":prepared.findings()}))?;
+    } else {
+        prepared
+            .write(destination.as_ref().expect("checked destination"))
+            .map_err(|e| (1, format!("Cannot write bundle: {e}")))?;
+        output(
+            &serde_json::json!({"written":true,"partial":prepared.is_partial(),"redaction":"pending-review"}),
+        )?;
+    }
+    Ok(code)
 }
 fn main() -> ExitCode {
     match run() {

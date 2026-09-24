@@ -42,8 +42,12 @@ Não presumir acesso às conversas anteriores. O Markdown é a referência opera
 Stack: Rust 1.98.1 fixada, projeto Cargo com biblioteca e CLI de inspeção.
 Comandos canônicos: `cargo build --locked`, `cargo fmt --all -- --check`,
 `cargo clippy --locked --all-targets -- -D warnings` e `cargo test --locked`.
-CI executa esses checks em macOS e Linux. O leitor usa fixtures sintéticas;
+CI executa esses checks em macOS e Linux, além de `python scripts/check_bundle.py`
+(com dependências de `scripts/requirements-validation.txt`) para schema e hashes. O leitor usa fixtures sintéticas;
 descoberta por projeto e seleção de ramo implementadas, compatibilidade real pendente.
-Contrato de inspeção em `docs/specs/claude-reader.md`; pacote futuro em
+Exportação somente contexto implementada; roteiro manual em `docs/MANUAL_TESTS.md`.
+Mantenedor adiou ensaios manuais e autorizou continuar implementações; registrar
+pendências sem usá-las como bloqueio automático (ADR 0006).
+Contrato de inspeção em `docs/specs/claude-reader.md`; contrato do pacote em
 `docs/specs/bundle-v1.md`, com schema em `schemas/` e exemplos em `examples/`.
 Para documentação, verificar links relativos e executar `git diff --check`.

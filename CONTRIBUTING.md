@@ -54,6 +54,11 @@ cargo build --locked
 Toolchain em `rust-toolchain.toml`; versionar mudanças de dependências no
 `Cargo.lock`. CI em `.github/workflows/ci.yml` executa os mesmos comandos.
 Usar apenas fixtures sintéticas em `testdata/` e testes temporários.
+Para mudanças no exportador, instalar `scripts/requirements-validation.txt` em
+venv e executar `python scripts/check_bundle.py` após o build; CI faz o mesmo.
+Python é dependência de validação, não de execução/distribuição do produto.
+Ensaios manuais estão separados em `docs/MANUAL_TESTS.md`; conforme orientação do
+mantenedor, podem ocorrer depois sem impedir implementações testadas automaticamente.
 
 ## Registro do PR
 

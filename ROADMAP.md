@@ -17,6 +17,15 @@ Fluxo central: selecionar trabalho → revisar contexto e código → escolher d
 - Pesquisa de cotas e autenticação pode avançar sem bloquear exportação. Distribuição de uma alpha pode acompanhar M1; não precisa aguardar a etapa 10.
 - Ao concluir uma entrega, atualizar o estado de execução com evidências. Não marcar uma etapa concluída por ter apenas criado arquivos ou passado um teste parcial.
 
+## Ajuste de sequência — 2026-09-24
+
+O mantenedor pediu continuidade das implementações e fará os ensaios manuais
+posteriormente. A compatibilidade real da etapa 02 não bloqueia a implementação
+subsequente com fixtures, testes e CI; permanece pendente, sem certificação implícita.
+A mesma separação vale para ensaios manuais das entregas seguintes. Veja o
+[ADR 0006](docs/decisions/0006-context-export-and-deferred-manual-validation.md)
+e o [roteiro manual](docs/MANUAL_TESTS.md). Dependências de código continuam válidas.
+
 ## Marcos
 
 | Marco | Etapas | Resultado verificável |
@@ -190,7 +199,7 @@ Preparar lançamento público após o marco escolhido.
 |---|---|
 | Stack e primeiro SO | Decidido: Rust, macOS arm64 primeiro; ver [ADR 0004](docs/decisions/0004-rust-stack.md). |
 | Primeiro leitor | Claude Code com descoberta por projeto e seleção de ramo em fixtures sintéticas; compatibilidade real pendente. Codex seguinte. |
-| Contrato do pacote | Contrato v1 definido em docs/specs/bundle-v1.md; exportador ainda pendente. |
+| Contrato do pacote | Exportador somente contexto v1 implementado; estado Git e mudanças de código pendentes. |
 | Uso e limites | Repositório de referência prometido pelo mantenedor ainda não foi fornecido. Não bloquear M1 por isso. |
 | Contas | Investigar isolamento e login oficial por ferramenta. Não prometer suporte universal. |
 | Nome e licença | Nome escolhido: Memory Pier (`memory-pier`). Licença pendente antes da distribuição pública. |
