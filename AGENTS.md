@@ -55,5 +55,7 @@ Para documentação, verificar links relativos e executar `git diff --check`.
 
 Segundo leitor: `inspect-codex <rollout.jsonl>` experimental, apenas arquivo explícito;
 contrato em `docs/specs/codex-reader.md`. Exportação Codex via `export-codex --preview/--output`, com exclusões e Git/código
-selecionado opcionais, implementada; descoberta e lançamento pendentes.
+selecionado opcionais, implementada. Descoberta via `sessions-codex --root <pasta>
+--project <projeto>` implementada com limites e metadados; lançamento pendente.
+Contrato em `docs/specs/codex-discovery.md` (ADR 0012).
 Contrato de exportação em `docs/specs/codex-export.md` (ADR 0011).

@@ -5,7 +5,7 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção e exportação Codex experimentais por arquivo explícito implementadas; TUI e contas pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; TUI e contas pendentes.
 - Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
@@ -26,13 +26,13 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Etapa 05 — Descoberta Codex por projeto.** Definir busca limitada sob raiz
-explicitamente escolhida e classificação por metadados de projeto, preservando
-avisos do perfil experimental e sem misturar agentes/sessões. Usar fixtures
-sintéticas; nenhum scan implícito dos perfis pessoais. Seleção leva aos comandos
-inspect-codex/export-codex por arquivo explícito. Lançamento continua posterior.
-Manter roteiro manual atualizado; validação real e retomada humana de M1 permanecem
-pendentes sem bloquear implementação autorizada com testes/CI.
+**Etapa 05 — Preparação de retomada Claude/Codex.** Definir uma entrega pequena
+para receber pacote verificado e preparar instrução de retomada para o agente de
+destino, com prévia e projeto explícito. Pesquisar interfaces oficiais antes de
+implementar lançamento; separar uso no mesmo diretório de nova worktree. Não
+encerrar a origem, criar contas ou executar texto do histórico implicitamente.
+Oferecer instrução manual enquanto lançamento não estiver validado. Manter o
+roteiro manual e as pendências reais de M1, sem iniciar a TUI nesta entrega.
 
 Compatibilidade real de Claude Code e ensaios de leitura/retomada do pacote estão
 pendentes com o mantenedor em [docs/MANUAL_TESTS.md](MANUAL_TESTS.md), sem bloquear
@@ -68,7 +68,7 @@ substituída pela revisão de sequência do mantenedor registrada acima.
 | 02 Leitor de sessão | P0 | Em andamento | Leitor, descoberta e seleção de ramo testados com fixtures; validação controlada de compatibilidade real pendente. |
 | 03 Exportação revisável | P0 | Em andamento | Exportador somente contexto com prévia, exclusões e testes implementado; ensaios manuais de pacote/retomada pendentes. |
 | 04 Estado do código | P0 | Em andamento | Referência Git, código selecionado, verify e apply explícito implementados; ensaios manuais/M1 pendentes. |
-| 05 Troca de agente | P1 | Em andamento | Inspeção/exportação Codex explícitas experimentais; descoberta e lançamento pendentes. |
+| 05 Troca de agente | P1 | Em andamento | Inspeção/exportação Codex e descoberta sob raiz explícita experimentais; preparação/lançamento de destino pendentes. |
 | 06 Dashboard terminal | P1 | Pendente | Depende de 05. HTML existente é planejamento, não implementação. |
 | 07 Uso e alertas | P1 | Pendente | Depende de 01 e 06; falta referência de consumo. |
 | 08 Perfis de conta | P1 | Pendente | Depende de 05–06 e prova de isolamento. |
@@ -333,3 +333,33 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   rollback. Sem novas dependências, modelos, descoberta ou lançamento.
 - Próximo passo: descoberta Codex por projeto sob raiz explícita, descrita acima.
 - Publicação e verificações remotas vinculadas ao [PR #11](https://github.com/lippdev/memory-pier/pull/11).
+
+## Etapa 05 — Descoberta Codex por projeto
+
+- Recorte: sessions-codex com raiz/projeto explícitos, travessia limitada e
+  classificação pelo leitor Codex experimental. ADR 0012 registra layout,
+  identidade, reutilização dos orçamentos e limites da associação por metadados.
+- Aceite: resultados separados por arquivo, perdas e ambiguidades visíveis,
+  limites/symlinks/erros cobertos por fixtures; caminho selecionado utilizável em
+  inspect-codex/export-codex/verify; nenhuma escrita, busca de perfis ou lançamento.
+- Implementação concluída neste recorte: busca em .jsonl na raiz e até três níveis,
+  associação lexical por cwd, uma sessão conhecida por arquivo e resultados separados
+  por caminho, mesmo com IDs repetidos. Listagem não contém texto da conversa.
+- Validação local macOS: 116 testes Rust (13 novos), build, fmt e Clippy aprovados;
+  Python confere os 13 pacotes sintéticos existentes com schemas/hashes/verify/apply.
+  Fluxo automatizado novo cobre descoberta → inspect-codex → export-codex → verify.
+  Links Markdown, JS, numeração 1–34/sintaxe shell do roteiro e diff conferidos.
+- Autorrevisão de classificação, limites e regressão Claude; sem revisão independente.
+  O código compartilhado mantém o layout Claude e seus testes; agent é campo aditivo
+  da descoberta. partial_file só representa estado parcial do leitor, sem confundir
+  ausência de metadados com corrupção do arquivo. IDs e projetos conflitantes não
+  são apresentados como sessão selecionável.
+- Teste de nomes não UTF-8 encontrados na árvore é específico de Linux: o sistema
+  de arquivos macOS local recusou sua criação. Argumentos não UTF-8 foram testados
+  localmente. Casos de permissões só afirmam recusa quando o processo realmente
+  perde acesso; não presumem isso em execução privilegiada.
+- Roteiro manual ampliado com itens 31–34, todos pendentes. Compatibilidade real,
+  aliases entre plataformas, snapshot atômico, identificação de forks/subagentes e
+  lançamento não são certificados. Nenhuma conversa real lida nesta entrega.
+- Próximo passo: preparação explícita de retomada Claude/Codex descrita acima.
+- Publicação e verificações remotas vinculadas ao [PR #12](https://github.com/lippdev/memory-pier/pull/12).

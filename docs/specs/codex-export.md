@@ -65,4 +65,5 @@ força saída 2. Limites de leitura e snapshot não atômico são os do leitor.
 
 Compatibilidade real, revisão humana e retomada de M1 continuam pendentes; fixtures
 sintéticas não substituem esses ensaios. Veja os itens 27–30 do
-[roteiro manual](../MANUAL_TESTS.md). Descoberta e lançamento ficam para outras entregas.
+[roteiro manual](../MANUAL_TESTS.md). Descoberta explícita está em [sessions-codex](codex-discovery.md); lançamento
+continua pendente.

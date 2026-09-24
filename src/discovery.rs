@@ -1,4 +1,4 @@
-//! Bounded discovery in an explicit Claude projects directory. No implicit home scan.
+//! Bounded discovery under explicit roots. Reader-specific layouts and metadata stay separate.
 use crate::claude::{self, Diagnostic, Limits, ReadState};
 use serde::Serialize;
 use std::{
@@ -42,18 +42,41 @@ pub struct Session {
     pub diagnostics: Vec<Diagnostic>,
 }
 #[derive(Debug, Serialize)]
-pub struct Discovery {
+pub struct Discovery<S = Session> {
+    pub agent: &'static str,
     pub discovery_version: u8,
     pub root: PathBuf,
     pub project: PathBuf,
     pub partial: bool,
     pub files_inspected: usize,
     pub compatibility: &'static str,
-    pub sessions: Vec<Session>,
+    pub sessions: Vec<S>,
     pub diagnostics: Vec<DiscoveryDiagnostic>,
 }
-struct Scan {
-    report: Discovery,
+pub(crate) struct Inspection<S> {
+    pub snapshot_bytes: u64,
+    pub partial: bool,
+    pub project_paths: BTreeSet<String>,
+    pub session: Result<S, &'static str>,
+}
+#[derive(Clone, Copy)]
+pub(crate) enum Layout {
+    Claude,
+    Codex,
+}
+// Sorting uses the file path and never assumes globally unique session IDs.
+pub(crate) trait SessionPath {
+    fn path(&self) -> &Path;
+}
+impl SessionPath for Session {
+    fn path(&self) -> &Path {
+        &self.path
+    }
+}
+struct Scan<S> {
+    report: Discovery<S>,
+    layout: Layout,
+    inspect: fn(&Path, Limits, bool) -> io::Result<Inspection<S>>,
     limits: DiscoveryLimits,
     entries: usize,
     bytes: u64,
@@ -79,6 +102,16 @@ fn normalize(path: &Path) -> Option<PathBuf> {
 }
 
 pub fn discover(root: &Path, project: &Path, limits: DiscoveryLimits) -> io::Result<Discovery> {
+    discover_with(root, project, limits, Layout::Claude, inspect_claude)
+}
+
+pub(crate) fn discover_with<S: SessionPath>(
+    root: &Path,
+    project: &Path,
+    limits: DiscoveryLimits,
+    layout: Layout,
+    inspect: fn(&Path, Limits, bool) -> io::Result<Inspection<S>>,
+) -> io::Result<Discovery<S>> {
     if limits.entries == 0
         || limits.files == 0
         || limits.total_bytes == 0
@@ -101,7 +134,13 @@ pub fn discover(root: &Path, project: &Path, limits: DiscoveryLimits) -> io::Res
     let entries = fs::read_dir(&root)?;
     let project = normalize(&std::env::current_dir()?.join(project)).unwrap();
     let mut scan = Scan {
+        layout,
+        inspect,
         report: Discovery {
+            agent: match layout {
+                Layout::Claude => "claude-code",
+                Layout::Codex => "codex",
+            },
             discovery_version: 1,
             root: root.clone(),
             project,
@@ -117,13 +156,13 @@ pub fn discover(root: &Path, project: &Path, limits: DiscoveryLimits) -> io::Res
         stopped: false,
     };
     scan.walk(&root, entries, 0);
-    scan.report.sessions.sort_by(|a, b| a.path.cmp(&b.path));
+    scan.report.sessions.sort_by(|a, b| a.path().cmp(b.path()));
     scan.report
         .diagnostics
         .sort_by(|a, b| a.path.cmp(&b.path).then(a.code.cmp(b.code)));
     Ok(scan.report)
 }
-impl Scan {
+impl<S> Scan<S> {
     fn warn(&mut self, path: &Path, code: &'static str) {
         self.report.partial = true;
         self.report.diagnostics.push(DiscoveryDiagnostic {
@@ -137,7 +176,7 @@ impl Scan {
             Err(_) => self.warn(path, "directory_unreadable"),
         }
     }
-    // root/project/*.jsonl and root/project/session/subagents/*.jsonl only.
+    // Claude layout is unchanged; Codex accepts .jsonl at depths 0 through 3.
     fn walk(&mut self, dir: &Path, entries: fs::ReadDir, level: usize) {
         for entry in entries {
             if self.stopped {
@@ -173,10 +212,16 @@ impl Scan {
                 continue;
             }
             if kind.is_dir() {
-                if level < 2 || (level == 2 && entry.file_name() == "subagents") {
+                let descend = match self.layout {
+                    Layout::Claude => level < 2 || (level == 2 && entry.file_name() == "subagents"),
+                    Layout::Codex => level < 3,
+                };
+                if descend {
                     self.descend(&path, level + 1);
+                } else if matches!(self.layout, Layout::Codex) {
+                    self.warn(&path, "depth_limit");
                 }
-            } else if (level == 1 || level == 3)
+            } else if (matches!(self.layout, Layout::Codex) || level == 1 || level == 3)
                 && path.extension().is_some_and(|ext| ext == "jsonl")
             {
                 if kind.is_file() {
@@ -219,7 +264,7 @@ impl Scan {
         let mut reader_limits = self.limits.reader;
         // Refuse growth between stat and open rather than reading beyond the reservation.
         reader_limits.file_bytes = reader_limits.file_bytes.min(reservation);
-        let report = match claude::inspect(path, reader_limits) {
+        let report = match (self.inspect)(path, reader_limits, nested) {
             Ok(report) => report,
             Err(_) => {
                 self.warn(path, "file_unreadable");
@@ -227,7 +272,7 @@ impl Scan {
             }
         };
         self.bytes = self.bytes - reservation + report.snapshot_bytes;
-        if report.state == ReadState::Partial {
+        if report.partial {
             self.warn(path, "partial_file");
         }
         let projects: BTreeSet<_> = report
@@ -251,37 +296,51 @@ impl Scan {
             self.warn(path, "conflicting_project_metadata");
             return;
         }
-        if !projects.contains(&self.report.project) {
-            return;
+        let session = match report.session {
+            Ok(session) => session,
+            Err(code) => {
+                self.warn(path, code);
+                return;
+            }
+        };
+        if projects.contains(&self.report.project) {
+            self.report.sessions.push(session);
         }
-        if report.state == ReadState::Partial {
-            self.report.partial = true;
-        }
-        let session_ids = report
-            .records
-            .iter()
-            .filter_map(|r| r.source.session_id.clone())
-            .collect();
-        let agent_ids = report
-            .records
-            .iter()
-            .filter_map(|r| r.source.agent_id.clone())
-            .collect();
-        let is_subagent = nested
-            || report
-                .records
-                .iter()
-                .any(|r| r.source.is_sidechain == Some(true) || r.source.agent_id.is_some());
-        self.report.sessions.push(Session {
-            path: path.to_path_buf(),
-            session_ids,
-            agent_ids,
-            is_subagent,
-            state: report.state,
-            event_count: report.events.len(),
-            branch_tips: report.branch_tips,
-            requires_branch_selection: report.requires_branch_selection,
-            diagnostics: report.diagnostics,
-        });
     }
+}
+
+fn inspect_claude(path: &Path, limits: Limits, nested: bool) -> io::Result<Inspection<Session>> {
+    let report = claude::inspect(path, limits)?;
+    let session_ids = report
+        .records
+        .iter()
+        .filter_map(|r| r.source.session_id.clone())
+        .collect();
+    let agent_ids = report
+        .records
+        .iter()
+        .filter_map(|r| r.source.agent_id.clone())
+        .collect();
+    let is_subagent = nested
+        || report
+            .records
+            .iter()
+            .any(|r| r.source.is_sidechain == Some(true) || r.source.agent_id.is_some());
+    let session = Session {
+        path: path.to_path_buf(),
+        session_ids,
+        agent_ids,
+        is_subagent,
+        state: report.state,
+        event_count: report.events.len(),
+        branch_tips: report.branch_tips,
+        requires_branch_selection: report.requires_branch_selection,
+        diagnostics: report.diagnostics,
+    };
+    Ok(Inspection {
+        snapshot_bytes: report.snapshot_bytes,
+        partial: session.state == ReadState::Partial,
+        project_paths: report.project_paths,
+        session: Ok(session),
+    })
 }

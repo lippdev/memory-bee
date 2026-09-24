@@ -110,7 +110,8 @@ Uma identificação disponível vale para o arquivo; não é necessário que cad
 repita `cwd`. Projetos sem diretório existente podem ser pesquisados. Symlinks e
 aliases de projeto não são unificados; subdiretórios e worktrees são projetos distintos.
 
-A saída tem `discovery_version: 1`, `root`, `project`, `compatibility`, `partial`,
+A saída tem `agent: claude-code` (campo aditivo), `discovery_version: 1`, `root`,
+`project`, `compatibility`, `partial`,
 `files_inspected`, `sessions` e `diagnostics`. Cada sessão traz caminho absoluto,
 IDs observados, indicação de subagente, estado do leitor, quantidade de eventos,
 pontas e diagnósticos, sem texto da conversa. Mesmo ID em arquivos diferentes

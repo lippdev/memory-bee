@@ -12,7 +12,7 @@ use std::{
     process::ExitCode,
 };
 
-const USAGE: &str = "Usage:\n  memory-pier export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier inspect-codex <rollout.jsonl>\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier verify <bundle-dir>\n  memory-pier apply <bundle-dir> --project <checkout> (--check | --write)\nOffline; no model calls.\nExit: 0 success, 2 partial, 3 possible secrets, 1 I/O or selection error, 64 usage error.";
+const USAGE: &str = "Usage:\n  memory-pier export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier inspect-codex <rollout.jsonl>\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier verify <bundle-dir>\n  memory-pier apply <bundle-dir> --project <checkout> (--check | --write)\nOffline; no model calls.\nExit: 0 success, 2 partial, 3 possible secrets, 1 I/O or selection error, 64 usage error.";
 fn output(value: &impl Serialize) -> Result<(), (u8, String)> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -49,7 +49,7 @@ fn run() -> Result<u8, (u8, String)> {
             0
         });
     }
-    if args.len() == 5 && args[0] == "sessions" {
+    if args.len() == 5 && (args[0] == "sessions" || args[0] == "sessions-codex") {
         let (root, project) = if args[1] == "--root" && args[3] == "--project" {
             (&args[2], &args[4])
         } else if args[1] == "--project" && args[3] == "--root" {
@@ -57,14 +57,26 @@ fn run() -> Result<u8, (u8, String)> {
         } else {
             return Err((64, USAGE.into()));
         };
-        let report = discover(
-            Path::new(root),
-            Path::new(project),
-            DiscoveryLimits::default(),
-        )
-        .map_err(|e| (1, format!("Cannot discover sessions: {e}")))?;
-        output(&report)?;
-        return Ok(if report.partial { 2 } else { 0 });
+        let partial = if args[0] == "sessions-codex" {
+            let report = memory_pier::codex_discovery::discover(
+                Path::new(root),
+                Path::new(project),
+                DiscoveryLimits::default(),
+            )
+            .map_err(|e| (1, format!("Cannot discover Codex sessions: {e}")))?;
+            output(&report)?;
+            report.partial
+        } else {
+            let report = discover(
+                Path::new(root),
+                Path::new(project),
+                DiscoveryLimits::default(),
+            )
+            .map_err(|e| (1, format!("Cannot discover sessions: {e}")))?;
+            output(&report)?;
+            report.partial
+        };
+        return Ok(if partial { 2 } else { 0 });
     }
     if args.len() == 2 && args[0] == "verify" {
         let verified = memory_pier::receive::verify(Path::new(&args[1])).map_err(|e| (1, e))?;

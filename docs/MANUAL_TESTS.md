@@ -445,3 +445,80 @@ produz v1/base-reference e não inclui código. Descoberta e lançamento não oc
 |---|---|---|
 | 27–29: pacotes Codex, exclusões, perdas e segredos | Pendente | — |
 | 30: referência Git e roundtrip Codex | Pendente | — |
+
+## 31. Descoberta Codex com raiz/projeto explícitos (pendente)
+
+```sh
+cargo run --locked -- sessions-codex --root testdata/codex-sessions --project /synthetic/project
+cargo run --locked -- sessions-codex --project /synthetic/other --root testdata/codex-sessions
+cargo run --locked -- sessions-codex --root testdata/codex-sessions --project /synthetic/absent
+```
+
+Esperado: saída 0 nos três casos, quatro arquivos inspecionados. Primeiro retorna
+três caminhos (arquivo datado, copy.jsonl e workers/worker.jsonl); segundo retorna
+other/session.jsonl; terceiro, lista vazia. Dois arquivos com synthetic-session
+permanecem separados; o nome workers não vira relação de subagente. Cada sessão tem
+três registros/um evento, versão synthetic e diagnóstico unverified_compatibility.
+A saída não contém o texto do pedido. Conferir origem sem alterações; nada é exportado.
+
+## 32. Selecionar caminho para inspecionar e exportar (pendente)
+
+Escolher o caminho datado retornado no item 31; abaixo está seu equivalente relativo.
+Use destino novo para não colidir com ensaios anteriores:
+
+```sh
+cargo run --locked -- inspect-codex testdata/codex-sessions/2026/09/24/session.jsonl
+cargo run --locked -- export-codex testdata/codex-sessions/2026/09/24/session.jsonl --preview
+mkdir -p exports
+cargo run --locked -- export-codex testdata/codex-sessions/2026/09/24/session.jsonl --output exports/manual-codex-discovered
+cargo run --locked -- verify exports/manual-codex-discovered
+```
+
+Esperado: inspeção com um evento, prévia correspondente, pacote v1 com agent codex
+e verify valid true. Descoberta/seleção não inicia agente, não consulta Git e não
+reconstrói conversa ativa. Compatibilidade e revisão de segredos continuam pendentes.
+
+## 33. Profundidade, metadados conflitantes e links (pendente)
+
+Preparar uma árvore descartável com cópias sintéticas, sem dados pessoais:
+
+```sh
+mkdir -p exports/manual-codex-tree/a/b/c/d
+cp testdata/codex-sessions/copy.jsonl exports/manual-codex-tree/a/b/c/visible.jsonl
+cp testdata/codex-sessions/copy.jsonl exports/manual-codex-tree/a/b/c/d/too-deep.jsonl
+cat testdata/codex-sessions/copy.jsonl testdata/codex-sessions/workers/worker.jsonl > exports/manual-codex-tree/mixed.jsonl
+ln -s a/b/c/visible.jsonl exports/manual-codex-tree/link.jsonl
+cargo run --locked -- sessions-codex --root exports/manual-codex-tree --project /synthetic/project
+```
+
+Esperado: saída 2, apenas visible.jsonl listado; depth_limit para d, symlink_skipped
+para link.jsonl e conflicting_session_metadata para mixed.jsonl. Too-deep não é
+aberto e sessões misturadas não são apresentadas como uma única sessão. Repetir o
+comando com --root exports/manual-codex-tree/a permite alcançar too-deep, pois a
+profundidade é relativa à raiz escolhida. Nessa segunda busca, a saída esperada é
+0 com dois arquivos; mixed/link ficam fora da raiz escolhida.
+
+## 34. Erros e descoberta real controlada (pendente)
+
+```sh
+cargo run --locked -- sessions-codex
+cargo run --locked -- sessions-codex --root testdata/codex-sessions
+cargo run --locked -- sessions-codex --root testdata/codex-sessions --project /synthetic/project --leaf synthetic-session
+cargo run --locked -- sessions-codex --root testdata/codex-sessions/no-such-root --project /synthetic/project
+```
+
+Esperado: saídas 64, 64, 64 e 1. Nenhum comando consulta home/perfis como fallback.
+Os limites de entradas/arquivos/bytes são cobertos automaticamente com valores
+reduzidos na biblioteca; a CLI mantém os padrões documentados.
+
+Posteriormente, usar uma pasta explicitamente escolhida com cópia de uma sessão
+controlada do item 26. Informar o cwd histórico exato, comparar caminhos/contagens
+com inspect-codex e anotar versão/sistema/diferenças. Não varrer perfis reais sem
+escolher a raiz e considerar que a descoberta lê todos os projetos dentro dela.
+Metadados também podem conter dados pessoais; não versionar nem publicar relatórios.
+Compatibilidade real não é certificada pelos testes sintéticos.
+
+| Itens novos | Estado | Evidência manual |
+|---|---|---|
+| 31–33: descoberta sintética, seleção, profundidade e ambiguidades | Pendente | — |
+| 34: uso inválido e descoberta real controlada | Pendente | — |
