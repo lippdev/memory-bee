@@ -1,0 +1,11 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# User data: do not commit real conversation exports
+/exports/
+/.memory-share/
+
+# Operating-system metadata
+.DS_Store
