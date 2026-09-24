@@ -243,3 +243,15 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - Próximo recorte: recebimento e aplicação explícita, descrito acima.
 - Verificações documentais: links locais, JS do roadmap, numeração e sintaxe shell
   dos exemplos do roteiro manual, além de `git diff --check`, aprovados.
+
+### Publicação pendente — exportação selecionada
+
+- Implementação e validação local concluídas no commit `cca4b6e`, branch
+  `codex/selected-changes`. Integração ainda pendente: três tentativas de push HTTPS
+  em 2026-09-24 receberam `remote: Internal Server Error` do GitHub. A consulta à
+  API confirmou permissão de push; a branch não apareceu no remoto.
+- Alternativa SSH não utilizada com sucesso: `Host key verification failed`.
+  Nenhuma configuração de confiança SSH foi alterada.
+- PR não criado e CI remoto não executado para esta entrega. Não declarar merge.
+  Próxima ação operacional: publicar a branch, abrir PR, conferir CI macOS/Linux
+  e integrar por squash antes de iniciar a próxima implementação.
