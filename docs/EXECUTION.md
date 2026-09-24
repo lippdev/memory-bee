@@ -388,3 +388,4 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   da sandbox; --add-dir do Claude dá acesso de ferramenta ao pacote. Roteiro manual
   ampliado com itens 35–38, pendentes. Nenhuma conversa real lida.
 - Próximo passo: lançamento explícito opcional descrito em "Próxima tarefa".
+- Publicação e verificações remotas vinculadas ao [PR #13](https://github.com/lippdev/memory-pier/pull/13).
