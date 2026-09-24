@@ -18,6 +18,7 @@ use std::{
 #[derive(Default)]
 pub struct Options {
     pub project: Option<PathBuf>,
+    pub include_paths: BTreeSet<String>,
     pub leaf: Option<String>,
     pub exclude_lines: BTreeSet<usize>,
 }
@@ -27,6 +28,8 @@ pub struct Finding {
     pub line: Option<usize>,
     pub block: Option<usize>,
     pub field: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub selection: Option<usize>,
 }
 #[derive(Debug, Serialize)]
 pub struct Origin {
@@ -37,7 +40,7 @@ pub struct Origin {
 pub use crate::git::Project;
 #[derive(Debug, Serialize)]
 pub struct Payload {
-    path: &'static str,
+    path: String,
     sha256: String,
     purpose: &'static str,
 }
@@ -52,6 +55,10 @@ pub struct Manifest {
     omissions: Vec<String>,
     warnings: Vec<String>,
     redaction: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    selected_paths: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    changes: Option<Vec<crate::changes::Change>>,
 }
 /// Immutable prepared bytes: preview and write use the same payloads and hashes.
 #[derive(Debug, Serialize)]
@@ -61,6 +68,13 @@ pub struct Prepared {
     history: String,
     findings: Vec<Finding>,
     partial: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    code: Option<CodePayloads>,
+}
+#[derive(Debug, Serialize)]
+struct CodePayloads {
+    patch: String,
+    new_files: Vec<crate::changes::File>,
 }
 impl Prepared {
     pub fn findings(&self) -> &[Finding] {
@@ -85,7 +99,7 @@ impl Prepared {
         if !self.findings.is_empty() {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "possible secrets detected; use preview and exclude affected lines",
+                "possible secrets detected; use preview and remove affected selections",
             ));
         }
         let manifest = serde_json::to_vec_pretty(&self.manifest)?;
@@ -96,21 +110,38 @@ impl Prepared {
             directory.mode(0o700);
         }
         directory.create(destination)?;
-        write_payloads(
-            destination,
-            &[
-                ("HANDOFF.md", self.handoff.as_bytes()),
-                ("history.jsonl", self.history.as_bytes()),
-                ("manifest.json", manifest.as_slice()),
-            ],
-        )
+        let mut payloads = vec![
+            ("HANDOFF.md", self.handoff.as_bytes()),
+            ("history.jsonl", self.history.as_bytes()),
+        ];
+        if let Some(code) = &self.code {
+            if !code.patch.is_empty() {
+                payloads.push(("changes.patch", code.patch.as_bytes()));
+            }
+            for file in &code.new_files {
+                payloads.push((&file.path, file.content.as_bytes()));
+            }
+        }
+        payloads.push(("manifest.json", manifest.as_slice()));
+        write_payloads(destination, &payloads)
     }
 }
 
 fn write_payloads(destination: &Path, payloads: &[(&str, &[u8])]) -> io::Result<()> {
     let mut created = Vec::new();
+    let mut created_files_dir = false;
     let result = (|| {
         for (name, content) in payloads {
+            if name.starts_with("files/") && !created_files_dir {
+                let mut dir = fs::DirBuilder::new();
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::DirBuilderExt;
+                    dir.mode(0o700);
+                }
+                dir.create(destination.join("files"))?;
+                created_files_dir = true;
+            }
             let path = destination.join(name);
             let mut options = OpenOptions::new();
             options.write(true).create_new(true);
@@ -130,12 +161,18 @@ fn write_payloads(destination: &Path, payloads: &[(&str, &[u8])]) -> io::Result<
         for path in created.iter().rev() {
             let _ = fs::remove_file(path);
         }
+        if created_files_dir {
+            let _ = fs::remove_dir(destination.join("files"));
+        }
         let _ = fs::remove_dir(destination);
     }
     result
 }
 
 pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
+    if !options.include_paths.is_empty() && options.project.is_none() {
+        return Err("--include-path requires --project".into());
+    }
     let report = if let Some(leaf) = &options.leaf {
         select(report, leaf).map_err(str::to_owned)?
     } else if report.selection.is_some() {
@@ -291,15 +328,63 @@ pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
             }
         }
     }
-    let code_state = if project.base_commit.is_some() {
+    let with_code = !options.include_paths.is_empty();
+    let mut changes = None;
+    let mut code = None;
+    let mut extra_payloads = Vec::new();
+    if with_code {
+        let base = project
+            .base_commit
+            .as_deref()
+            .ok_or("selected code requires a verified base commit")?;
+        let captured = crate::changes::prepare(
+            options.project.as_deref().expect("checked project"),
+            base,
+            &options.include_paths,
+        )?;
+        for (selection, content) in &captured.scan_text {
+            let start = findings.len();
+            scan(content, None, None, "code_selection", &mut findings);
+            for finding in &mut findings[start..] {
+                finding.selection = Some(*selection);
+            }
+        }
+        partial |= !captured.omissions.is_empty();
+        omissions.extend(captured.omissions);
+        omissions[0] = "Somente arquivos selecionados e suportados acompanham o pacote; outras alterações locais não estão incluídas.".into();
+        warnings.push("Código capturado do conteúdo em disco relativo à base, sem preservar separação staged/unstaged ou executar filtros Git. Aplicação exige revisão e verificação da base.".into());
+        if !captured.patch.is_empty() {
+            extra_payloads.push(Payload {
+                path: "changes.patch".into(),
+                sha256: hash(captured.patch.as_bytes()),
+                purpose: "patch",
+            });
+        }
+        for file in &captured.new_files {
+            extra_payloads.push(Payload {
+                path: file.path.clone(),
+                sha256: hash(file.content.as_bytes()),
+                purpose: "new-file",
+            });
+        }
+        changes = Some(captured.entries);
+        code = Some(CodePayloads {
+            patch: captured.patch,
+            new_files: captured.new_files,
+        });
+    }
+    let included_code = !extra_payloads.is_empty();
+    let code_state = if included_code {
+        "changes-included"
+    } else if project.base_commit.is_some() {
         "base-reference"
     } else {
         "unknown"
     };
-    let handoff = render_handoff(&events, &omissions, &warnings, &project);
+    let handoff = render_handoff(&events, &omissions, &warnings, &project, included_code);
     let now: chrono::DateTime<chrono::Utc> = SystemTime::now().into();
-    let manifest = Manifest {
-        format_version: 1,
+    let mut manifest = Manifest {
+        format_version: if with_code { 2 } else { 1 },
         created_at: now.to_rfc3339(),
         source: Origin {
             agent: "claude-code",
@@ -310,12 +395,12 @@ pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
         code_state,
         files: vec![
             Payload {
-                path: "HANDOFF.md",
+                path: "HANDOFF.md".into(),
                 sha256: hash(handoff.as_bytes()),
                 purpose: "entrypoint",
             },
             Payload {
-                path: "history.jsonl",
+                path: "history.jsonl".into(),
                 sha256: hash(history.as_bytes()),
                 purpose: "history",
             },
@@ -323,13 +408,17 @@ pub fn prepare(report: Report, options: &Options) -> Result<Prepared, String> {
         omissions,
         warnings,
         redaction: "pending-review",
+        selected_paths: with_code.then(|| options.include_paths.iter().cloned().collect()),
+        changes,
     };
+    manifest.files.extend(extra_payloads);
     Ok(Prepared {
         manifest,
         handoff,
         history,
         findings,
         partial,
+        code,
     })
 }
 
@@ -359,6 +448,7 @@ fn scan(
                 line,
                 block,
                 field,
+                selection: None,
             });
         }
     }
@@ -398,9 +488,10 @@ fn render_handoff(
     omissions: &[String],
     warnings: &[String],
     project: &Project,
+    included_code: bool,
 ) -> String {
     let mut text = String::from(
-        "# Retomada — Memory Pier\n\nPacote somente de contexto. Não exige Memory Pier no destino.\n\nLeia [manifest.json](manifest.json) para origem, integridade e limitações e\n[history.jsonl](history.jsonl) para todos os eventos selecionados.\n\n## Primeiro pedido humano retido\n\nNão inferimos o pedido original quando há perdas ou exclusões.\n\n",
+        "# Retomada — Memory Pier\n\nPacote portátil. Não exige Memory Pier no destino.\n\nLeia [manifest.json](manifest.json) para origem, integridade e limitações e\n[history.jsonl](history.jsonl) para todos os eventos selecionados.\n\n## Primeiro pedido humano retido\n\nNão inferimos o pedido original quando há perdas ou exclusões.\n\n",
     );
     if let Some(first) = events.iter().find(|e| e.role == "user" && e.kind == "text") {
         text.push_str(&format!(
@@ -420,7 +511,12 @@ fn render_handoff(
     } else {
         "Repositório, branch, commit e alterações locais: **não verificados**."
     };
-    text.push_str(&format!("## Seleção e estado do código\n\n{} eventos em ordem física, com sequência renumerada e linha/bloco originais.\nUUIDs parentais são referências históricas; podem apontar para linhas excluídas.\n{code_description}\nNenhum código ou patch incluído.\n\n",events.len()));
+    let code_contents = if included_code {
+        "Código selecionado incluído; consulte changes no manifesto e confira omissões. Nenhuma aplicação automática."
+    } else {
+        "Nenhum código ou patch incluído."
+    };
+    text.push_str(&format!("## Seleção e estado do código\n\n{} eventos em ordem física, com sequência renumerada e linha/bloco originais.\nUUIDs parentais são referências históricas; podem apontar para linhas excluídas.\n{code_description}\n{code_contents}\n\n",events.len()));
     if observed {
         text.push_str(&excerpt(&format!(
             "Origin: {}\nBranch: {}\nCommit base: {}\nAlterações locais: {}",
@@ -431,12 +527,19 @@ fn render_handoff(
                 .unwrap_or("indisponível (possível detached HEAD)"),
             project.base_commit.as_deref().unwrap_or("desconhecido"),
             project.dirty.map_or("desconhecidas", |dirty| if dirty {
-                "sim; não incluídas"
+                if included_code {
+                    "sim; somente seleção incluída"
+                } else {
+                    "sim; não incluídas"
+                }
             } else {
                 "não detectadas (arquivos ignorados não contados)"
             })
         )));
         text.push('\n');
+    }
+    if included_code {
+        text.push_str("## Código selecionado\n\nO manifesto v2 mapeia cada caminho da raiz do projeto ao payload, hashes e modos.\nchanges.patch contém mudanças em arquivos da base; files/ contém novos arquivos.\nRevise também linhas removidas do patch: elas podem conter dados sensíveis.\nNão aplique sem conferir o commit base, hashes, caminhos e conflitos em checkout separado.\nO Memory Pier ainda não oferece comando de aplicação.\n\n");
     }
     for (title, entries) in [("Omissões", omissions), ("Avisos", warnings)] {
         text.push_str(&format!("## {title}\n\n"));

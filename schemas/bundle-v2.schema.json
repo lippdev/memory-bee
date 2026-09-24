@@ -1,0 +1,331 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Memory Pier bundle v2 — selected code",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {
+      "const": 2
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "agent": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "session_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "agent",
+        "version",
+        "session_id"
+      ]
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "remote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "base_commit": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+        },
+        "dirty": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "remote",
+        "branch",
+        "base_commit",
+        "dirty"
+      ]
+    },
+    "code_state": {
+      "enum": [
+        "base-reference",
+        "changes-included"
+      ]
+    },
+    "files": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "purpose": {
+            "enum": [
+              "entrypoint",
+              "history",
+              "patch",
+              "new-file"
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "sha256",
+          "purpose"
+        ]
+      }
+    },
+    "omissions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "redaction": {
+      "enum": [
+        "pending-review",
+        "reviewed"
+      ]
+    },
+    "selected_paths": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024,
+        "pattern": "^(?!/)(?!.*(?:^|/)(?:\\.{1,2}|\\.[gG][iI][tT])(?:/|$))(?!.*//)[A-Za-z0-9 /._-]+(?<!/)$"
+      }
+    },
+    "changes": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "pattern": "^(?!/)(?!.*(?:^|/)(?:\\.{1,2}|\\.[gG][iI][tT])(?:/|$))(?!.*//)[A-Za-z0-9 /._-]+(?<!/)$"
+          },
+          "kind": {
+            "enum": [
+              "add",
+              "modify",
+              "delete"
+            ]
+          },
+          "payload": {
+            "type": "string",
+            "pattern": "^(changes\\.patch|files/[0-9]{4}\\.txt)$"
+          },
+          "base_sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "result_sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "base_mode": {
+            "enum": [
+              null,
+              "100644",
+              "100755"
+            ]
+          },
+          "result_mode": {
+            "enum": [
+              null,
+              "100644",
+              "100755"
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "kind",
+          "payload",
+          "base_sha256",
+          "result_sha256",
+          "base_mode",
+          "result_mode"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "add"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "base_sha256": {
+                  "type": "null"
+                },
+                "base_mode": {
+                  "type": "null"
+                },
+                "result_sha256": {
+                  "type": "string"
+                },
+                "result_mode": {
+                  "type": "string"
+                },
+                "payload": {
+                  "pattern": "^files/[0-9]{4}\\.txt$"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "delete"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "result_sha256": {
+                  "type": "null"
+                },
+                "result_mode": {
+                  "type": "null"
+                },
+                "base_sha256": {
+                  "type": "string"
+                },
+                "base_mode": {
+                  "type": "string"
+                },
+                "payload": {
+                  "const": "changes.patch"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "modify"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "base_sha256": {
+                  "type": "string"
+                },
+                "result_sha256": {
+                  "type": "string"
+                },
+                "base_mode": {
+                  "type": "string"
+                },
+                "result_mode": {
+                  "type": "string"
+                },
+                "payload": {
+                  "const": "changes.patch"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "format_version",
+    "created_at",
+    "source",
+    "project",
+    "code_state",
+    "files",
+    "omissions",
+    "warnings",
+    "redaction",
+    "selected_paths",
+    "changes"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "changes": {
+            "minItems": 1
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "code_state": {
+            "const": "changes-included"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "code_state": {
+            "const": "base-reference"
+          }
+        }
+      }
+    }
+  ]
+}

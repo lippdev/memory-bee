@@ -39,3 +39,7 @@ Git continua relevante ao status; limites/erros não devem virar estado limpo.
 Não incluir patches, novos arquivos ou inventário de caminhos neste recorte.
 Próxima entrega: seleção e transporte de mudanças, com contrato e verificação de
 base antes de aplicação explícita. M1 e ensaios manuais permanecem pendentes.
+
+Atualização posterior: o [ADR 0008](0008-selected-code-and-bundle-v2.md) desabilita
+filtros no status e evita recursão em submódulos, cujo estado interno passa a ser
+explicitamente não verificado.

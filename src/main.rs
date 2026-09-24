@@ -12,7 +12,7 @@ use std::{
     process::ExitCode,
 };
 
-const USAGE: &str = "Usage:\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>]\nOffline; no model calls.\nExit: 0 success, 2 partial, 3 possible secrets, 1 I/O or selection error, 64 usage error.";
+const USAGE: &str = "Usage:\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\nOffline; no model calls.\nExit: 0 success, 2 partial, 3 possible secrets, 1 I/O or selection error, 64 usage error.";
 fn output(value: &impl Serialize) -> Result<(), (u8, String)> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -76,11 +76,19 @@ fn export(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
                 preview = true;
                 index += 1;
             }
-            Some(flag @ ("--output" | "--leaf" | "--exclude-line" | "--project"))
-                if index + 1 < args.len() =>
-            {
+            Some(
+                flag @ ("--output" | "--leaf" | "--exclude-line" | "--project" | "--include-path"),
+            ) if index + 1 < args.len() => {
                 let value = &args[index + 1];
                 match flag {
+                    "--include-path" => {
+                        options.include_paths.insert(
+                            value
+                                .to_str()
+                                .ok_or((64, "selected path must be UTF-8".into()))?
+                                .into(),
+                        );
+                    }
                     "--project" if options.project.is_none() => {
                         options.project = Some(value.into())
                     }
@@ -108,7 +116,9 @@ fn export(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
             _ => return Err((64, USAGE.into())),
         }
     }
-    if preview == destination.is_some() {
+    if preview == destination.is_some()
+        || (!options.include_paths.is_empty() && options.project.is_none())
+    {
         return Err((64, USAGE.into()));
     }
     let report = inspect(Path::new(&args[0]), Limits::default())

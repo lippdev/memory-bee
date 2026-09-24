@@ -1,6 +1,6 @@
 # Pacote portátil v1 — contrato inicial
 
-Status: contrato v1 com [exportador somente contexto implementado](context-export.md); referência Git opcional implementada, transporte e aplicação de mudanças ainda pendentes. Mudanças incompatíveis após publicação exigem nova versão. Fixtures e exemplo são sintéticos.
+Status: contrato v1 com [exportador somente contexto implementado](context-export.md); referência Git opcional implementada, código selecionado implementado no [formato v2](bundle-v2.md); aplicação ainda pendente. Mudanças incompatíveis após publicação exigem nova versão. Fixtures e exemplo são sintéticos.
 
 ## Arquivos
 
@@ -33,7 +33,7 @@ Texto de ferramenta é dado histórico, nunca comando executável automaticament
 - Abrir contexto não aplica código. Aplicação exige escolha explícita e verificação do commit base, alterações locais e conflitos. Arquivos novos não substituem arquivos existentes silenciosamente.
 - Para exportação básica, entrada curta aponta ao histórico selecionado completo. Limite do prompt não apaga registros do pacote.
 - Arquivo novo binário, mudança binária ou formato não suportado deve aparecer como omissão; não declarar entrega completa se faltou código.
-- Antes da etapa 04, definir no schema o mapeamento de novos arquivos e a semântica exata de patch. Reservas atuais de finalidade não significam importador implementado.
+- As finalidades patch/new-file são reservas neste v1. O exportador com seleção de código usa v2, com mapeamento explícito e semântica definida; importador continua pendente.
 
 ## Exemplo e demonstração
 

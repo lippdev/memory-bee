@@ -24,7 +24,7 @@ Etapa 01 concluída. Etapa 02 em andamento: projeto Cargo e primeiro leitor Clau
 Code com descoberta por projeto e seleção explícita de ramo, testados com fixtures
 sintéticas. Etapa 03 implementada para exportação somente de contexto, com prévia,
 exclusões e manifesto v1. Validação manual e compatibilidade real pendentes; TUI
-continua no roadmap. Etapa 04 iniciada: `export --project <pasta>` registra referência Git local; patches ainda pendentes.
+continua no roadmap. Etapa 04 iniciada: `export --project <pasta>` registra referência Git local; `--include-path <arquivo>` inclui alterações textuais selecionadas em pacote v2. Aplicação automatizada ainda pendente.
 
 ```sh
 cargo run --locked -- inspect testdata/claude/basic.jsonl
