@@ -11,7 +11,7 @@ O parser do Orca, no commit `adc0c67f75dd44ee5b771faf3372e7dba3c73fa0`, observa 
 | Agente | Ler contexto | Iniciar destino | Cotas | Perfis isolados |
 |---|---|---|---|---|
 | Claude Code | JSONL documentado; primeiro leitor escolhido | Retomada nativa documentada; injeção de pacote ainda por validar | Não investigado; não inferir por contagem de tokens | Não comprovado; login global não basta |
-| Codex | Parser identificado no Orca; não validado aqui | Integração da etapa 05 | Aguardar pesquisa da fonte | Não comprovado |
+| Codex | Inspeção experimental por arquivo explícito; fixtures sintéticas, compatibilidade real pendente | Integração da etapa 05 | Aguardar pesquisa da fonte | Não comprovado |
 | Cursor | Parser identificado no Orca; CLI e IDE precisam ser distinguidas | Não investigado | Não investigado | Não comprovado |
 | Pi | Parser identificado no Orca; não validado aqui | Não investigado | Dependente de provedor; não investigado | Não comprovado |
 | Hermes | Parser identificado no Orca; não validado aqui | Não investigado | Dependente de provedor; não investigado | Não comprovado |
@@ -36,3 +36,9 @@ Uso e contas não bloqueiam M1. Antes de implementar essas capacidades, verifica
 - [Arquitetura ai-memory examinada](https://github.com/akitaonrails/ai-memory/blob/24ae5dd0b86041e29d25b6586adff5307d51cc00/docs/ARCHITECTURE.md).
 
 Decisão: implementar o núcleo pequeno de forma independente. Não extrair o runtime/IDE do Orca nem exigir o servidor do ai-memory. Nenhum código copiado. Avaliar entrada/saída compatível com ai-memory na etapa 09; não chamar nosso pacote de OKF sem implementar e validar o contrato correspondente.
+
+## Pesquisa Codex — 2026-09-24
+
+Fontes, distinção entre App Server e transcrição instável e perfil testado em
+[contrato Codex](../specs/codex-reader.md). A pesquisa não certifica formato real;
+leitura controlada permanece no item 26 do roteiro manual.

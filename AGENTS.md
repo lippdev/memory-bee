@@ -52,3 +52,6 @@ pendências sem usá-las como bloqueio automático (ADR 0006).
 Contrato de inspeção em `docs/specs/claude-reader.md`; contrato do pacote em
 `docs/specs/bundle-v1.md` e `docs/specs/bundle-v2.md`, com schemas em `schemas/` e exemplos em `examples/`.
 Para documentação, verificar links relativos e executar `git diff --check`.
+
+Segundo leitor: `inspect-codex <rollout.jsonl>` experimental, apenas arquivo explícito;
+contrato em `docs/specs/codex-reader.md`. Exportação/descoberta Codex pendentes.

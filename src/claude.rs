@@ -232,7 +232,7 @@ pub fn inspect(path: &Path, limits: Limits) -> io::Result<Report> {
 }
 
 // Drain an oversized line without allocating the whole line. Count includes delimiters.
-fn bounded_line(
+pub(crate) fn bounded_line(
     reader: &mut impl BufRead,
     limit: usize,
 ) -> io::Result<(Vec<u8>, usize, bool, bool)> {
