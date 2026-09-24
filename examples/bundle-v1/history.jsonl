@@ -1,0 +1,2 @@
+{"sequence": 1, "role": "user", "kind": "text", "text": "Adicione ordenação decrescente de tarefas, mantendo crescente como padrão.", "timestamp": "2026-09-24T12:00:00Z", "source": {"line": 1, "id": "u1", "parent_id": null}, "provenance": "extracted"}
+{"sequence": 2, "role": "assistant", "kind": "text", "text": "A implementação inicial está pronta; ainda falta validar a entrada e executar os testes.", "timestamp": "2026-09-24T12:01:00Z", "source": {"line": 2, "id": "a1", "parent_id": "u1"}, "provenance": "extracted"}

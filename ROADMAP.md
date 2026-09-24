@@ -188,9 +188,9 @@ Preparar lançamento público após o marco escolhido.
 
 | Decisão | Encaminhamento |
 |---|---|
-| Stack e primeiro SO | Comparar distribuição, TUI, leitura de sessões e credenciais; justificar em ADR antes da implementação. |
-| Primeiro leitor | Claude Code é candidato, não escolha validada. Codex é candidato seguinte. |
-| Contrato do pacote | Definir esquema versionado, histórico, Markdown de entrada, omissões e vínculo ao estado do código na etapa 01. |
+| Stack e primeiro SO | Decidido: Go, macOS arm64 primeiro; ver ADR 0003. |
+| Primeiro leitor | Claude Code escolhido; formato pesquisado, compatibilidade de execução ainda pendente. Codex seguinte. |
+| Contrato do pacote | Contrato v1 definido em docs/specs/bundle-v1.md; exportador ainda pendente. |
 | Uso e limites | Repositório de referência prometido pelo mantenedor ainda não foi fornecido. Não bloquear M1 por isso. |
 | Contas | Investigar isolamento e login oficial por ferramenta. Não prometer suporte universal. |
 | Nome e licença | Nome escolhido: Memory Pier (`memory-pier`). Licença pendente antes da distribuição pública. |

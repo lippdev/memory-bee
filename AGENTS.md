@@ -39,4 +39,4 @@ Não presumir acesso às conversas anteriores. O Markdown é a referência opera
 
 ## Validação atual
 
-Não há stack, build ou testes definidos ainda. Para mudanças documentais, verificar links relativos e executar `git diff --check`. Atualize esta seção quando os comandos reais do projeto existirem.
+Stack escolhida: Go; ainda não há módulo, build ou testes de aplicação. O contrato inicial está em `docs/specs/bundle-v1.md`, com schema em `schemas/` e exemplos sintéticos em `examples/` e `testdata/`. Para mudanças documentais, verificar links relativos e executar `git diff --check`. Atualize esta seção quando os comandos reais do projeto existirem.
