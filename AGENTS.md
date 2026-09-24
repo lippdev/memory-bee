@@ -43,7 +43,7 @@ Stack: Rust 1.98.1 fixada, projeto Cargo com biblioteca e CLI de inspeção.
 Comandos canônicos: `cargo build --locked`, `cargo fmt --all -- --check`,
 `cargo clippy --locked --all-targets -- -D warnings` e `cargo test --locked`.
 CI executa esses checks em macOS e Linux. O leitor usa fixtures sintéticas;
-compatibilidade real e descoberta por projeto ainda pendentes.
+descoberta por projeto e seleção de ramo implementadas, compatibilidade real pendente.
 Contrato de inspeção em `docs/specs/claude-reader.md`; pacote futuro em
 `docs/specs/bundle-v1.md`, com schema em `schemas/` e exemplos em `examples/`.
 Para documentação, verificar links relativos e executar `git diff --check`.

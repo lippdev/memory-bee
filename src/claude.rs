@@ -59,6 +59,18 @@ pub struct Event {
     pub tool_is_error: Option<bool>,
 }
 #[derive(Debug, Serialize)]
+pub struct Record {
+    pub source: Source,
+    pub parent_known: bool,
+    pub valid_metadata: bool,
+}
+#[derive(Debug, Serialize)]
+pub struct Selection {
+    pub leaf_uuid: String,
+    pub excluded_records: usize,
+    pub excluded_events: usize,
+}
+#[derive(Debug, Serialize)]
 pub struct Report {
     pub inspection_version: u8,
     pub state: ReadState,
@@ -68,6 +80,10 @@ pub struct Report {
     pub observed_versions: BTreeSet<String>,
     pub requires_branch_selection: bool,
     pub events: Vec<Event>,
+    pub records: Vec<Record>,
+    pub project_paths: BTreeSet<String>,
+    pub branch_tips: Vec<String>,
+    pub selection: Option<Selection>,
     pub diagnostics: Vec<Diagnostic>,
 }
 impl Report {
@@ -152,6 +168,10 @@ pub fn inspect(path: &Path, limits: Limits) -> io::Result<Report> {
         observed_versions: BTreeSet::new(),
         requires_branch_selection: false,
         events: vec![],
+        records: vec![],
+        project_paths: BTreeSet::new(),
+        branch_tips: vec![],
+        selection: None,
         diagnostics: vec![],
     };
     report.warn("unverified_compatibility", None, None, false);
@@ -272,6 +292,13 @@ impl Graph {
         }
     }
     fn finish(self, report: &mut Report) {
+        report.branch_tips = self
+            .ids
+            .iter()
+            .filter(|id| !self.parents.contains(&Some((*id).clone())))
+            .cloned()
+            .collect();
+        report.branch_tips.sort();
         for (parent, line) in self.references {
             if !self.ids.contains(&parent) {
                 report.warn("missing_parent", Some(line), None, false);
@@ -290,10 +317,12 @@ fn parse_record(v: &Value, line: usize, report: &mut Report, graph: &mut Graph) 
     if let Some(version) = string(v, "version") {
         report.observed_versions.insert(version);
     }
+    let mut valid_metadata = true;
     for key in ["uuid", "parentUuid", "sessionId", "agentId", "version"] {
         if v.get(key)
             .is_some_and(|value| !value.is_null() && !value.is_string())
         {
+            valid_metadata = false;
             report.warn("invalid_metadata", Some(line), None, true);
             report.requires_branch_selection = true;
         }
@@ -302,6 +331,7 @@ fn parse_record(v: &Value, line: usize, report: &mut Report, graph: &mut Graph) 
         if v.get(key)
             .is_some_and(|value| !value.is_null() && !value.is_boolean())
         {
+            valid_metadata = false;
             report.warn("invalid_metadata", Some(line), None, true);
             report.requires_branch_selection = true;
         }
@@ -339,6 +369,18 @@ fn parse_record(v: &Value, line: usize, report: &mut Report, graph: &mut Graph) 
             return;
         }
     };
+    if let Some(cwd) = string(v, "cwd") {
+        report.project_paths.insert(cwd);
+    } else if v.get("cwd").is_some_and(|cwd| !cwd.is_null()) {
+        report.warn("invalid_project_metadata", Some(line), None, true);
+    }
+    report.records.push(Record {
+        source: source.clone(),
+        parent_known: v
+            .get("parentUuid")
+            .is_some_and(|p| p.is_null() || p.is_string()),
+        valid_metadata,
+    });
     graph.record(&source, report);
     let checkpoint = v.get("isCompactSummary").and_then(Value::as_bool) == Some(true);
     if checkpoint {

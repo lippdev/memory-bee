@@ -21,11 +21,13 @@ A exportação básica funciona sem chamadas a modelos. Sínteses semânticas de
 ## Estado
 
 Etapa 01 concluída. Etapa 02 em andamento: projeto Cargo e primeiro leitor Claude
-Code disponíveis por arquivo explícito, testados com fixtures sintéticas. Ainda
-não há descoberta por projeto, exportador ou TUI; compatibilidade real não certificada.
+Code com descoberta por projeto e seleção explícita de ramo, testados com fixtures
+sintéticas. Exportador e TUI pendentes; compatibilidade real não certificada.
 
 ```sh
 cargo run --locked -- inspect testdata/claude/basic.jsonl
+cargo run --locked -- sessions --root testdata/claude-projects --project /synthetic/project
+cargo run --locked -- inspect testdata/claude-projects/arbitrary/session.jsonl --leaf a1
 ```
 
 A saída é um relatório JSON local com eventos, proveniência e diagnósticos.
