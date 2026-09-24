@@ -6,10 +6,10 @@
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
 - Não existe CLI, TUI, leitor de sessões ou integração de contas implementada.
-- Stack, primeiro SO, nome definitivo e licença ainda não foram escolhidos.
+- Nome escolhido: Memory Pier (`memory-pier`). Stack, primeiro SO e licença ainda não foram escolhidos.
 - Não há comandos de build, lint ou testes de aplicação definidos.
-- Na última inspeção, não havia remoto configurado. Conferir novamente antes de operações de publicação.
-- A documentação está em branches locais; não presumir que já foi integrada à `main`.
+- Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), criado inicialmente como privado.
+- Publicação inicial: documentação e identidade serão integradas por PR; conferir o estado de merge no GitHub antes de retomar.
 
 ## Próxima tarefa de produto
 
@@ -37,7 +37,7 @@ O repositório de referência sobre consumo de contas ainda aguarda envio do man
 | 08 Perfis de conta | P1 | Pendente | Depende de 05–06 e prova de isolamento. |
 | 09 Captura contínua | P2 | Pendente | Depende de 02–06. |
 | 10 Novos adaptadores | P2 | Pendente | Depende dos contratos e testes relevantes. |
-| 11 Distribuição | P2 | Pendente | Pode acompanhar M1 para alpha; nome e licença em aberto. |
+| 11 Distribuição | P2 | Pendente | Pode acompanhar M1 para alpha; licença em aberto. |
 
 ## Registro de entregas documentais
 
@@ -59,3 +59,10 @@ O repositório de referência sobre consumo de contas ainda aguarda envio do man
 ## Como manter este arquivo
 
 Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar a linha da etapa e acrescentar um registro curto com resultado, verificações realmente executadas, tipo de revisão e pendências. Referenciar PR/commit quando existir, sem inventar identificadores. Não manter planos pessoais paralelos que o próximo agente não consiga consultar.
+
+## Publicação inicial — Memory Pier
+
+- Repositório privado criado em 2026-09-24 na conta `lippdev`.
+- Nome atualizado no README, roadmap, instruções e HTML; decisão em `docs/decisions/0002-product-name.md`.
+- Revisão: autorrevisão documental. Validação: links locais e `git diff --check`.
+- Nenhuma funcionalidade de produto ou release de aplicação nesta entrega.

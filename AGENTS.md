@@ -32,7 +32,7 @@ Não presumir acesso às conversas anteriores. O Markdown é a referência opera
 ## Invariantes do produto
 
 - Exportação básica sem chamadas a modelos, inclusive quando a origem não consegue mais responder.
-- Pacote legível por pessoas e agentes sem exigir instalação do Memory Share no destino.
+- Pacote legível por pessoas e agentes sem exigir instalação do Memory Pier no destino.
 - Distinguir registros extraídos de sínteses ou inferências; informar conteúdo omitido ou indisponível.
 - Referenciar o estado do código e tratar alterações locais explicitamente. Não publicar código como efeito implícito de exportar contexto.
 - Não versionar dados reais de conversas ou segredos. Usar fixtures sintéticas.

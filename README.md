@@ -1,14 +1,14 @@
-# Memory Share
+# Memory Pier
 
 Continue um trabalho de programação em outro agente ou entregue o contexto a outra pessoa, sem depender de uma nova resposta da IA de origem.
 
 ## Proposta
 
-Memory Share (nome provisório) será uma ferramenta de terminal independente de IDE. Seu núcleo lê registros disponíveis de sessões, organiza um pacote local e prepara a retomada. Skills e plugins poderão facilitar seu uso, mas não serão necessários para exportar.
+Memory Pier será uma ferramenta de terminal independente de IDE. Seu núcleo lê registros disponíveis de sessões, organiza um pacote local e prepara a retomada. Skills e plugins poderão facilitar seu uso, mas não serão necessários para exportar.
 
 A visão inclui uma dashboard em terminal para sessões, uso disponível e perfis de contas, conforme suporte de cada agente. O núcleo de exportação vem primeiro; cotas e autenticação dependem de pesquisa técnica.
 
-O destinatário deve conseguir usar o pacote sem instalar Memory Share: um Markdown legível será a porta de entrada, acompanhado do histórico selecionado e das referências necessárias.
+O destinatário deve conseguir usar o pacote sem instalar Memory Pier: um Markdown legível será a porta de entrada, acompanhado do histórico selecionado e das referências necessárias.
 
 ## Primeiro marco
 
