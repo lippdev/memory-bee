@@ -286,3 +286,4 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - Próximo passo: segundo leitor com contrato/fixtures, conforme tarefa acima.
 - Links Markdown, sintaxe JS do roadmap, numeração 1–22 e sintaxe shell do roteiro
   manual conferidos, além de `git diff --check`.
+- CI remoto e integração vinculados ao [PR #9](https://github.com/lippdev/memory-pier/pull/9).
