@@ -5,7 +5,7 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; TUI e contas pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção Codex experimental por arquivo explícito implementada; TUI e contas pendentes.
 - Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
@@ -26,11 +26,11 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Etapa 05 — Segundo leitor: Codex.** Pesquisar o formato e definir contrato de
-inspeção com fixtures sintéticas antes de implementar leitura explícita. Preservar
-papéis, ferramentas, checkpoints, proveniência e omissões; sem executar conteúdo
-histórico ou iniciar agentes automaticamente. Dividir descoberta e lançamento em
-entregas posteriores. Reutilizar núcleo de pacote apenas após contrato do leitor.
+**Etapa 05 — Exportação Codex revisável.** Definir adaptação explícita do relatório
+Codex ao núcleo de pacotes, preservando o perfil experimental, proveniência e
+omissões. Testar preview/exclusões/segredos e compatibilidade com verify, sem
+reinterpretar turnos como árvore Claude. Não lançar agentes nem descobrir arquivos
+implicitamente. Descoberta e lançamento continuam como entregas posteriores.
 Manter `docs/MANUAL_TESTS.md` atualizado; validação real e retomada humana de M1
 continuam pendentes sem bloquear implementação autorizada com testes/CI.
 
@@ -68,7 +68,7 @@ substituída pela revisão de sequência do mantenedor registrada acima.
 | 02 Leitor de sessão | P0 | Em andamento | Leitor, descoberta e seleção de ramo testados com fixtures; validação controlada de compatibilidade real pendente. |
 | 03 Exportação revisável | P0 | Em andamento | Exportador somente contexto com prévia, exclusões e testes implementado; ensaios manuais de pacote/retomada pendentes. |
 | 04 Estado do código | P0 | Em andamento | Referência Git, código selecionado, verify e apply explícito implementados; ensaios manuais/M1 pendentes. |
-| 05 Troca de agente | P1 | Pendente | Depende de 03–04. |
+| 05 Troca de agente | P1 | Em andamento | Inspeção Codex explícita experimental; exportação, descoberta e lançamento pendentes. |
 | 06 Dashboard terminal | P1 | Pendente | Depende de 05. HTML existente é planejamento, não implementação. |
 | 07 Uso e alertas | P1 | Pendente | Depende de 01 e 06; falta referência de consumo. |
 | 08 Perfis de conta | P1 | Pendente | Depende de 05–06 e prova de isolamento. |
@@ -287,3 +287,23 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - Links Markdown, sintaxe JS do roadmap, numeração 1–22 e sintaxe shell do roteiro
   manual conferidos, além de `git diff --check`.
 - CI remoto e integração vinculados ao [PR #9](https://github.com/lippdev/memory-pier/pull/9).
+
+## Etapa 05 — Inspeção Codex explícita
+
+- Comando inspect-codex e relatório independente da árvore Claude. Mensagens,
+  papéis, ferramentas, blocos, IDs, fase e sessão/turno conhecidos preservados.
+  Checkpoints identificados; event_msg/reasoning/tipos futuros/compactações geram
+  diagnósticos explícitos. Sem execução, modelos, descoberta ou exportação Codex.
+- Perfil experimental documentado antes da implementação; fontes oficiais de hooks
+  e App Server e schema ResponseItem gerado localmente consultados. Envelope JSONL
+  não certificado como API estável. Nenhuma conversa real lida.
+- Autorrevisão: cabeçalhos inválidos limpam identidade anterior; texto idêntico
+  não é deduplicado; replacement_history não é reproduzido como conversa.
+  Sem revisão independente. Roteiro manual ampliado com itens 23–26, todos pendentes.
+- Limitações: compatibilidade unverified, registro físico sem reconstrução de
+  forks/rollback; parcial esperado com registros auxiliares/configuração adicional;
+  limites e snapshot não atômico iguais aos do leitor inicial.
+- Próximo passo: adaptação explícita para exportação Codex, descrita acima.
+- Validação local: 95 testes Rust (14 novos), build, fmt e Clippy aprovados;
+  validação Python dos pacotes v1/v2 e hashes passou. Links Markdown, JS do roadmap,
+  numeração 1–26 e sintaxe shell do roteiro manual conferidos; git diff --check limpo.

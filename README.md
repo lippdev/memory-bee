@@ -39,6 +39,10 @@ Veja [inspeção e descoberta](docs/specs/claude-reader.md),
 [roteiro para testar um por um](docs/MANUAL_TESTS.md). Para gravar um pacote,
 use `export <arquivo> --output <pasta-nova>`; a pasta pai deve existir.
 
+O segundo leitor está disponível como `inspect-codex <rollout.jsonl>`, experimental
+e limitado a arquivo explícito. Veja o [contrato Codex](docs/specs/codex-reader.md).
+Exportação e descoberta Codex ainda não estão implementadas.
+
 ## Desenvolvimento
 
 A toolchain Rust 1.98.1 está fixada em `rust-toolchain.toml`; instale Rust via rustup.

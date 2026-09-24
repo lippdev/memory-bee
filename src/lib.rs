@@ -2,6 +2,7 @@
 pub mod bundle;
 pub mod changes;
 pub mod claude;
+pub mod codex;
 pub mod discovery;
 pub mod git;
 pub mod receive;

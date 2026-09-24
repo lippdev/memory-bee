@@ -314,3 +314,62 @@ Ensaio de interrupção abrupta/falha elétrica NÃO foi validado automaticament
 |---|---|---|
 | 17–19: verify/check/write | Pendente | — |
 | 20–22: adulteração, base, colisões e recuperação | Pendente | — |
+
+## 23. Inspeção Codex por arquivo sintético (pendente)
+
+Na raiz do repositório:
+
+```sh
+cargo run --locked -- inspect-codex testdata/codex/basic.jsonl
+```
+
+Esperado: saída 0, agent codex, compatibility unverified, state read, sete registros
+físicos e cinco eventos. Mensagem inicial na linha 3/bloco 1; sessão synthetic-session,
+turno synthetic-turn. Chamada e resultado ligados por call-1. Nenhum comando do
+histórico executado, nenhuma pasta de exportação criada e origem preservada.
+
+## 24. Compactação, perdas e mensagens auxiliares Codex (pendente)
+
+```sh
+cargo run --locked -- inspect-codex testdata/codex/losses.jsonl
+```
+
+Esperado: saída 2, state partial, três eventos. Pedido aparece uma vez; checkpoint
+identificado como checkpoint; texto após compactação preservado. Diagnósticos para
+event_msg, reasoning, campos omitidos e imagem. NOT-REPLAYED e synthetic-opaque
+não aparecem na saída. Rollback é diagnosticado como event_msg omitido; o leitor
+não afirma reconstruir a conversa ativa após essa operação.
+
+## 25. Codex vazio, truncado e uso inválido (pendente)
+
+```sh
+cargo run --locked -- inspect-codex testdata/codex/empty.jsonl
+cargo run --locked -- inspect-codex testdata/codex/truncated.jsonl
+cargo run --locked -- inspect-codex testdata/codex/basic.jsonl --leaf nonexistent
+```
+
+Esperado: respectivamente saída 0/state empty; saída 2 com cinco eventos e
+incomplete_final_line na linha 8; saída 64 com ajuda (seleção Claude não se aplica).
+
+## 26. Compatibilidade real controlada do Codex (pendente)
+
+Criar posteriormente uma sessão descartável com uma tarefa sintética e sem segredos.
+Usar apenas o arquivo explicitamente escolhido pelo mantenedor; não varrer o perfil.
+Anotar versão do Codex, sistema e tipos observados, sem versionar conversa real.
+
+```sh
+# Substituir o caminho por uma cópia local do rollout controlado.
+cargo run --locked -- inspect-codex /caminho/controlado/rollout.jsonl
+```
+
+Conferir papéis, ordem, texto, chamadas/resultados, linha/bloco, sessão/turno,
+compactações e diagnósticos contra o arquivo. Campos de configuração e registros
+auxiliares podem tornar a saída parcial; isso é esperado no perfil inicial.
+Comparar bytes/hash da origem antes e depois. Não publicar a saída sem revisão de
+segredos. Diferenças de formato devem ser registradas como pendências, sem declarar
+suporte geral. Descoberta, exportação Codex e lançamento continuam fora deste recorte.
+
+| Itens novos | Estado | Evidência manual |
+|---|---|---|
+| 23–25: inspeção Codex sintética, perdas e erros | Pendente | — |
+| 26: compatibilidade real controlada Codex | Pendente | — |
