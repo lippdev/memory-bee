@@ -539,7 +539,7 @@ fn render_handoff(
         text.push('\n');
     }
     if included_code {
-        text.push_str("## Código selecionado\n\nO manifesto v2 mapeia cada caminho da raiz do projeto ao payload, hashes e modos.\nchanges.patch contém mudanças em arquivos da base; files/ contém novos arquivos.\nRevise também linhas removidas do patch: elas podem conter dados sensíveis.\nNão aplique sem conferir o commit base, hashes, caminhos e conflitos em checkout separado.\nO Memory Pier ainda não oferece comando de aplicação.\n\n");
+        text.push_str("## Código selecionado\n\nO manifesto v2 mapeia cada caminho da raiz do projeto ao payload, hashes e modos.\nchanges.patch contém mudanças em arquivos da base; files/ contém novos arquivos.\nRevise também linhas removidas do patch: elas podem conter dados sensíveis.\nNão aplique sem conferir o commit base, hashes, caminhos e conflitos em checkout separado.\nUse memory-pier verify para integridade e apply --check para conferir um checkout limpo na base exata. Só apply --write aplica explicitamente.\n\n");
     }
     for (title, entries) in [("Omissões", omissions), ("Avisos", warnings)] {
         text.push_str(&format!("## {title}\n\n"));

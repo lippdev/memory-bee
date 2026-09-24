@@ -5,7 +5,7 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; aplicação, TUI e contas pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; TUI e contas pendentes.
 - Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
@@ -26,13 +26,13 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Etapa 04 — Recebimento e aplicação explícita.** Implementar validação de pacotes
-v1/v2 (versão, hashes, caminhos, colisões, mapeamentos), checagem do commit/base e
-conflitos em checkout separado antes de aplicação solicitada explicitamente.
-Preservar alterações preexistentes e recusar sobrescrita de novos arquivos.
-Exportação de referência Git e alterações textuais selecionadas já implementadas.
-Atualizar sempre `docs/MANUAL_TESTS.md` com comandos e expectativas, conforme pedido
-atual do mantenedor; ensaios pessoais continuam separados dos testes automatizados.
+**Etapa 05 — Segundo leitor: Codex.** Pesquisar o formato e definir contrato de
+inspeção com fixtures sintéticas antes de implementar leitura explícita. Preservar
+papéis, ferramentas, checkpoints, proveniência e omissões; sem executar conteúdo
+histórico ou iniciar agentes automaticamente. Dividir descoberta e lançamento em
+entregas posteriores. Reutilizar núcleo de pacote apenas após contrato do leitor.
+Manter `docs/MANUAL_TESTS.md` atualizado; validação real e retomada humana de M1
+continuam pendentes sem bloquear implementação autorizada com testes/CI.
 
 Compatibilidade real de Claude Code e ensaios de leitura/retomada do pacote estão
 pendentes com o mantenedor em [docs/MANUAL_TESTS.md](MANUAL_TESTS.md), sem bloquear
@@ -67,7 +67,7 @@ substituída pela revisão de sequência do mantenedor registrada acima.
 | 01 Pesquisa e contrato | P0 | Concluído | ADR 0003 substituído pelo ADR 0004, matriz de investigação, contrato v1, fixtures e cenário M1; compatibilidade real do leitor ainda não certificada. |
 | 02 Leitor de sessão | P0 | Em andamento | Leitor, descoberta e seleção de ramo testados com fixtures; validação controlada de compatibilidade real pendente. |
 | 03 Exportação revisável | P0 | Em andamento | Exportador somente contexto com prévia, exclusões e testes implementado; ensaios manuais de pacote/retomada pendentes. |
-| 04 Estado do código | P0 | Em andamento | Referência Git e exportação de código selecionado implementadas; recebimento/aplicação pendentes. |
+| 04 Estado do código | P0 | Em andamento | Referência Git, código selecionado, verify e apply explícito implementados; ensaios manuais/M1 pendentes. |
 | 05 Troca de agente | P1 | Pendente | Depende de 03–04. |
 | 06 Dashboard terminal | P1 | Pendente | Depende de 05. HTML existente é planejamento, não implementação. |
 | 07 Uso e alertas | P1 | Pendente | Depende de 01 e 06; falta referência de consumo. |
@@ -262,3 +262,27 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   anteriores ficaram resolvidos, sem alteração de configuração SSH.
 - Publicação e verificações remotas vinculadas ao [PR #8](https://github.com/lippdev/memory-pier/pull/8).
   Nenhuma mudança de implementação nesta retomada; roteiro manual 10–16 preservado.
+
+## Etapa 04 — Recebimento e aplicação explícita
+
+- Recorte: verify de pacotes v1/v2 suportados; apply --check sem escrita e --write
+  explícito em checkout limpo/HEAD exato. Verificações de campos, hashes, layout,
+  caminhos, mapeamentos, base e conflitos; rejeição de symlinks/colisões/extensões.
+- Patch decodificado e reconstituído canonicamente; não executa Git apply recebido,
+  hooks, filtros ou histórico. Arquivos de resultado verificados; índice/commit
+  preservados. Contagens de omissões/avisos continuam nos relatórios.
+- Aplicação mantém originais em staging privado e tenta rollback em erro comum.
+  Interrupção abrupta pode exigir recuperação manual via recovery.json/old-N;
+  sem atomicidade multiarquivo ou garantia contra escritores concorrentes.
+- Validação local: 81 testes Rust, build, fmt, Clippy; roundtrip, adulteração mesmo com hash recalculado,
+  versões/campos/limites, colisões ignoradas, base divergente, mudança após check,
+  symlinks, modos/vazios e não execução de filtros. Falha injetada valida rollback
+  e preservação de índice. Python confere schemas/hashes e verify/check/write.
+- Revisão: autorrevisão; sem revisão independente. ADR 0009 documenta limites:
+  perfil estrito de patch, Unix/hard links, checkout limpo, sem submódulos,
+  permissões privadas e recuperação não automática após interrupção abrupta.
+- Roteiro manual ampliado com itens 17–22 e expectativas. Ensaios humanos continuam
+  pendentes; etapa 04 e M1 não declarados concluídos por testes automatizados.
+- Próximo passo: segundo leitor com contrato/fixtures, conforme tarefa acima.
+- Links Markdown, sintaxe JS do roadmap, numeração 1–22 e sintaxe shell do roteiro
+  manual conferidos, além de `git diff --check`.

@@ -1,7 +1,6 @@
 # Pacote portátil v2 — alterações selecionadas
 
-Status: exportação implementada; validação de recebimento e aplicação pelo Memory
-Pier pendentes. [Schema v2](../../schemas/bundle-v2.schema.json). O
+Status: exportação, [verificação e aplicação explícita](receive-apply.md) implementadas no perfil descrito; ensaios manuais pendentes. [Schema v2](../../schemas/bundle-v2.schema.json). O
 [contrato v1](bundle-v1.md) continua sendo produzido quando não há seleção de código.
 
 ## Manifesto e arquivos
@@ -61,7 +60,7 @@ projetos com clean/smudge podem ter resultado diferente do Git habitual. Submód
 não atômico: rechecagem detecta mudanças comuns de HEAD/conteúdo durante captura,
 mas não garante proteção contra modificação concorrente maliciosa. Sem timeout.
 
-## Recebimento (contrato; comando ainda pendente)
+## Recebimento
 
 O receptor deve recusar versões desconhecidas, payloads ausentes/duplicados,
 caminhos inseguros/symlinks/colisões e hashes divergentes. Conferir que changes
@@ -72,6 +71,6 @@ Antes de aplicar, confirmar commit base e hashes/modos anteriores em checkout
 separado, conferir conflitos e garantir que destinos de adição não existem.
 Não executar filtros, hooks ou comandos históricos. Verificar resultado pelos
 hashes e modos declarados. Nenhuma aplicação é efeito de abrir/exportar pacote.
-O Memory Pier ainda não automatiza essas verificações ou aplicação.
+O Memory Pier implementa verify e apply --check/--write com checkout limpo e base exata; leia [limites e recuperação](receive-apply.md).
 
 Decisões e limites no [ADR 0008](../decisions/0008-selected-code-and-bundle-v2.md).

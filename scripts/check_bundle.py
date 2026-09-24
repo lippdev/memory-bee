@@ -36,6 +36,8 @@ def check_bundle(path, excluded_lines, code_state="unknown"):
     assert manifest["code_state"] == code_state
     invalid = dict(manifest, format_version=99)
     assert not validator.is_valid(invalid)
+    verified = subprocess.run([str(BINARY), "verify", str(path)], check=True, capture_output=True, text=True)
+    assert json.loads(verified.stdout)["valid"]
 
 
 with tempfile.TemporaryDirectory(prefix="memory-pier-schema-") as directory:
@@ -85,6 +87,13 @@ with tempfile.TemporaryDirectory(prefix="memory-pier-schema-") as directory:
         assert change["result_sha256"] == hashlib.sha256((repo / change["path"]).read_bytes()).hexdigest()
         if change["kind"] == "add":
             assert (output / change["payload"]).read_bytes() == (repo / change["path"]).read_bytes()
+    target = Path(directory) / "receiver"
+    git("clone", "--no-hardlinks", str(repo), str(target))
+    for operation in ("--check", "--write"):
+        result = subprocess.run([str(BINARY), "apply", str(output), "--project", str(target), operation], check=True, capture_output=True, text=True)
+        assert json.loads(result.stdout)["written"] == (operation == "--write")
+    for change in manifest["changes"]:
+        assert hashlib.sha256((target / change["path"]).read_bytes()).hexdigest() == change["result_sha256"]
     invalid = copy.deepcopy(manifest)
     invalid["changes"][0]["path"] = "../escape"
     assert not validator.is_valid(invalid)

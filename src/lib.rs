@@ -4,4 +4,5 @@ pub mod changes;
 pub mod claude;
 pub mod discovery;
 pub mod git;
+pub mod receive;
 pub mod selection;

@@ -133,6 +133,6 @@ Veja o [ADR 0007](../decisions/0007-explicit-git-reference.md).
 Com `--project`, repetir `--include-path <arquivo-relativo-à-raiz-Git>` para incluir
 mudanças textuais e novos arquivos. Isso produz manifesto v2, changes.patch e/ou
 files/, conforme [contrato de código selecionado](bundle-v2.md). Sem seletores,
-permanece v1. Não há aplicação automática. Omissões de código também dão saída 2;
+permanece v1. Exportar não aplica código; aplicação separada em [verify/apply](receive-apply.md). Omissões de código também dão saída 2;
 achados de segredos dão saída 3, com `selection` apontando ao índice de selected_paths.
 Os itens 10–15 do [roteiro manual](../MANUAL_TESTS.md) demonstram o fluxo sintético.

@@ -151,7 +151,7 @@ git clone --no-hardlinks "$mp_case/source" "$mp_case/receiver"
 
 Esperado: saída 0, changes.patch e files/0001.txt, ambos com hashes no manifesto.
 A entrada `add` mapeia files/0001.txt para new.txt; conferir antes de copiar.
-Verificação/aplicação abaixo é manual via Git, não funcionalidade do Memory Pier.
+Verificação/aplicação abaixo é alternativa manual via Git. Para o fluxo do Memory Pier, veja os itens 17–22.
 Execute apenas no receiver sintético, depois de revisar conteúdo e manifesto:
 
 ```sh
@@ -225,6 +225,92 @@ informe número, sistema, commit do Memory Pier, resultado e mensagem de erro
 | 13–15: omissões, segredos e modos | Pendente | — |
 | 16: submódulos | Pendente | — |
 
-Aplicador do Memory Pier, checagem automática da base no recebimento e proteção
-contra conflitos no destino ainda serão implementados. Não estão aprovados por
-esta exportação nem pelos testes automatizados de reconstrução sintética.
+Aplicador e checagens automáticas foram implementados posteriormente; os itens 17–22 abaixo ainda precisam de validação manual. Testes automatizados não aprovam esses ensaios humanos.
+
+## 17. Verificar pacote recebido (pendente)
+
+Use o bundle sintético dos itens 10–12, preservado fora do checkout de destino:
+
+```sh
+cargo build --locked
+"$mp_root/target/debug/memory-pier" verify "$mp_case/bundle"
+```
+
+Esperado: saída 0, valid true, format_version 2, duas mudanças, contagens de
+omissões/avisos preservadas. Nada no pacote ou projeto é alterado. Repita com o
+pacote de contexto do item 5: versão 1, zero mudanças. Valid não autentica origem
+nem afirma ausência de segredos.
+
+## 18. Conferir checkout sem escrever (pendente)
+
+Crie OUTRO checkout, pois receiver do item 12 já foi modificado:
+
+```sh
+git clone --no-hardlinks "$mp_case/source" "$mp_case/receiver-app"
+"$mp_root/target/debug/memory-pier" apply "$mp_case/bundle" --project "$mp_case/receiver-app" --check
+git -C "$mp_case/receiver-app" status --porcelain
+cat "$mp_case/receiver-app/tracked.txt"
+```
+
+Esperado: checked true, written false, changes 2, saída 0. Status vazio, tracked.txt
+continua base e new.txt não existe. Rodar apply sem --check/--write deve retornar 64.
+
+## 19. Aplicar explicitamente e conferir resultado (pendente)
+
+```sh
+"$mp_root/target/debug/memory-pier" apply "$mp_case/bundle" --project "$mp_case/receiver-app" --write
+cat "$mp_case/receiver-app/tracked.txt"
+cat "$mp_case/receiver-app/new.txt"
+cat "$mp_case/receiver-app/unselected.txt"
+git -C "$mp_case/receiver-app" status --short
+git -C "$mp_case/receiver-app" diff --cached --exit-code
+```
+
+Esperado: saída 0, written true; textos selected change / new file / original.
+Tracked modificado e new não rastreado; índice sem mudanças, nenhum commit/push.
+Não comparar source após item 15, que já pode ter sido alterado: referência é o
+bundle gravado no item 12. Repetir --write deve recusar checkout alterado e preservar
+resultado. Pasta .memory-pier-apply-* não deve permanecer após sucesso.
+
+## 20. Detectar adulteração antes da aplicação (pendente)
+
+```sh
+cp -R "$mp_case/bundle" "$mp_case/tampered"
+printf 'changed\n' >> "$mp_case/tampered/HANDOFF.md"
+"$mp_root/target/debug/memory-pier" verify "$mp_case/tampered"
+```
+
+Esperado: saída 1 e payload hash mismatch. A mesma pasta em apply deve ser recusada
+antes de qualquer escrita. Em outras cópias, testar manifesto com versão 99,
+caminho ../escape e payload ausente: todos recusados. Não alterar o bundle original.
+
+## 21. Base divergente e trabalho local preservados (pendente)
+
+```sh
+git clone --no-hardlinks "$mp_case/source" "$mp_case/receiver-blocked"
+printf 'my local work\n' > "$mp_case/receiver-blocked/tracked.txt"
+"$mp_root/target/debug/memory-pier" apply "$mp_case/bundle" --project "$mp_case/receiver-blocked" --write
+cat "$mp_case/receiver-blocked/tracked.txt"
+```
+
+Esperado: saída 1, conteúdo local preservado, nenhum new.txt criado. Em um checkout
+sintético adicional, crie commit diferente da base e tente --check: deve recusar
+por commit divergente. Não usar reset/clean para contornar a recusa num projeto real.
+
+## 22. Colisão ignorada, symlink e recuperação (pendente)
+
+Em novo clone sintético limpo, configure .git/info/exclude para ignorar new.txt e
+crie new.txt com conteúdo próprio. apply --check deve recusar colisão mesmo com
+Git status limpo; conteúdo deve permanecer intacto. No Unix, testar também destino
+novo como symlink para arquivo descartável externo: deve recusar sem alterar alvo.
+
+Para qualquer erro real de gravação/interrupção, conferir a mensagem antes de
+repetir: uma falha com rollback informa originais restaurados; recuperação incompleta
+informa pasta .memory-pier-apply-* com recovery.json e old-N. Preservar cópia dos
+backups e conferir destinos manualmente. Não provocar interrupções em projetos reais.
+Ensaio de interrupção abrupta/falha elétrica NÃO foi validado automaticamente.
+
+| Itens novos | Estado | Evidência manual |
+|---|---|---|
+| 17–19: verify/check/write | Pendente | — |
+| 20–22: adulteração, base, colisões e recuperação | Pendente | — |
