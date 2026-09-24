@@ -255,3 +255,10 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - PR não criado e CI remoto não executado para esta entrega. Não declarar merge.
   Próxima ação operacional: publicar a branch, abrir PR, conferir CI macOS/Linux
   e integrar por squash antes de iniciar a próxima implementação.
+
+### Retomada da publicação
+
+- Após novo pedido do mantenedor, push HTTPS concluído com sucesso. Os erros
+  anteriores ficaram resolvidos, sem alteração de configuração SSH.
+- Publicação e verificações remotas vinculadas ao [PR #8](https://github.com/lippdev/memory-pier/pull/8).
+  Nenhuma mudança de implementação nesta retomada; roteiro manual 10–16 preservado.
