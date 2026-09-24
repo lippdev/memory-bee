@@ -307,3 +307,4 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - Validação local: 95 testes Rust (14 novos), build, fmt e Clippy aprovados;
   validação Python dos pacotes v1/v2 e hashes passou. Links Markdown, JS do roadmap,
   numeração 1–26 e sintaxe shell do roteiro manual conferidos; git diff --check limpo.
+- CI remoto e integração vinculados ao [PR #10](https://github.com/lippdev/memory-pier/pull/10).
