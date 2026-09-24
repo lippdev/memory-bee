@@ -5,7 +5,7 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção e leitor Claude Code por arquivo explícito implementados; TUI, exportação e contas pendentes.
+- CLI de inspeção, descoberta por projeto e seleção de ramo implementadas; TUI, exportação e contas pendentes.
 - Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
@@ -13,12 +13,14 @@
 
 ## Próxima tarefa de produto
 
-**Etapa 02 — Descoberta e seleção de sessões por projeto.** Usar o leitor existente
-para pesquisar uma raiz configurável, conferir metadados do projeto e listar
-sessões sem depender apenas do nome codificado do diretório. Cobrir erros de
-acesso e subagentes com fixtures sintéticas. Definir seleção explícita de ramo
-antes de exportar ou afirmar continuidade; certificar compatibilidade com uma
-amostra controlada sem versionar conversas reais. Não iniciar etapa 03 ainda.
+**Etapa 02 — Validação controlada de compatibilidade Claude Code.** Preparar uma
+amostra descartável de sessão real, com tarefa e conteúdo sintéticos, registrando
+versão e ambiente sem versionar transcrições reais. Comparar layout, `cwd`, UUIDs,
+parentesco, ferramentas e compactação com os leitores; documentar divergências e
+cobrir ajustes com fixtures reescritas sintéticas. Não presumir compatibilidade por
+causa dos testes atuais. Definir o procedimento antes de iniciar sessões que façam
+chamadas a modelos; o leitor e a descoberta continuam totalmente offline.
+Não iniciar etapa 03 ainda.
 
 Referências: [decisão técnica atual](decisions/0004-rust-stack.md), [pesquisa de integrações](research/integrations.md), [contrato v1](specs/bundle-v1.md) e [cenário M1](research/m1-scenario.md).
 
@@ -32,12 +34,21 @@ proveniência; recuperar prefixos/linhas válidas com diagnósticos; distinguir 
 ramos e checkpoints; impor limites; não escrever na origem nem chamar modelos.
 Descoberta por projeto permanece para a próxima entrega da etapa 02.
 
+## Recorte entregue — descoberta e seleção
+
+Escopo: listar JSONL sob raiz explícita por `cwd` observado; manter subagentes
+separados; diagnosticar arquivos não classificáveis, erros e limites. Selecionar
+ponta por UUID com cadeia de parentesco verificável, preservando diagnósticos e
+registrando exclusões. Aceite: fixtures sintéticas de projetos homônimos,
+subagentes, ramos válidos/ambíguos, falhas e limites; CLI e checks canônicos.
+Compatibilidade real será uma entrega controlada separada; não iniciar exportador.
+
 ## Status do roadmap
 
 | Etapa | Prioridade | Status | Evidência / pendência |
 |---|---|---|---|
 | 01 Pesquisa e contrato | P0 | Concluído | ADR 0003 substituído pelo ADR 0004, matriz de investigação, contrato v1, fixtures e cenário M1; compatibilidade real do leitor ainda não certificada. |
-| 02 Leitor de sessão | P0 | Em andamento | Leitor por arquivo, CLI e testes implementados; descoberta, seleção de ramo e compatibilidade real pendentes. |
+| 02 Leitor de sessão | P0 | Em andamento | Leitor, descoberta e seleção de ramo testados com fixtures; validação controlada de compatibilidade real pendente. |
 | 03 Exportação revisável | P0 | Pendente | Depende de 02. |
 | 04 Estado do código | P0 | Pendente | Depende de 03; fecha M1. |
 | 05 Troca de agente | P1 | Pendente | Depende de 03–04. |
@@ -113,3 +124,25 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   exportação ou TUI. Snapshot não atômico, limites de 64 MiB/arquivo e 1 MiB/linha.
   Uso, saída e diagnósticos em [contrato do leitor](specs/claude-reader.md).
 - Próximo passo: descoberta por projeto e seleção explícita, conforme tarefa acima.
+
+## Etapa 02 — Descoberta e seleção de ramo
+
+- Entrega concluída neste recorte: `sessions --root ... --project ...` lista arquivos
+  por `cwd` observado; `inspect ... --leaf <uuid>` seleciona ancestrais de uma ponta
+  verificável. Subagentes permanecem separados. ADR 0005 registra as decisões.
+- Busca limitada e somente leitura; erros, metadados ausentes/conflitantes, symlinks
+  e limites geram diagnósticos. Seleção mantém perdas originais e conta exclusões;
+  recusa parentesco ausente/duplicado/futuro e mistura de sessão/agente.
+- Validação local macOS arm64: 34 testes (`cargo test --locked`), Clippy sem warnings,
+  build, formatação, links Markdown, sintaxe JS do roadmap e `git diff --check`.
+  Demonstração de descoberta e seleção executada na árvore sintética versionada.
+  CI remoto e integração vinculados ao [PR #5](https://github.com/lippdev/memory-pier/pull/5).
+- Revisão: autorrevisão de limites, identidade, omissões, caminhos e falhas. Corrigida
+  consulta quadrática de diagnósticos por registro e sinalização de arquivos
+  parciais fora do projeto pesquisado; testes ajustados para caminhos
+  canonicalizados do macOS e ordenação por componentes. Sem revisão independente.
+- Limitações: formato real não certificado, comparação lexical de projetos,
+  layout de busca delimitado e árvore sem snapshot atômico. Seleção exige cadeia
+  verificável e pode recusar sessões compactadas. Nenhuma conversa pessoal lida.
+- Próximo passo: validação controlada de compatibilidade descrita acima; etapa 02
+  permanece em andamento e exportação continua pendente.
