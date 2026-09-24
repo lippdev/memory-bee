@@ -18,9 +18,13 @@ Trabalhamos com etapas de equipe, preservando a autoria real: planejamento, impl
 
 ## Ciclo de uma mudança
 
+O [ROADMAP.md](ROADMAP.md) define escopo e aceite; [docs/EXECUTION.md](docs/EXECUTION.md) registra progresso e retomada. Leia ambos antes de iniciar trabalho de produto. Mantenha o roadmap como referência canônica e sinalize divergências na apresentação HTML.
+
 ### Planejamento
 
 Registrar problema, escopo e critérios de aceite em uma issue ou no corpo do PR. Enquanto não houver remoto, usar um documento local versionado para mudanças substanciais. Alterações pequenas não precisam de documentação burocrática. Decisões duradouras e suas razões vão em `docs/decisions/`.
+
+Associar cada entrega à etapa do roadmap quando aplicável. O registro pode ficar em `docs/EXECUTION.md` enquanto não houver issue ou PR. Não avançar para uma etapa dependente com critérios essenciais pendentes sem registrar uma revisão explícita do plano.
 
 ### Implementação
 
@@ -35,6 +39,8 @@ Revisar o diff final, os critérios de aceite, a compatibilidade e o tratamento 
 Executar verificações proporcionais à mudança e registrar comandos, resultados e limitações. Para documentação, conferir links locais, consistência e diff; para comportamento, testar resultados observáveis e casos de falha relevantes. Quando a stack existir, definir os comandos canônicos e automatizá-los no CI.
 
 Integrar apenas quando os critérios de aceite estiverem atendidos, não houver achados bloqueantes e as verificações aplicáveis passarem. Não contornar falhas de CI para concluir um PR. Distinguir claramente verificações executadas de verificações indisponíveis.
+
+Ao terminar, atualizar `docs/EXECUTION.md` com resultado, evidência de validação, tipo de revisão, limitações e próximo passo. Status permitidos: pendente, em andamento, bloqueado e concluído. Um bloqueio deve indicar o que falta e como destravá-lo; a conclusão exige evidência dos critérios de aceite.
 
 ## Registro do PR
 

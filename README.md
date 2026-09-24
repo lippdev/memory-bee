@@ -1,12 +1,14 @@
-# Memory Share
+# Memory Pier
 
 Continue um trabalho de programação em outro agente ou entregue o contexto a outra pessoa, sem depender de uma nova resposta da IA de origem.
 
 ## Proposta
 
-Memory Share será uma ferramenta de terminal independente de IDE. Seu núcleo lê registros disponíveis de sessões, organiza um pacote local e prepara a retomada. Skills e plugins poderão facilitar seu uso, mas não serão necessários para exportar.
+Memory Pier será uma ferramenta de terminal independente de IDE. Seu núcleo lê registros disponíveis de sessões, organiza um pacote local e prepara a retomada. Skills e plugins poderão facilitar seu uso, mas não serão necessários para exportar.
 
-O destinatário deve conseguir usar o pacote sem instalar Memory Share: um Markdown legível será a porta de entrada, acompanhado do histórico selecionado e das referências necessárias.
+A visão inclui uma dashboard em terminal para sessões, uso disponível e perfis de contas, conforme suporte de cada agente. O núcleo de exportação vem primeiro; cotas e autenticação dependem de pesquisa técnica.
+
+O destinatário deve conseguir usar o pacote sem instalar Memory Pier: um Markdown legível será a porta de entrada, acompanhado do histórico selecionado e das referências necessárias.
 
 ## Primeiro marco
 
@@ -22,6 +24,10 @@ Planejamento inicial; ainda não há CLI implementada. Exemplos de comandos disc
 
 ## Desenvolvimento
 
+- Comece por [AGENTS.md](AGENTS.md), mesmo usando uma ferramenta que não carregue esse arquivo automaticamente.
+- [Roadmap canônico em Markdown](ROADMAP.md)
+- [Estado de execução e próxima tarefa](docs/EXECUTION.md)
+- [Plano visual: prioridades e ordem de implementação](docs/roadmap/index.html)
 - [Fluxo de contribuição](CONTRIBUTING.md)
 - [Instruções para agentes](AGENTS.md)
 - [Decisões de arquitetura e processo](docs/decisions/0001-development-workflow.md)
