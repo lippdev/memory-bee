@@ -12,7 +12,7 @@ O destinatário deve conseguir usar o pacote sem instalar Memory Pier: um Markdo
 
 ## Primeiro marco
 
-Exportar uma sessão de um agente para um pacote que outro desenvolvedor consiga usar no mesmo projeto. O núcleo será em Go, com primeiro leitor para Claude Code e validação inicial em macOS arm64. Veja a [decisão técnica](docs/decisions/0003-core-stack.md).
+Exportar uma sessão de um agente para um pacote que outro desenvolvedor consiga usar no mesmo projeto. O núcleo será em Rust, com primeiro leitor para Claude Code e validação inicial em macOS arm64. Veja a [decisão técnica](docs/decisions/0004-rust-stack.md).
 
 O pacote deve identificar o pedido original, preservar a proveniência das mensagens, referenciar repositório/branch/commit e informar omissões. Alterações locais selecionadas poderão acompanhar o contexto; a exportação não deve publicar código automaticamente.
 
