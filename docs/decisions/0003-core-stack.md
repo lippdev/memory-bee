@@ -1,6 +1,6 @@
 # 0003 — Núcleo em Go e primeiro adaptador Claude Code
 
-Status: decidido na etapa 01, em 2026-09-24, sob a autonomia de arquitetura acordada.
+Status: substituído pelo [ADR 0004 — Rust](0004-rust-stack.md), por escolha explícita do mantenedor em 2026-09-24. O conteúdo abaixo preserva a decisão histórica; não orienta a implementação atual.
 
 ## Comparação e decisão
 

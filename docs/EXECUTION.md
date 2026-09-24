@@ -6,24 +6,24 @@
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
 - Não existe CLI, TUI, leitor de sessões ou integração de contas implementada.
-- Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Go, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
+- Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Não há comandos de build, lint ou testes de aplicação definidos.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
 - Documentação inicial integrada na `main` pelo PR #1.
 
 ## Próxima tarefa de produto
 
-**Etapa 02 — Leitor Claude Code.** Criar módulo Go com versão fixada, CLI mínima de inspeção de arquivo e parser de somente leitura, usando as [fixtures sintéticas](../testdata/claude/README.md). Adicionar casos de ferramentas, ramos, compaction e erros; depois implementar descoberta por projeto. Configurar CI para testes do leitor, sem anunciar exportação funcional antes da etapa 03.
+**Etapa 02 — Leitor Claude Code.** Criar projeto Cargo com toolchain Rust fixada, CLI mínima de inspeção de arquivo e parser de somente leitura, usando as [fixtures sintéticas](../testdata/claude/README.md). Adicionar casos de ferramentas, ramos, compaction e erros; depois implementar descoberta por projeto. Configurar CI para testes do leitor, sem anunciar exportação funcional antes da etapa 03.
 
-Referências: [decisão técnica](decisions/0003-core-stack.md), [pesquisa de integrações](research/integrations.md), [contrato v1](specs/bundle-v1.md) e [cenário M1](research/m1-scenario.md).
+Referências: [decisão técnica atual](decisions/0004-rust-stack.md), [pesquisa de integrações](research/integrations.md), [contrato v1](specs/bundle-v1.md) e [cenário M1](research/m1-scenario.md).
 
-O repositório de consulta de consumo continua aguardando envio do mantenedor; não bloqueia M1. Go não estava instalado no PATH na avaliação; preparar toolchain antes de implementar.
+O repositório de consulta de consumo continua aguardando envio do mantenedor; não bloqueia M1. Verificar e preparar a toolchain Rust antes de implementar.
 
 ## Status do roadmap
 
 | Etapa | Prioridade | Status | Evidência / pendência |
 |---|---|---|---|
-| 01 Pesquisa e contrato | P0 | Concluído | ADR 0003, matriz de investigação, contrato v1, fixtures e cenário M1; compatibilidade real do leitor ainda não certificada. |
+| 01 Pesquisa e contrato | P0 | Concluído | ADR 0003 substituído pelo ADR 0004, matriz de investigação, contrato v1, fixtures e cenário M1; compatibilidade real do leitor ainda não certificada. |
 | 02 Leitor de sessão | P0 | Pendente | Depende de 01. |
 | 03 Exportação revisável | P0 | Pendente | Depende de 02. |
 | 04 Estado do código | P0 | Pendente | Depende de 03; fecha M1. |
@@ -65,9 +65,16 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 
 ## Etapa 01 — Fundação técnica
 
-- Decisão: Go para núcleo, macOS arm64 primeiro, Claude Code como primeiro leitor; TUI futura com Bubble Tea.
+- Decisão histórica (substituída pelo ADR 0004): Go para núcleo, macOS arm64 primeiro, Claude Code como primeiro leitor; TUI futura com Bubble Tea.
 - Contrato v1 em Markdown e JSON Schema, exemplo somente contexto e três fixtures sintéticas.
 - Validação: schema e exemplo, hashes, rejeição de versão inválida, fixtures válidas/truncadas/vazias, links locais e diff.
 - Revisão: autorrevisão. Sem leitura de chats reais, sem chamadas a modelos, sem exportador ou teste fim a fim ainda.
 - A versão instalada do Claude Code é 2.1.281; isso não certifica compatibilidade de parsing.
 - Próximo passo: etapa 02, descrita acima.
+
+## Escolha de Rust
+
+- Mantenedor escolheu Rust explicitamente; ADR 0004 substitui a decisão de Go sem apagar seu histórico.
+- README, AGENTS, roadmap e HTML alinhados. Contrato e fixtures preservados.
+- Validação: links locais, sintaxe JS do HTML e git diff --check. Autorrevisão documental.
+- Nenhum build ou teste Rust executado: projeto Cargo ainda será criado na etapa 02.
