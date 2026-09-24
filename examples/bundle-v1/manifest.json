@@ -1,0 +1,35 @@
+{
+  "format_version": 1,
+  "created_at": "2026-09-24T12:05:00Z",
+  "source": {
+    "agent": "claude-code",
+    "version": null,
+    "session_id": "synthetic-task-sort"
+  },
+  "project": {
+    "remote": null,
+    "branch": null,
+    "base_commit": null,
+    "dirty": null
+  },
+  "code_state": "unknown",
+  "files": [
+    {
+      "path": "HANDOFF.md",
+      "sha256": "d11301b979e3c2e941b9c796e4f60414e45eb12e1b25fcc7b20aaa5fab720edf",
+      "purpose": "entrypoint"
+    },
+    {
+      "path": "history.jsonl",
+      "sha256": "b973be40fa433582f504690e3c61948392d9cb42df55021624cc5e3722c7dbb8",
+      "purpose": "history"
+    }
+  ],
+  "omissions": [
+    "Exemplo sem código; estado do repositório não verificado."
+  ],
+  "warnings": [
+    "Fixture sintética; compatibilidade de versão não certificada."
+  ],
+  "redaction": "reviewed"
+}

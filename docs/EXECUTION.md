@@ -6,28 +6,24 @@
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
 - Não existe CLI, TUI, leitor de sessões ou integração de contas implementada.
-- Nome escolhido: Memory Pier (`memory-pier`). Stack, primeiro SO e licença ainda não foram escolhidos.
+- Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Go, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Não há comandos de build, lint ou testes de aplicação definidos.
-- Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), criado inicialmente como privado.
-- Publicação inicial: documentação e identidade serão integradas por PR; conferir o estado de merge no GitHub antes de retomar.
+- Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
+- Documentação inicial integrada na `main` pelo PR #1.
 
 ## Próxima tarefa de produto
 
-**Etapa 01 — Pesquisa e contrato do produto.** Quando solicitado a iniciar implementação, começar por uma avaliação curta de stack e do primeiro leitor, com os seguintes resultados:
+**Etapa 02 — Leitor Claude Code.** Criar módulo Go com versão fixada, CLI mínima de inspeção de arquivo e parser de somente leitura, usando as [fixtures sintéticas](../testdata/claude/README.md). Adicionar casos de ferramentas, ramos, compaction e erros; depois implementar descoberta por projeto. Configurar CI para testes do leitor, sem anunciar exportação funcional antes da etapa 03.
 
-1. Comparar opções de stack quanto a distribuição, TUI, leitura de registros e armazenamento de credenciais. Registrar recomendação e tradeoffs em ADR.
-2. Validar o formato de sessões da versão escolhida de Claude Code ou justificar outra primeira origem, usando fixtures sintéticas.
-3. Propor o contrato versionado do pacote: Markdown de entrada, manifesto, histórico e referência ao código, com omissões explícitas.
-4. Definir uma tarefa sintética para demonstrar M1 em outro checkout.
-5. Mapear incertezas de uso e contas separadamente; elas não bloqueiam o leitor nem a exportação.
+Referências: [decisão técnica](decisions/0003-core-stack.md), [pesquisa de integrações](research/integrations.md), [contrato v1](specs/bundle-v1.md) e [cenário M1](research/m1-scenario.md).
 
-O repositório de referência sobre consumo de contas ainda aguarda envio do mantenedor. Nenhuma stack ou API de autenticação deve ser tratada como escolhida apenas por ter aparecido em um exemplo.
+O repositório de consulta de consumo continua aguardando envio do mantenedor; não bloqueia M1. Go não estava instalado no PATH na avaliação; preparar toolchain antes de implementar.
 
 ## Status do roadmap
 
 | Etapa | Prioridade | Status | Evidência / pendência |
 |---|---|---|---|
-| 01 Pesquisa e contrato | P0 | Pendente | Referências consultadas; avaliação técnica e contratos ainda ausentes. |
+| 01 Pesquisa e contrato | P0 | Concluído | ADR 0003, matriz de investigação, contrato v1, fixtures e cenário M1; compatibilidade real do leitor ainda não certificada. |
 | 02 Leitor de sessão | P0 | Pendente | Depende de 01. |
 | 03 Exportação revisável | P0 | Pendente | Depende de 02. |
 | 04 Estado do código | P0 | Pendente | Depende de 03; fecha M1. |
@@ -66,3 +62,12 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - Nome atualizado no README, roadmap, instruções e HTML; decisão em `docs/decisions/0002-product-name.md`.
 - Revisão: autorrevisão documental. Validação: links locais e `git diff --check`.
 - Nenhuma funcionalidade de produto ou release de aplicação nesta entrega.
+
+## Etapa 01 — Fundação técnica
+
+- Decisão: Go para núcleo, macOS arm64 primeiro, Claude Code como primeiro leitor; TUI futura com Bubble Tea.
+- Contrato v1 em Markdown e JSON Schema, exemplo somente contexto e três fixtures sintéticas.
+- Validação: schema e exemplo, hashes, rejeição de versão inválida, fixtures válidas/truncadas/vazias, links locais e diff.
+- Revisão: autorrevisão. Sem leitura de chats reais, sem chamadas a modelos, sem exportador ou teste fim a fim ainda.
+- A versão instalada do Claude Code é 2.1.281; isso não certifica compatibilidade de parsing.
+- Próximo passo: etapa 02, descrita acima.

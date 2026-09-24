@@ -12,7 +12,7 @@ O destinatário deve conseguir usar o pacote sem instalar Memory Pier: um Markdo
 
 ## Primeiro marco
 
-Exportar uma sessão de um agente para um pacote que outro desenvolvedor consiga usar no mesmo projeto. A primeira origem e a stack ainda serão escolhidas após uma avaliação técnica curta.
+Exportar uma sessão de um agente para um pacote que outro desenvolvedor consiga usar no mesmo projeto. O núcleo será em Go, com primeiro leitor para Claude Code e validação inicial em macOS arm64. Veja a [decisão técnica](docs/decisions/0003-core-stack.md).
 
 O pacote deve identificar o pedido original, preservar a proveniência das mensagens, referenciar repositório/branch/commit e informar omissões. Alterações locais selecionadas poderão acompanhar o contexto; a exportação não deve publicar código automaticamente.
 
@@ -20,7 +20,7 @@ A exportação básica funciona sem chamadas a modelos. Sínteses semânticas de
 
 ## Estado
 
-Planejamento inicial; ainda não há CLI implementada. Exemplos de comandos discutidos são propostas, não interfaces disponíveis.
+Etapa 01 concluída: stack e contrato inicial definidos, com exemplos sintéticos. Ainda não há CLI implementada. Exemplos de comandos discutidos são propostas, não interfaces disponíveis.
 
 ## Desenvolvimento
 
