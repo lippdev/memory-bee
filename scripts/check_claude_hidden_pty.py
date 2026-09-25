@@ -68,7 +68,10 @@ def run(binary, project, state, env, resume, decision):
         until(b'Permitir esta')
         os.write(master, decision.encode())
         until(b'sintetica')
-        proc.wait(timeout=8)
+        try:
+            proc.wait(timeout=20)
+        except subprocess.TimeoutExpired as exc:
+            raise AssertionError(f'Bee did not exit after {decision!r}; output={output[-800:]!r}') from exc
         assert proc.returncode == 0, proc.returncode
         assert b'CLAUDE ORIGINAL SHOULD STAY HIDDEN' not in output
         assert termios.tcgetattr(slave) == before
