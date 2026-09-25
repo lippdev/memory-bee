@@ -621,3 +621,4 @@ escopo da entrega atual nem a próxima tarefa aprovada.
 - Próximo passo: renderizador Rust conforme plano visual; esta entrega não inicia
   essa implementação. O artifact externo é temporário; o HTML versionado mantém
   a referência local.
+- Publicação e verificações remotas vinculadas ao [PR #20](https://github.com/lippdev/memory-bee/pull/20).
