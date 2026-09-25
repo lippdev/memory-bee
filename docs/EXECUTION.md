@@ -446,3 +446,4 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   cobrir; nenhuma verificação de marca ou domínio para o nome.
 - Próximo passo: PR de renomeação para `memory-bee` (inventário no ADR 0015) e,
   depois, o primeiro recorte do dashboard em Rust seguindo a cena aprovada.
+- Publicação e verificações remotas vinculadas ao [PR #15](https://github.com/lippdev/memory-pier/pull/15).
