@@ -1,15 +1,39 @@
-# Workspace unificado — demonstração experimental
+# Workspace unificado — demonstração e Claude local experimental
 
-Contrato do primeiro recorte do [ADR 0018](../decisions/0018-unified-workspace.md).
-Não é programação real. Claude/Codex, ferramentas, mudanças e permissões são
-simulados, sem processos de provedores, rede ou edição do projeto.
+Contrato dos primeiros recortes do [ADR 0018](../decisions/0018-unified-workspace.md).
+`workspace --demo` não é programação real: Claude/Codex, ferramentas, mudanças e
+permissões são simulados. `workspace --claude` inicia o Claude Code instalado.
 
 Para a versão real, a TUI deverá hospedar os CLIs oficiais como processos locais.
 O usuário autentica cada um pelo seu próprio fluxo. A Memory Bee não lê nem
 armazena tokens; associa sessões, eventos e exportações ao processo e ao perfil
 selecionado. App Server é o transporte candidato para Codex; para Claude, testar
 o binário original em PTY e verificar se a CLI permite uma conversa própria com
-permissões fiéis. O transporte Claude ainda não está decidido nem implementado.
+permissões fiéis. O PTY é o primeiro transporte Claude implementado; ainda não
+fornece eventos estruturados nem conversa renderizada pela Memory Bee.
+
+## Claude local experimental
+
+```sh
+memory-bee workspace --claude --project . --state /tmp/bee-claude-state
+memory-bee workspace --claude --project . --state /tmp/bee-claude-state --resume
+```
+
+Exige `claude` no PATH, TTY interativo, projeto existente e pasta de estado
+privada (pai existente). Inicia o binário original com `--session-id <uuid>` ou
+`--resume <uuid>`, sem copiar tokens. O login, a conversa, as ferramentas e as
+decisões de permissão pertencem ao Claude Code. A Memory Bee encaminha teclado,
+colagem e resize ao PTY, desenha sua saída em moldura própria e restaura o terminal
+ao sair. `Ctrl+G` abre ajuda Bee; `Ctrl+C` vai ao Claude; `/exit` encerra a sessão.
+
+`claude-native.json` guarda projeto canônico, IDs e códigos de saída (até 128
+sessões, 64 KiB), sem transcrição. A pasta é 0700 e arquivos são 0600 em Unix;
+`claude-native.lock` impede segundo escritor. Após crash, verificar que não há
+processo ativo antes de remover a trava antiga. `--resume` usa o último ID desta
+pasta; não reenvia prompt. A sessão nativa pode não existir quando se sai antes
+de enviar uma mensagem. Exportação/revisão de memória, isolamento de perfis,
+decisões em UI própria e integração Codex estão pendentes. O modo não comprova
+conversa/permissões reais por si só; ver [roteiro manual](../MANUAL_TESTS.md).
 
 ```sh
 cargo run --locked -- workspace --demo --project . --state /tmp/bee-demo-state
@@ -20,8 +44,9 @@ O pai de `--state` precisa existir. Pasta nova é criada 0700, arquivos 0600;
 pasta existente precisa ser privada. `--once` usa memória, não aceita `--state`,
 não grava nem lê sessões existentes. `--width/--height` (1–500) só com `--once`.
 `--agent claude|codex` escolhe apenas a primeira sessão de um estado novo.
-`--theme dark|light`, `--no-color` e `NO_COLOR` controlam aparência. Flags repetidas,
-modo real, projeto ausente e uso interativo sem TTY retornam 64; falha de I/O, 1.
+`--theme dark|light`, `--no-color` e `NO_COLOR` controlam aparência. Na demo,
+flags repetidas, projeto ausente e uso interativo sem TTY retornam 64; falha de
+I/O, 1. Modo sem `--demo` nem `--claude` segue recusado.
 Projeto é normalizado para caminho absoluto e precisa ser diretório existente.
 
 ## Experiência e teclas
@@ -92,5 +117,7 @@ pelo usuário continua sendo dado real local, mesmo numa simulação: não versi
 proveniência, exclusões e telas estreitas. `scripts/check_workspace_pty.py` percorre
 colagem, decisão negada, exportação/schema/verify, resize, interrupção e restauração
 em PTY com projeto sintético. O [roteiro manual](../MANUAL_TESTS.md) mantém ensaios
-humanos separados. Adaptador Codex experimental é apenas protocolo não conectado;
-Claude real, contas, isolamento real, reinício nativo e lançamento conjunto pendentes.
+humanos separados. `scripts/check_claude_native_pty.py` usa CLI falsa para testar
+entrada, ID, retomada, estado privado e restauração do terminal. Adaptador Codex
+experimental é apenas protocolo não conectado; ensaio de conversa Claude real,
+contas, isolamento real, exportação nativa e lançamento conjunto pendentes.

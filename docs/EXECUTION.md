@@ -5,7 +5,7 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex e lançamento confirmado por token implementados, experimentais; dashboard de terminal (ratatui) com lista, detalhe, exportação de contexto/exclusões, aplicação e prompt/lançamento confirmado implementados; workspace unificado disponível apenas com simulação explícita (ADR 0018); cena animada, exportação de código pela TUI e contas reais pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex e lançamento confirmado por token implementados, experimentais; dashboard de terminal (ratatui) com lista, detalhe, exportação de contexto/exclusões, aplicação e prompt/lançamento confirmado implementados; workspace unificado com demo explícita e primeiro modo Claude local sobre CLI oficial/PTY, experimental (ADR 0018); cena animada, exportação nativa pela TUI e perfis reais pendentes.
 - Nome decidido: **Memory Bee** (`memory-bee`), com mascote abelha e colmeia dos projetos, conforme o [ADR 0015](decisions/0015-memory-bee-identity.md); crate, binário, pacotes e documentos renomeados para `memory-bee` (registros anteriores mantêm o nome da época). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto atual: [lippdev/memory-bee](https://github.com/lippdev/memory-bee), público.
@@ -28,25 +28,19 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Refinamento visual — próxima entrega local.** A orientação mais recente do
-mantenedor autoriza a frente visual em paralelo à prova dos harnesses. Referência
-HTML e [plano visual](specs/workspace-visual.md) concluídos; próximo recorte:
-renderizador Rust com abelha à direita do campo amarelo e estados por ação,
-seguido da conexão aos eventos da demo. Não iniciar esse porte na entrega
-restrita ao protótipo/plano. Exportação e troca de agente ainda precisam de
-animações próprias.
+**Claude nativo primeiro — próxima entrega de produto.** O mantenedor priorizou
+Claude antes de Codex. `workspace --claude` já hospeda a CLI original em PTY,
+com sessão nativa, entrada/saída interativa e retomada por ID; é experimental.
+Próximo: ensaio humano de conversa, edição, execução, permitir/negar, interrupção
+e retomada com assinatura existente; ligar histórico/exportação revisável e ações
+da Memory Bee à sessão Claude. O modo atual guarda apenas IDs, não a memória.
+Perfis reais, interface de conversa própria e Codex integrado permanecem pendentes.
+O lançamento da experiência completa ainda exige os dois agentes (ADR 0018).
 
-**TUI unificada — prova de integração com assinaturas.** A orientação de
-2026-09-25 substitui a prioridade anterior da cena animada: interface permanente
-Memory Bee, assinaturas existentes e lançamento real somente com Claude e Codex.
-Primeiro recorte `workspace --demo` implementado; não declarar programação real.
-Próximo: provar a hospedagem do CLI Claude original autenticado pelo próprio
-usuário e fazer prova controlada de ambos os processos (conversa, edição,
-execução, permissões, interrupção, retomada e dois perfis isolados). Protocolo
-Codex experimental existe, sem conexão à TUI nem
-validação real. Não copiar credenciais, não substituir assinatura por API
-paga e não lançar só um provedor. Ver ADR 0018 e contrato `specs/workspace.md`.
-Cena, exportação de código pela TUI e worktree na interface continuam pendentes.
+**Refinamento visual.** Referência HTML e [plano visual](specs/workspace-visual.md)
+concluídos; renderizador Rust, abelha por ação e animações de exportação/troca
+permanecem pendentes. O HTML apresenta o plano visual anterior à prioridade
+Claude primeiro; este registro e o roadmap Markdown prevalecem.
 
 A renomeação no código está feita (seção "Renomeação — memory-bee"). O GitHub
 já informa `lippdev/memory-bee`; a URL local antiga redireciona. Não foi feita
@@ -637,3 +631,25 @@ escopo da entrega atual nem a próxima tarefa aprovada.
   Autorrevisão; nenhuma revisão independente ou chamada a modelo nesta revisão.
 - Próximo: ensaio controlado com os CLIs oficiais em ambiente explícito, cobrindo
   conversa, eventos, permissões e interrupção antes de integrar à tela.
+
+## Claude Code local na TUI — primeiro recorte nativo
+
+- Escopo: `workspace --claude --project <dir> --state <pasta>` abre o Claude Code
+  instalado em PTY, usando autenticação e permissões da CLI original. A Memory
+  Bee encaminha entrada/colagem/resize e desenha a saída; `--resume` reutiliza o
+  último ID nativo. Estado separado guarda só IDs e códigos de saída, com pasta
+  privada e trava. Demo e dashboard anteriores continuam disponíveis.
+- Evidências: `cargo fmt --all -- --check`, `cargo clippy --locked --all-targets
+  -- -D warnings`, `cargo test --locked`, `cargo build --locked`,
+  `python3 scripts/check_claude_native_pty.py`, links relativos e
+  `git diff --check` passaram localmente. Teste sintético exercitou CLI falsa,
+  entrada, retomada, privacidade, recusa sem TTY e restauração. Ensaio controlado
+  iniciou e encerrou o Claude instalado com `/exit`, sem enviar prompt/modelo;
+  não comprova fluxo de conversa nem permissões. CI macOS/Linux configurado para
+  repetir o teste sintético.
+- Autorrevisão de escopo, armazenamento e fronteira de autenticação; sem revisão
+  independente. Ensaio manual 51 pendente. Não há ainda exportação integrada,
+  eventos estruturados, UI de conversa própria, perfis isolados nem Codex real.
+- Próximo: executar o roteiro 51 com conversa/permissões reais e vincular a sessão
+  Claude ao histórico/exportação revisável, mantendo origem e omissões explícitas.
+  Lançamento completo com ambos os agentes permanece pendente.

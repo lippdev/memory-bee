@@ -72,10 +72,22 @@ cargo run --locked -- workspace --demo --project . --state /tmp/bee-demo-state
 cargo run --locked -- workspace --demo --project . --once --no-color
 ```
 
-Contrato e teclas em [workspace](docs/specs/workspace.md). A direção aprovada usa
-os logins dos CLIs oficiais como processos locais, com lançamento real conjunto
-de Claude e Codex; integração real e isolamento continuam pendentes
-([ADR 0018](docs/decisions/0018-unified-workspace.md)).
+O primeiro recorte real abre o **Claude Code original** em um PTY dentro da TUI.
+Faça login pelo próprio `claude` antes; a Memory Bee não solicita nem armazena
+credenciais. Use um projeto e uma pasta de estado explícitos:
+
+```sh
+cargo run --locked -- workspace --claude --project . --state /tmp/bee-claude-state
+cargo run --locked -- workspace --claude --project . --state /tmp/bee-claude-state --resume
+```
+
+`/exit` encerra o Claude; `Ctrl+G` abre ajuda da Memory Bee e `Ctrl+C` vai ao Claude.
+A pasta privada guarda apenas IDs de sessão e códigos de saída, enquanto o Claude
+mantém a conversa nativa. Este recorte ainda mostra a interface do Claude dentro
+da moldura Bee; memória/exportação integrada, perfis isolados e interface de
+conversa própria continuam pendentes. Contrato e teclas em
+[workspace](docs/specs/workspace.md). O lançamento da experiência completa com
+Claude e Codex segue condicionado aos aceites do [ADR 0018](docs/decisions/0018-unified-workspace.md).
 O dashboard anterior permanece disponível.
 
 ## Desenvolvimento
