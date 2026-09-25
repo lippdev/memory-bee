@@ -824,3 +824,18 @@ e dois perfis sem mistura. Não interpretar a demo como evidência desses aceite
 | 47: perfis fictícios, contexto, reinício e crash | Pendente | — |
 | 48: exportação revisada com proveniência e omissões | Pendente | — |
 | 49: terminal, acessibilidade e recusa de modo real | Pendente | — |
+
+## 50. Artifact visual e abelha no campo (ensaio humano pendente)
+
+```sh
+open docs/prototypes/workspace.html
+```
+
+Abrir conversa e enviar tarefa sintética. Esperado: abelha à direita do campo
+amarelo; pensar → ler → editar → aguardar permissão. Permitir mostra execução
+simulada e depois check; negar pousa sem executar. Interromper durante execução
+não pode produzir sucesso atrasado. Enviar `[erro]` mostra falha preservando o
+histórico. Após inatividade, digitar acorda. Conferir movimento desligado, sem
+cor, tema claro/escuro, larguras 140/100/60/40 e janela estreita. A cena inicial
+continua disponível. Nenhum teste, arquivo ou agente real é executado pelo HTML.
+Esse roteiro não valida o renderizador Rust, ainda pendente.

@@ -73,3 +73,12 @@ I/O de persistência/exportação é síncrono; a demo não certifica responsivi
 sob disco lento. Uma sessão ativa por pasta de estado, não trava global de checkout
 para um futuro motor real. Colmeia estática, projeto explícito e tema não persistido.
 Autorrevisão e testes sintéticos não substituem ensaio humano ou prova real.
+
+## Refinamento visual — 2026-09-25
+
+O mantenedor aprovou preservar a Clareira da Colmeia e aproximar a organização da
+conversa do Claude Code, com identidade amarela própria e abelha à direita do
+campo. A mascote representa cada ação por animação, símbolo e texto; não substitui
+permissões ou evidência de execução. O [plano visual](../specs/workspace-visual.md)
+separa protótipo, renderizador Rust e integração real. Essa frente pode avançar
+com eventos simulados sem certificar nem desbloquear lançamento real.

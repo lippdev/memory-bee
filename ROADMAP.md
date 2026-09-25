@@ -252,3 +252,12 @@ Fora do MVP: IDE própria, servidor compartilhado obrigatório, memória organiz
 - [ai-memory](https://github.com/akitaonrails/ai-memory): memória contínua, handoffs e exportação.
 
 Foram consultados código e documentação. Não houve validação em execução desses projetos. Antes de reutilizar código, verificar a licença e o comportamento da versão escolhida. Diferenciais são hipóteses a validar, não alegações de exclusividade.
+
+## Refinamento visual autorizado — 2026-09-25
+
+O mantenedor aprovou a abelha à direita do campo com contorno amarelo e animações
+por ação, preservando a Clareira original. O [plano visual](docs/specs/workspace-visual.md)
+define entregas: referência HTML, renderizador Rust, conexão à demo e eventos
+reais. A frente visual pode avançar independentemente da prova dos harnesses;
+o lançamento conjunto continua condicionado ao ADR 0018. O HTML de roadmap
+não incorpora este refinamento; esta seção Markdown é a referência vigente.
