@@ -34,6 +34,27 @@
 - Próximo recorte de implementação: #29, seguido da prova de permissões #30;
   os ensaios P0 #25–#26 podem avançar em paralelo quando o mantenedor os fizer.
 
+## Revisão automática de PRs — 2026-09-25
+
+- Pullfrog já estava ativo para PRs novos e novos commits; configuração inicial
+  tinha `prompts.review` vazio, aprovação automática e auto-merge desligados.
+- Instruções específicas de revisão foram versionadas em
+  [`.github/pullfrog/review.md`](../.github/pullfrog/review.md). O procedimento
+  de sincronização está no [guia de contribuição](../CONTRIBUTING.md), e o
+  ensaio humano permanece pendente no item 53 do [roteiro](MANUAL_TESTS.md).
+- `npx --yes pullfrog@latest config set prompts.review --file
+  .github/pullfrog/review.md --repo lippdev/memory-bee` retornou `updated`; `get`
+  devolveu o texto completo. O primeiro parecer no PR #49 veio em português e
+  apontou ambiguidade na explicação da sincronização; o texto foi corrigido.
+  A revisão incremental no commit `e542f2a` confirmou a correção sem novos
+  achados. CI Linux passou; o primeiro job macOS falhou por timeout no teste
+  sintético de PTY e passou no rerun do mesmo commit. A intermitência foi
+  registrada na [issue #50](https://github.com/lippdev/memory-bee/issues/50).
+  O ensaio de rascunho do item 53 segue pendente. Isso não altera o status das
+  etapas do produto.
+  Autorrevisão documental; Pullfrog é revisor automatizado, não revisão humana
+  independente.
+
 ## Revisão de sequência — orientação do mantenedor
 
 Em 2026-09-24, o mantenedor pediu continuidade das implementações e deixou os

@@ -64,6 +64,23 @@ mantenedor, podem ocorrer depois sem impedir implementações testadas automatic
 
 O corpo deve conter problema e resultado, escopo, validação, revisão e limitações relevantes. Preferir uma explicação curta e concreta. Manter título e descrição atualizados com a implementação final.
 
+### Revisão automática com Pullfrog
+
+O Pullfrog revisa PRs novos e novos commits. O texto versionado em
+[`.github/pullfrog/review.md`](.github/pullfrog/review.md) é a cópia versionada das
+instruções de `prompts.review`. O workflow não lê esse arquivo automaticamente.
+Após alterá-lo e integrar o PR, sincronizar a configuração externa com:
+
+```sh
+npx --yes pullfrog@latest config set prompts.review --file .github/pullfrog/review.md --repo lippdev/memory-bee
+npx --yes pullfrog@latest config get prompts.review --repo lippdev/memory-bee
+```
+
+O Pullfrog é uma revisão automatizada; seu parecer não substitui autorrevisão,
+testes, ensaios humanos nem aprovação independente. O workflow gerado em
+`.github/workflows/pullfrog.yml` é administrado pelo serviço; ajustar as
+instruções pela configuração acima, sem editar os gatilhos no YAML.
+
 ## Dados e exportações
 
 Não versionar conversas reais, credenciais ou pacotes de usuários. Usar fixtures sintéticas. Exportações devem ficar fora do repositório ou em `exports/`, ignorado pelo Git. Uma exportação de contexto não autoriza commit, push ou publicação do código do usuário.
