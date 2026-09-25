@@ -45,7 +45,7 @@ cargo run --locked -- export testdata/claude/basic.jsonl --preview
 Esperado: JSON com Markdown, histórico, manifesto v1 e achados vazios; nenhum
 arquivo criado. Estado Git desconhecido e revisão de segredos pendente.
 
-## 5. Abrir pacote sem Memory Pier
+## 5. Abrir pacote sem Memory Bee
 
 ```sh
 mkdir -p exports
@@ -55,7 +55,7 @@ cargo run --locked -- export testdata/claude/basic.jsonl --output exports/manual
 Abra `exports/manual-basic/HANDOFF.md` em editor de texto ou visualizador Markdown.
 Confira pedido retido, último registro, omissões e links relativos para manifesto
 e histórico. Copie a pasta para outro diretório e confira os mesmos links.
-Não é necessário instalar Memory Pier para ler esses três arquivos.
+Não é necessário instalar Memory Bee para ler esses três arquivos.
 
 Executar o mesmo comando novamente deve falhar com saída 1 e preservar a pasta.
 Escolha outro nome para repetir o teste; não é necessário apagar resultados antigos.
@@ -108,34 +108,34 @@ repositório temporário é alterado; não use um projeto de trabalho real neste
 
 ```sh
 cargo build --locked
-mp_root="$PWD"
-mp_case="$(mktemp -d /tmp/memory-pier-manual.XXXXXX)"
-mkdir "$mp_case/source"
-git -C "$mp_case/source" init -b manual
-git -C "$mp_case/source" config user.name 'Synthetic Test'
-git -C "$mp_case/source" config user.email 'synthetic@example.invalid'
-git -C "$mp_case/source" config commit.gpgsign false
-git -C "$mp_case/source" config core.hooksPath /dev/null
-printf 'base\n' > "$mp_case/source/tracked.txt"
-printf 'original\n' > "$mp_case/source/unselected.txt"
-git -C "$mp_case/source" add .
-git -C "$mp_case/source" commit -m 'synthetic base'
-mp_base="$(git -C "$mp_case/source" rev-parse HEAD)"
-printf 'selected change\n' > "$mp_case/source/tracked.txt"
-printf 'new file\n' > "$mp_case/source/new.txt"
-printf 'leave outside\n' > "$mp_case/source/unselected.txt"
+mb_root="$PWD"
+mb_case="$(mktemp -d /tmp/memory-bee-manual.XXXXXX)"
+mkdir "$mb_case/source"
+git -C "$mb_case/source" init -b manual
+git -C "$mb_case/source" config user.name 'Synthetic Test'
+git -C "$mb_case/source" config user.email 'synthetic@example.invalid'
+git -C "$mb_case/source" config commit.gpgsign false
+git -C "$mb_case/source" config core.hooksPath /dev/null
+printf 'base\n' > "$mb_case/source/tracked.txt"
+printf 'original\n' > "$mb_case/source/unselected.txt"
+git -C "$mb_case/source" add .
+git -C "$mb_case/source" commit -m 'synthetic base'
+mb_base="$(git -C "$mb_case/source" rev-parse HEAD)"
+printf 'selected change\n' > "$mb_case/source/tracked.txt"
+printf 'new file\n' > "$mb_case/source/new.txt"
+printf 'leave outside\n' > "$mb_case/source/unselected.txt"
 ```
 
 Esperado: base com dois arquivos; duas modificações e um arquivo novo no disco.
-Guarde o valor de `mp_case` para encontrar os resultados depois.
+Guarde o valor de `mb_case` para encontrar os resultados depois.
 
 ## 11. Prévia de código e seleção explícita
 
 ```sh
-"$mp_root/target/debug/memory-pier" export "$mp_root/testdata/claude/basic.jsonl" --project "$mp_case/source" --include-path tracked.txt --include-path new.txt --preview
+"$mb_root/target/debug/memory-bee" export "$mb_root/testdata/claude/basic.jsonl" --project "$mb_case/source" --include-path tracked.txt --include-path new.txt --preview
 ```
 
-Esperado: manifesto v2, code_state changes-included, base igual a `mp_base`,
+Esperado: manifesto v2, code_state changes-included, base igual a `mb_base`,
 selected_paths com new.txt/tracked.txt e duas entradas em changes. A prévia contém
 patch do tracked.txt e conteúdo de new.txt. unselected.txt não entra nos payloads.
 Índice e arquivos da origem não mudam. Sem --include-path, continua manifesto v1.
@@ -143,23 +143,23 @@ patch do tracked.txt e conteúdo de new.txt. unselected.txt não entra nos paylo
 ## 12. Gravar pacote e conferir reconstrução em checkout separado
 
 ```sh
-"$mp_root/target/debug/memory-pier" export "$mp_root/testdata/claude/basic.jsonl" --project "$mp_case/source" --include-path tracked.txt --include-path new.txt --output "$mp_case/bundle"
-cat "$mp_case/bundle/HANDOFF.md"
-cat "$mp_case/bundle/manifest.json"
-git clone --no-hardlinks "$mp_case/source" "$mp_case/receiver"
+"$mb_root/target/debug/memory-bee" export "$mb_root/testdata/claude/basic.jsonl" --project "$mb_case/source" --include-path tracked.txt --include-path new.txt --output "$mb_case/bundle"
+cat "$mb_case/bundle/HANDOFF.md"
+cat "$mb_case/bundle/manifest.json"
+git clone --no-hardlinks "$mb_case/source" "$mb_case/receiver"
 ```
 
 Esperado: saída 0, changes.patch e files/0001.txt, ambos com hashes no manifesto.
 A entrada `add` mapeia files/0001.txt para new.txt; conferir antes de copiar.
-Verificação/aplicação abaixo é alternativa manual via Git. Para o fluxo do Memory Pier, veja os itens 17–22.
+Verificação/aplicação abaixo é alternativa manual via Git. Para o fluxo do Memory Bee, veja os itens 17–22.
 Execute apenas no receiver sintético, depois de revisar conteúdo e manifesto:
 
 ```sh
-test "$(git -C "$mp_case/receiver" rev-parse HEAD)" = "$mp_base" && git -C "$mp_case/receiver" apply --check "$mp_case/bundle/changes.patch" && git -C "$mp_case/receiver" apply "$mp_case/bundle/changes.patch"
-test ! -e "$mp_case/receiver/new.txt" && cp -n "$mp_case/bundle/files/0001.txt" "$mp_case/receiver/new.txt"
-cmp "$mp_case/source/tracked.txt" "$mp_case/receiver/tracked.txt"
-cmp "$mp_case/source/new.txt" "$mp_case/receiver/new.txt"
-cat "$mp_case/receiver/unselected.txt"
+test "$(git -C "$mb_case/receiver" rev-parse HEAD)" = "$mb_base" && git -C "$mb_case/receiver" apply --check "$mb_case/bundle/changes.patch" && git -C "$mb_case/receiver" apply "$mb_case/bundle/changes.patch"
+test ! -e "$mb_case/receiver/new.txt" && cp -n "$mb_case/bundle/files/0001.txt" "$mb_case/receiver/new.txt"
+cmp "$mb_case/source/tracked.txt" "$mb_case/receiver/tracked.txt"
+cmp "$mb_case/source/new.txt" "$mb_case/receiver/new.txt"
+cat "$mb_case/receiver/unselected.txt"
 ```
 
 Esperado: cmp sem diferenças; unselected.txt continua `original`. Conferir também
@@ -169,8 +169,8 @@ para a mesma pasta deve falhar e preservar o pacote. Não tratar hashes como ass
 ## 13. Binário omitido e caminho inválido recusado
 
 ```sh
-printf '\000synthetic' > "$mp_case/source/binary.dat"
-"$mp_root/target/debug/memory-pier" export "$mp_root/testdata/claude/basic.jsonl" --project "$mp_case/source" --include-path binary.dat --include-path tracked.txt --output "$mp_case/partial"
+printf '\000synthetic' > "$mb_case/source/binary.dat"
+"$mb_root/target/debug/memory-bee" export "$mb_root/testdata/claude/basic.jsonl" --project "$mb_case/source" --include-path binary.dat --include-path tracked.txt --output "$mb_case/partial"
 ```
 
 Esperado: saída 2, patch textual preservado, binary_unsupported nas omissões e
@@ -181,8 +181,8 @@ Nomes de diretório não selecionam conteúdo recursivamente.
 ## 14. Possível segredo em código bloqueia gravação
 
 ```sh
-printf 'api_key=synthetic-fixture-only\n' > "$mp_case/source/suspect.txt"
-"$mp_root/target/debug/memory-pier" export "$mp_root/testdata/claude/basic.jsonl" --project "$mp_case/source" --include-path suspect.txt --output "$mp_case/blocked"
+printf 'api_key=synthetic-fixture-only\n' > "$mb_case/source/suspect.txt"
+"$mb_root/target/debug/memory-bee" export "$mb_root/testdata/claude/basic.jsonl" --project "$mb_case/source" --include-path suspect.txt --output "$mb_case/blocked"
 ```
 
 Esperado: saída 3, written false, achado code_selection com índice da seleção,
@@ -194,7 +194,7 @@ removidas também bloqueiam, pois o patch contém essas linhas.
 ## 15. Staging, exclusão e modos
 
 1. No source sintético, faça `git add tracked.txt`, edite tracked.txt novamente e
-   exporte só ele. Deve representar disco contra mp_base, não só o conteúdo staged.
+   exporte só ele. Deve representar disco contra mb_base, não só o conteúdo staged.
 2. Remova tracked.txt do source sintético e exporte para pasta nova: changes deve
    marcar delete com hash/modo anteriores e resultado null.
 3. No Unix, torne new.txt executável e exporte: result_mode deve ser 100755,
@@ -213,7 +213,7 @@ esse resultado como certificação de que o submódulo está limpo.
 ## Registro dos ensaios
 
 Todos os itens continuam **pendentes** até o mantenedor executá-los. Ao reportar,
-informe número, sistema, commit do Memory Pier, resultado e mensagem de erro
+informe número, sistema, commit do Memory Bee, resultado e mensagem de erro
 (sanitizada). Atualizar esta tabela sem apagar observações anteriores.
 
 | Itens | Estado | Evidência manual |
@@ -233,7 +233,7 @@ Use o bundle sintético dos itens 10–12, preservado fora do checkout de destin
 
 ```sh
 cargo build --locked
-"$mp_root/target/debug/memory-pier" verify "$mp_case/bundle"
+"$mb_root/target/debug/memory-bee" verify "$mb_case/bundle"
 ```
 
 Esperado: saída 0, valid true, format_version 2, duas mudanças, contagens de
@@ -246,10 +246,10 @@ nem afirma ausência de segredos.
 Crie OUTRO checkout, pois receiver do item 12 já foi modificado:
 
 ```sh
-git clone --no-hardlinks "$mp_case/source" "$mp_case/receiver-app"
-"$mp_root/target/debug/memory-pier" apply "$mp_case/bundle" --project "$mp_case/receiver-app" --check
-git -C "$mp_case/receiver-app" status --porcelain
-cat "$mp_case/receiver-app/tracked.txt"
+git clone --no-hardlinks "$mb_case/source" "$mb_case/receiver-app"
+"$mb_root/target/debug/memory-bee" apply "$mb_case/bundle" --project "$mb_case/receiver-app" --check
+git -C "$mb_case/receiver-app" status --porcelain
+cat "$mb_case/receiver-app/tracked.txt"
 ```
 
 Esperado: checked true, written false, changes 2, saída 0. Status vazio, tracked.txt
@@ -258,26 +258,26 @@ continua base e new.txt não existe. Rodar apply sem --check/--write deve retorn
 ## 19. Aplicar explicitamente e conferir resultado (pendente)
 
 ```sh
-"$mp_root/target/debug/memory-pier" apply "$mp_case/bundle" --project "$mp_case/receiver-app" --write
-cat "$mp_case/receiver-app/tracked.txt"
-cat "$mp_case/receiver-app/new.txt"
-cat "$mp_case/receiver-app/unselected.txt"
-git -C "$mp_case/receiver-app" status --short
-git -C "$mp_case/receiver-app" diff --cached --exit-code
+"$mb_root/target/debug/memory-bee" apply "$mb_case/bundle" --project "$mb_case/receiver-app" --write
+cat "$mb_case/receiver-app/tracked.txt"
+cat "$mb_case/receiver-app/new.txt"
+cat "$mb_case/receiver-app/unselected.txt"
+git -C "$mb_case/receiver-app" status --short
+git -C "$mb_case/receiver-app" diff --cached --exit-code
 ```
 
 Esperado: saída 0, written true; textos selected change / new file / original.
 Tracked modificado e new não rastreado; índice sem mudanças, nenhum commit/push.
 Não comparar source após item 15, que já pode ter sido alterado: referência é o
 bundle gravado no item 12. Repetir --write deve recusar checkout alterado e preservar
-resultado. Pasta .memory-pier-apply-* não deve permanecer após sucesso.
+resultado. Pasta .memory-bee-apply-* não deve permanecer após sucesso.
 
 ## 20. Detectar adulteração antes da aplicação (pendente)
 
 ```sh
-cp -R "$mp_case/bundle" "$mp_case/tampered"
-printf 'changed\n' >> "$mp_case/tampered/HANDOFF.md"
-"$mp_root/target/debug/memory-pier" verify "$mp_case/tampered"
+cp -R "$mb_case/bundle" "$mb_case/tampered"
+printf 'changed\n' >> "$mb_case/tampered/HANDOFF.md"
+"$mb_root/target/debug/memory-bee" verify "$mb_case/tampered"
 ```
 
 Esperado: saída 1 e payload hash mismatch. A mesma pasta em apply deve ser recusada
@@ -287,10 +287,10 @@ caminho ../escape e payload ausente: todos recusados. Não alterar o bundle orig
 ## 21. Base divergente e trabalho local preservados (pendente)
 
 ```sh
-git clone --no-hardlinks "$mp_case/source" "$mp_case/receiver-blocked"
-printf 'my local work\n' > "$mp_case/receiver-blocked/tracked.txt"
-"$mp_root/target/debug/memory-pier" apply "$mp_case/bundle" --project "$mp_case/receiver-blocked" --write
-cat "$mp_case/receiver-blocked/tracked.txt"
+git clone --no-hardlinks "$mb_case/source" "$mb_case/receiver-blocked"
+printf 'my local work\n' > "$mb_case/receiver-blocked/tracked.txt"
+"$mb_root/target/debug/memory-bee" apply "$mb_case/bundle" --project "$mb_case/receiver-blocked" --write
+cat "$mb_case/receiver-blocked/tracked.txt"
 ```
 
 Esperado: saída 1, conteúdo local preservado, nenhum new.txt criado. Em um checkout
@@ -306,7 +306,7 @@ novo como symlink para arquivo descartável externo: deve recusar sem alterar al
 
 Para qualquer erro real de gravação/interrupção, conferir a mensagem antes de
 repetir: uma falha com rollback informa originais restaurados; recuperação incompleta
-informa pasta .memory-pier-apply-* com recovery.json e old-N. Preservar cópia dos
+informa pasta .memory-bee-apply-* com recovery.json e old-N. Preservar cópia dos
 backups e conferir destinos manualmente. Não provocar interrupções em projetos reais.
 Ensaio de interrupção abrupta/falha elétrica NÃO foi validado automaticamente.
 
@@ -384,7 +384,7 @@ cargo run --locked -- verify exports/manual-codex
 ```
 
 Esperado: saída 0; manifesto v1 com source.agent codex, cinco eventos, Git desconhecido,
-redaction pending-review. HANDOFF abre sem Memory Pier, informa perfil experimental
+redaction pending-review. HANDOFF abre sem Memory Bee, informa perfil experimental
 não certificado e registro físico. history preserva sessão/turno, linha/bloco e
 ferramentas. verify informa valid true. Repetir gravação deve falhar (saída 1), sem
 modificar destino. Comparar bytes/hash da origem antes/depois. Escolher pasta nova
@@ -542,7 +542,7 @@ cargo run --locked -- prepare-resume exports/manual-resume/bundle --target claud
 Esperado: saída 0, mode same-checkout, base_match match, changes base, attention
 vazio e três passos: apply --check, apply --write e claude com o prompt antes de
 --add-dir. O prompt não contém o pedido do histórico. target/a.txt continua "base"
-e nada é lançado. Os passos usam `memory-pier` instalado; com cargo, substitua por
+e nada é lançado. Os passos usam `memory-bee` instalado; com cargo, substitua por
 `cargo run --locked --`.
 
 ## 36. Mudanças aplicadas e arquivo de prompt (pendente; depende do 35)
@@ -603,10 +603,10 @@ mkdir -p exports/manual-resume/fake-bin
 printf '#!/bin/sh\npwd > "$0.calls"; printf "%%s\\n" "$@" >> "$0.calls"\n' > exports/manual-resume/fake-bin/claude
 chmod +x exports/manual-resume/fake-bin/claude
 cargo build --locked
-TOKEN=$(target/debug/memory-pier prepare-resume exports/manual-resume/bundle --target claude --project exports/manual-resume/target --preview | python3 -c 'import json,sys;print(json.load(sys.stdin)["confirmation"])')
-PATH="$PWD/exports/manual-resume/fake-bin:/usr/bin:/bin" target/debug/memory-pier prepare-resume exports/manual-resume/bundle --target claude --project exports/manual-resume/target --output exports/manual-resume/launch.md --launch "$TOKEN"
+TOKEN=$(target/debug/memory-bee prepare-resume exports/manual-resume/bundle --target claude --project exports/manual-resume/target --preview | python3 -c 'import json,sys;print(json.load(sys.stdin)["confirmation"])')
+PATH="$PWD/exports/manual-resume/fake-bin:/usr/bin:/bin" target/debug/memory-bee prepare-resume exports/manual-resume/bundle --target claude --project exports/manual-resume/target --output exports/manual-resume/launch.md --launch "$TOKEN"
 cat exports/manual-resume/fake-bin/claude.calls
-PATH="$PWD/exports/manual-resume/fake-bin:/usr/bin:/bin" target/debug/memory-pier prepare-resume exports/manual-resume/bundle --target claude --project exports/manual-resume/target --output exports/manual-resume/launch2.md --launch 0000000000000000
+PATH="$PWD/exports/manual-resume/fake-bin:/usr/bin:/bin" target/debug/memory-bee prepare-resume exports/manual-resume/bundle --target claude --project exports/manual-resume/target --output exports/manual-resume/launch2.md --launch 0000000000000000
 ```
 
 Esperado: o lançamento retorna 0 com launched true e launch_exit_code 0; o arquivo

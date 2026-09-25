@@ -1,15 +1,15 @@
 # Recebimento e aplicação local
 
-Implementado para pastas v1/v2 no perfil emitido pelo Memory Pier. Sem rede,
+Implementado para pastas v1/v2 no perfil emitido pelo Memory Bee. Sem rede,
 modelos, execução de histórico, filtros ou hooks. A CLI não clona nem escolhe um
 destino automaticamente. Veja [ADR 0009](../decisions/0009-verify-and-explicit-apply.md).
 
 ## Comandos
 
 ```sh
-memory-pier verify /pasta/pacote
-memory-pier apply /pasta/pacote --project /checkout-de-teste --check
-memory-pier apply /pasta/pacote --project /checkout-de-teste --write
+memory-bee verify /pasta/pacote
+memory-bee apply /pasta/pacote --project /checkout-de-teste --check
+memory-bee apply /pasta/pacote --project /checkout-de-teste --write
 ```
 
 `verify` aceita contexto v1, referência v1 e alterações v2, inclusive v2 sem
@@ -73,7 +73,7 @@ Aplicação inicial suportada em Unix (macOS/Linux). Resultados têm permissões
 privadas 0600/0700 e preservam o bit executável declarado; não copiam ACLs/metadados
 especiais como propriedade. Originais guardados para rollback preservam seus inodes.
 
-A pasta privada `.memory-pier-apply-<pid>-<contador>` contém `recovery.json`,
+A pasta privada `.memory-bee-apply-<pid>-<contador>` contém `recovery.json`,
 originais `old-N` e resultados preparados `new-N`. N é o índice começando em zero
 no mapa de recovery, não o índice de seleção. A instalação usa hard links
 exclusivos no mesmo filesystem. Em sucesso a pasta é removida.

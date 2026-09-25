@@ -478,7 +478,7 @@ pub fn verify(directory: &Path) -> Result<Verified> {
     })
 }
 
-// Decode only the full replacement dialect emitted by Memory Pier. Canonical re-encoding
+// Decode only the full replacement dialect emitted by Memory Bee. Canonical re-encoding
 // checks every header, path, count and marker; no received patch is passed to Git.
 fn decode_hunk(fragment: &str) -> Result<(String, String, bool)> {
     let Some((_, body)) = fragment.split_once("\n@@ ") else {
@@ -749,7 +749,7 @@ impl Plan {
         }
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let name = format!(
-            ".memory-pier-apply-{}-{}",
+            ".memory-bee-apply-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         );
@@ -902,8 +902,7 @@ mod tests {
 
     #[test]
     fn ordinary_mid_apply_failure_restores_originals_and_removes_created_directories() {
-        let root =
-            std::env::temp_dir().join(format!("memory-pier-rollback-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("memory-bee-rollback-{}", std::process::id()));
         fs::create_dir(&root).unwrap();
         let git = |args: &[&str]| {
             let out = Command::new("git")

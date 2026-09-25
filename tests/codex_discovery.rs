@@ -1,4 +1,4 @@
-use memory_pier::{
+use memory_bee::{
     claude::Limits,
     codex_discovery::{Discovery, discover},
     discovery::DiscoveryLimits,
@@ -18,7 +18,7 @@ impl Tree {
     fn new() -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let path = std::env::temp_dir().join(format!(
-            "memory-pier-codex-discovery-{}-{}",
+            "memory-bee-codex-discovery-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -66,7 +66,7 @@ fn fixture() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("testdata/codex-sessions")
 }
 fn cli(args: &[&str]) -> std::process::Output {
-    Command::new(env!("CARGO_BIN_EXE_memory-pier"))
+    Command::new(env!("CARGO_BIN_EXE_memory-bee"))
         .args(args)
         .output()
         .unwrap()
@@ -249,7 +249,7 @@ fn turn_cwd_and_metadata_only_sessions_are_supported_without_claiming_exportabil
         .find(|s| s.session_id == "header-only")
         .unwrap();
     assert_eq!(empty.event_count, 0);
-    assert_eq!(empty.state, memory_pier::claude::ReadState::Empty);
+    assert_eq!(empty.state, memory_bee::claude::ReadState::Empty);
 }
 
 #[test]

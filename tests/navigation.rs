@@ -1,4 +1,4 @@
-use memory_pier::{
+use memory_bee::{
     claude::{Limits, ReadState, inspect},
     discovery::{DiscoveryLimits, discover},
     selection::select,
@@ -15,7 +15,7 @@ impl Tree {
     fn new() -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let path = std::env::temp_dir().join(format!(
-            "memory-pier-navigation-{}-{}",
+            "memory-bee-navigation-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -41,7 +41,7 @@ impl Drop for Tree {
 fn record(id: &str, parent: Option<&str>, cwd: &str) -> Value {
     json!({"type":"user", "uuid":id, "parentUuid":parent, "sessionId":"synthetic-session", "cwd":cwd, "message":{"role":"user","content":format!("synthetic {id}")}})
 }
-fn scan(tree: &Tree) -> memory_pier::discovery::Discovery {
+fn scan(tree: &Tree) -> memory_bee::discovery::Discovery {
     discover(
         &tree.0,
         Path::new("/synthetic/project"),
@@ -49,7 +49,7 @@ fn scan(tree: &Tree) -> memory_pier::discovery::Discovery {
     )
     .unwrap()
 }
-fn parsed(path: &Path) -> memory_pier::claude::Report {
+fn parsed(path: &Path) -> memory_bee::claude::Report {
     inspect(path, Limits::default()).unwrap()
 }
 
@@ -380,7 +380,7 @@ fn cli_discovers_and_selects_with_explicit_arguments() {
         "folder with spaces/session.jsonl",
         &[record("u", None, "/synthetic/project")],
     );
-    let bin = env!("CARGO_BIN_EXE_memory-pier");
+    let bin = env!("CARGO_BIN_EXE_memory-bee");
     let result = Command::new(bin)
         .args(["sessions", "--project", "/synthetic/project", "--root"])
         .arg(&tree.0)

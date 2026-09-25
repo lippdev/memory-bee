@@ -1,4 +1,4 @@
-use memory_pier::{
+use memory_bee::{
     bundle::{Options, Prepared, prepare_codex},
     claude::Limits,
     codex::inspect,
@@ -17,7 +17,7 @@ impl Temp {
     fn new() -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let path = std::env::temp_dir().join(format!(
-            "memory-pier-codex-export-{}-{}",
+            "memory-bee-codex-export-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -46,7 +46,7 @@ fn history(bundle: &Prepared) -> Vec<Value> {
         .collect()
 }
 fn cli(args: &[&str]) -> std::process::Output {
-    Command::new(env!("CARGO_BIN_EXE_memory-pier"))
+    Command::new(env!("CARGO_BIN_EXE_memory-bee"))
         .args(args)
         .output()
         .unwrap()

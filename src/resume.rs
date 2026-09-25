@@ -210,7 +210,7 @@ pub fn prepare(request: &Request, prompt_file: Option<&Path>) -> Result<Preparat
     let has_changes = verified.has_changes();
     let apply_argv = |dir: &str, flag: &str| {
         vec![
-            "memory-pier".into(),
+            "memory-bee".into(),
             "apply".into(),
             bundle_text.clone(),
             "--project".into(),
@@ -433,7 +433,7 @@ fn render_prompt(
         ChangeState::Unknown => "estado das mudanças incluídas desconhecido",
     };
     let mut text = format!(
-        "Retomada preparada pelo Memory Pier para {target}. Lançamento só ocorre por pedido explícito e confirmado do usuário.\n\n\
+        "Retomada preparada pelo Memory Bee para {target}. Lançamento só ocorre por pedido explícito e confirmado do usuário.\n\n\
 Pacote: {bundle}\n\
 Diretório de trabalho: {working_directory}\n\
 Modo: {mode_text}\n\

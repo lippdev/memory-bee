@@ -1,4 +1,4 @@
-use memory_pier::{
+use memory_bee::{
     bundle::{Options, prepare},
     claude::{Limits, inspect},
     git,
@@ -15,7 +15,7 @@ impl Repo {
     fn new() -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let path = std::env::temp_dir().join(format!(
-            "memory-pier-git-{}-{}",
+            "memory-bee-git-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -194,7 +194,7 @@ fn git_metadata_is_subject_to_secret_detection() {
             .iter()
             .any(|f| f["field"] == "project.branch")
     );
-    let output = Command::new(env!("CARGO_BIN_EXE_memory-pier"))
+    let output = Command::new(env!("CARGO_BIN_EXE_memory-bee"))
         .args(["export", "testdata/claude/basic.jsonl", "--project"])
         .arg(&repo.0)
         .arg("--output")
@@ -209,7 +209,7 @@ fn git_metadata_is_subject_to_secret_detection() {
 fn cli_partial_export_and_explicit_project_override_git_environment() {
     let repo = Repo::new();
     let commit = repo.commit();
-    let result = Command::new(env!("CARGO_BIN_EXE_memory-pier"))
+    let result = Command::new(env!("CARGO_BIN_EXE_memory-bee"))
         .args([
             "export",
             "testdata/claude/basic.jsonl",
@@ -225,7 +225,7 @@ fn cli_partial_export_and_explicit_project_override_git_environment() {
     let value: Value = serde_json::from_slice(&result.stdout).unwrap();
     assert_eq!(value["manifest"]["project"]["base_commit"], commit);
     let destination = repo.0.join("bundle");
-    let result = Command::new(env!("CARGO_BIN_EXE_memory-pier"))
+    let result = Command::new(env!("CARGO_BIN_EXE_memory-bee"))
         .args(["export", "testdata/claude/basic.jsonl", "--project"])
         .arg(repo.0.join("missing"))
         .arg("--output")
@@ -245,7 +245,7 @@ fn corrupt_index_and_missing_git_are_partial_not_clean() {
     assert!(observation.partial);
     assert!(observation.project.dirty.is_none());
     assert!(observation.project.base_commit.is_some());
-    let result = Command::new(env!("CARGO_BIN_EXE_memory-pier"))
+    let result = Command::new(env!("CARGO_BIN_EXE_memory-bee"))
         .args([
             "export",
             "testdata/claude/basic.jsonl",

@@ -71,6 +71,6 @@ Antes de aplicar, confirmar commit base e hashes/modos anteriores em checkout
 separado, conferir conflitos e garantir que destinos de adição não existem.
 Não executar filtros, hooks ou comandos históricos. Verificar resultado pelos
 hashes e modos declarados. Nenhuma aplicação é efeito de abrir/exportar pacote.
-O Memory Pier implementa verify e apply --check/--write com checkout limpo e base exata; leia [limites e recuperação](receive-apply.md).
+O Memory Bee implementa verify e apply --check/--write com checkout limpo e base exata; leia [limites e recuperação](receive-apply.md).
 
 Decisões e limites no [ADR 0008](../decisions/0008-selected-code-and-bundle-v2.md).

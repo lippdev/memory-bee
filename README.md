@@ -1,14 +1,14 @@
-# Memory Pier
+# Memory Bee
 
 Continue um trabalho de programação em outro agente ou entregue o contexto a outra pessoa, sem depender de uma nova resposta da IA de origem.
 
 ## Proposta
 
-Memory Pier será uma ferramenta de terminal independente de IDE. Seu núcleo lê registros disponíveis de sessões, organiza um pacote local e prepara a retomada. Skills e plugins poderão facilitar seu uso, mas não serão necessários para exportar.
+Memory Bee será uma ferramenta de terminal independente de IDE. Seu núcleo lê registros disponíveis de sessões, organiza um pacote local e prepara a retomada. Skills e plugins poderão facilitar seu uso, mas não serão necessários para exportar.
 
 A visão inclui uma dashboard em terminal para sessões, uso disponível e perfis de contas, conforme suporte de cada agente. O núcleo de exportação vem primeiro; cotas e autenticação dependem de pesquisa técnica.
 
-O destinatário deve conseguir usar o pacote sem instalar Memory Pier: um Markdown legível será a porta de entrada, acompanhado do histórico selecionado e das referências necessárias.
+O destinatário deve conseguir usar o pacote sem instalar Memory Bee: um Markdown legível será a porta de entrada, acompanhado do histórico selecionado e das referências necessárias.
 
 ## Primeiro marco
 
@@ -67,9 +67,9 @@ cargo test --locked
 A validação adicional de pacotes usa Python apenas no desenvolvimento/CI:
 
 ```sh
-python3 -m venv /tmp/memory-pier-validation
-/tmp/memory-pier-validation/bin/pip install -r scripts/requirements-validation.txt
-/tmp/memory-pier-validation/bin/python scripts/check_bundle.py
+python3 -m venv /tmp/memory-bee-validation
+/tmp/memory-bee-validation/bin/pip install -r scripts/requirements-validation.txt
+/tmp/memory-bee-validation/bin/python scripts/check_bundle.py
 ```
 
 - Comece por [AGENTS.md](AGENTS.md), mesmo usando uma ferramenta que não carregue esse arquivo automaticamente.

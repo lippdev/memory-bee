@@ -6,7 +6,7 @@
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
 - CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex e lançamento confirmado por token implementados, experimentais; TUI e contas pendentes.
-- Nome decidido: **Memory Bee** (`memory-bee`), com mascote abelha e colmeia dos projetos, conforme o [ADR 0015](decisions/0015-memory-bee-identity.md); o código, os pacotes e os documentos ainda usam Memory Pier (`memory-pier`) até o PR de renomeação. Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
+- Nome decidido: **Memory Bee** (`memory-bee`), com mascote abelha e colmeia dos projetos, conforme o [ADR 0015](decisions/0015-memory-bee-identity.md); crate, binário, pacotes e documentos renomeados para `memory-bee` (registros anteriores mantêm o nome da época). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
 - Documentação inicial integrada na `main` pelo PR #1.
@@ -34,11 +34,9 @@ tela somente leitura que liste sessões Claude/Codex de um projeto sob raízes
 explícitas e mostre o relatório de prepare-resume. Sem executar exportação, apply
 ou lançamento pela TUI neste recorte; sem contas, uso ou alertas.
 
-Antes disso, **renomear o produto no código** (PR próprio, inventário no ADR 0015):
-crate, binário, `memory_pier::`, staging `.memory-pier-apply-*`, textos gravados no
-HANDOFF e no prompt de retomada, títulos dos schemas, `scripts/check_bundle.py` e
-documentação; remoto GitHub só com confirmação do mantenedor. O dashboard segue a
-cena aprovada no protótipo [Clareira da Colmeia](https://claude.ai/artifact/W5a8EAd4UKXLS84Nsqa8Ab):
+A renomeação no código está feita (seção "Renomeação — memory-bee"); resta o
+remoto GitHub, só com confirmação do mantenedor. O dashboard segue a cena aprovada
+no protótipo [Clareira da Colmeia](https://claude.ai/artifact/W5a8EAd4UKXLS84Nsqa8Ab):
 a colmeia é o painel central e o seletor de projetos (um gominho por repositório,
 mel por sessões e pacotes), com lista de sessões e detalhe abaixo.
 
@@ -447,3 +445,29 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - Próximo passo: PR de renomeação para `memory-bee` (inventário no ADR 0015) e,
   depois, o primeiro recorte do dashboard em Rust seguindo a cena aprovada.
 - Publicação e verificações remotas vinculadas ao [PR #15](https://github.com/lippdev/memory-pier/pull/15).
+
+## Renomeação — memory-bee
+
+- Recorte: o mantenedor aprovou o visual da colmeia e autorizou a renomeação.
+  Troca mecânica de `Memory Pier`/`memory-pier`/`memory_pier`/`MEMORY_PIER` para
+  `Memory Bee`/`memory-bee`/`memory_bee`/`MEMORY_BEE` em Cargo.toml (crate e
+  binário), Cargo.lock, `src/`, `tests/` (inclusive `CARGO_BIN_EXE_memory-bee`),
+  schemas (títulos), `scripts/`, README, ROADMAP, AGENTS.md, specs, pesquisa,
+  `docs/roadmap/index.html` e `docs/MANUAL_TESTS.md` (variáveis `mp_` → `mb_`).
+  Contratos afetados: staging `.memory-bee-apply-<pid>-<n>`, comando `memory-bee`
+  nos passos de retomada, textos gravados no HANDOFF e no prompt de retomada.
+- Preservados: ADRs anteriores (o ADR 0009 descreve `.memory-pier-apply-*`, nome
+  da época; o ADR 0015 registra a troca), registros históricos deste arquivo e os
+  links de PRs em `github.com/lippdev/memory-pier`. Exemplos em `examples/` não
+  citam o nome, então hashes e manifestos ficam iguais. Pacotes já exportados
+  continuam válidos: `verify` confere hashes e layout, não o texto.
+- Validação local macOS: `cargo fmt`, `cargo clippy --locked --all-targets
+  -D warnings`, `cargo build --locked` e `cargo test --locked` aprovados após a
+  troca; `python scripts/check_bundle.py` aprovado em venv com
+  `scripts/requirements-validation.txt`. Sobras do nome antigo conferidas por
+  grep: só as intencionais. Links relativos e `git diff --check` conferidos.
+- Autorrevisão; sem revisão independente.
+- Limitações: o remoto continua `lippdev/memory-pier` (renomear só com
+  confirmação; o GitHub redireciona o nome antigo); a pasta local pode manter o
+  nome antigo. Os comandos do roteiro manual passam a usar `memory-bee`.
+- Próximo passo: primeiro recorte do dashboard em Rust seguindo a cena aprovada.

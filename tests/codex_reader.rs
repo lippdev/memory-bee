@@ -1,4 +1,4 @@
-use memory_pier::{
+use memory_bee::{
     claude::{Limits, ReadState},
     codex::{Report, inspect},
 };
@@ -34,7 +34,7 @@ impl Input {
     fn bytes(bytes: &[u8]) -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let dir = std::env::temp_dir().join(format!(
-            "memory-pier-codex-{}-{}",
+            "memory-bee-codex-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -326,7 +326,7 @@ fn cli_exit_codes_and_no_implicit_claude_flags() {
         ("empty.jsonl", 0),
         ("absent.jsonl", 1),
     ] {
-        let out = Command::new(env!("CARGO_BIN_EXE_memory-pier"))
+        let out = Command::new(env!("CARGO_BIN_EXE_memory-bee"))
             .arg("inspect-codex")
             .arg(fixture(name))
             .output()
@@ -336,7 +336,7 @@ fn cli_exit_codes_and_no_implicit_claude_flags() {
             let _: Value = serde_json::from_slice(&out.stdout).unwrap();
         }
     }
-    let out = Command::new(env!("CARGO_BIN_EXE_memory-pier"))
+    let out = Command::new(env!("CARGO_BIN_EXE_memory-bee"))
         .args(["inspect-codex", "x", "--leaf", "x"])
         .output()
         .unwrap();

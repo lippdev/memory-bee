@@ -599,7 +599,7 @@ fn render_handoff(
     agent: &str,
 ) -> String {
     let mut text = String::from(
-        "# Retomada — Memory Pier\n\nPacote portátil. Não exige Memory Pier no destino.\n\nLeia [manifest.json](manifest.json) para origem, integridade e limitações e\n[history.jsonl](history.jsonl) para todos os eventos selecionados.\n\n## Primeiro pedido humano retido\n\nNão inferimos o pedido original quando há perdas ou exclusões.\n\n",
+        "# Retomada — Memory Bee\n\nPacote portátil. Não exige Memory Bee no destino.\n\nLeia [manifest.json](manifest.json) para origem, integridade e limitações e\n[history.jsonl](history.jsonl) para todos os eventos selecionados.\n\n## Primeiro pedido humano retido\n\nNão inferimos o pedido original quando há perdas ou exclusões.\n\n",
     );
     if let Some(first) = events
         .iter()
@@ -655,7 +655,7 @@ fn render_handoff(
         text.push('\n');
     }
     if included_code {
-        text.push_str("## Código selecionado\n\nO manifesto v2 mapeia cada caminho da raiz do projeto ao payload, hashes e modos.\nchanges.patch contém mudanças em arquivos da base; files/ contém novos arquivos.\nRevise também linhas removidas do patch: elas podem conter dados sensíveis.\nNão aplique sem conferir o commit base, hashes, caminhos e conflitos em checkout separado.\nUse memory-pier verify para integridade e apply --check para conferir um checkout limpo na base exata. Só apply --write aplica explicitamente.\n\n");
+        text.push_str("## Código selecionado\n\nO manifesto v2 mapeia cada caminho da raiz do projeto ao payload, hashes e modos.\nchanges.patch contém mudanças em arquivos da base; files/ contém novos arquivos.\nRevise também linhas removidas do patch: elas podem conter dados sensíveis.\nNão aplique sem conferir o commit base, hashes, caminhos e conflitos em checkout separado.\nUse memory-bee verify para integridade e apply --check para conferir um checkout limpo na base exata. Só apply --write aplica explicitamente.\n\n");
     }
     for (title, entries) in [("Omissões", omissions), ("Avisos", warnings)] {
         text.push_str(&format!("## {title}\n\n"));
@@ -679,7 +679,7 @@ mod tests {
     #[test]
     fn failed_payload_write_removes_only_owned_files_and_never_commits_manifest() {
         let root =
-            std::env::temp_dir().join(format!("memory-pier-write-failure-{}", std::process::id()));
+            std::env::temp_dir().join(format!("memory-bee-write-failure-{}", std::process::id()));
         fs::create_dir(&root).unwrap();
         fs::write(root.join("history.jsonl"), "preexisting synthetic data").unwrap();
         let result = write_payloads(

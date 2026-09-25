@@ -4,7 +4,7 @@ Fonte de verdade do escopo, prioridades, dependências e critérios de aceite. O
 
 ## Visão
 
-Nome escolhido: Memory Pier. Ferramenta independente de IDE, com CLI e dashboard em terminal (TUI), para recuperar contexto e continuar um trabalho com outro agente, outra conta ou outro desenvolvedor. Sem servidor obrigatório. Skills e plugins são integrações opcionais.
+Nome escolhido: Memory Bee. Ferramenta independente de IDE, com CLI e dashboard em terminal (TUI), para recuperar contexto e continuar um trabalho com outro agente, outra conta ou outro desenvolvedor. Sem servidor obrigatório. Skills e plugins são integrações opcionais.
 
 Fluxo central: selecionar trabalho → revisar contexto e código → escolher destino → continuar ou exportar. O destinatário pode começar pelo Markdown sem instalar a ferramenta.
 
@@ -202,7 +202,7 @@ Preparar lançamento público após o marco escolhido.
 | Contrato do pacote | Exportador somente contexto v1 implementado; referência Git e exportação de alterações selecionadas v2 implementadas; verificação e aplicação explícita implementadas em checkout limpo/base exata; ensaios manuais pendentes. |
 | Uso e limites | Repositório de referência prometido pelo mantenedor ainda não foi fornecido. Não bloquear M1 por isso. |
 | Contas | Investigar isolamento e login oficial por ferramenta. Não prometer suporte universal. |
-| Nome e licença | Nome escolhido: Memory Pier (`memory-pier`). Licença pendente antes da distribuição pública. |
+| Nome e licença | Nome escolhido: Memory Bee (`memory-bee`). Licença pendente antes da distribuição pública. |
 | Interoperabilidade | Avaliar ai-memory antes de recriar funcionalidades de memória contínua. |
 
 ## Limites e regras de produto
