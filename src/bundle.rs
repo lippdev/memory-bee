@@ -672,6 +672,103 @@ fn render_handoff(
     text
 }
 
+/// Export records from the synthetic workspace without claiming a native agent
+/// conversation. Reuses v1 hashing, omission reporting and secret checks.
+pub fn prepare_workspace_demo(
+    session: &crate::workspace::Session,
+    options: &Options,
+) -> Result<Prepared, String> {
+    use crate::workspace::Event as WorkspaceEvent;
+    if !session.simulation
+        || session.native_id.is_some()
+        || options.project.is_some()
+        || !options.include_paths.is_empty()
+        || options.leaf.is_some()
+    {
+        return Err("workspace demo export accepts only synthetic context".into());
+    }
+    let events = session
+        .events
+        .iter()
+        .enumerate()
+        .map(|(index, event)| {
+            let (role, text, provenance) = match event {
+                WorkspaceEvent::User { text } => ("user", text.clone(), "user_input"),
+                WorkspaceEvent::Text { text } => ("assistant", text.clone(), "simulated"),
+                _ => (
+                    "system",
+                    serde_json::to_string(event).unwrap_or_default(),
+                    "simulated",
+                ),
+            };
+            Event::Codex(crate::codex::Event {
+                sequence: index + 1,
+                role,
+                kind: "text",
+                text,
+                timestamp: None,
+                phase: Some("memory-bee-simulation".into()),
+                source: crate::codex::Source {
+                    line: index + 1,
+                    block: None,
+                    record_type: "memory_bee_demo".into(),
+                    item_type: None,
+                    id: None,
+                    session_id: Some(format!("demo-{}-{}", session.agent.label(), session.id)),
+                    turn_id: None,
+                },
+                provenance,
+                tool_id: None,
+                tool_name: None,
+                tool_namespace: None,
+            })
+        })
+        .collect();
+    let partial = session.running
+        || session.events.iter().any(|event| {
+            matches!(
+                event,
+                WorkspaceEvent::Interrupted | WorkspaceEvent::Error { .. }
+            )
+        });
+    let mut prepared = prepare_input(
+        Input {
+            agent: "memory-bee-demo",
+            state: if partial {
+                ReadState::Partial
+            } else {
+                ReadState::Read
+            },
+            events,
+            diagnostics: Vec::new(),
+            observed_versions: ["synthetic-v1".into()].into(),
+            selection: None,
+        },
+        options,
+    )?;
+    prepared.manifest.warnings.push("SIMULAÇÃO Memory Bee: respostas, ferramentas, permissões e mudanças não vieram de um harness real. Mensagens do usuário têm proveniência user_input; demais eventos são simulated. Sem autenticação, inferência ou edição de código.".into());
+    let completeness = if partial {
+        "Snapshot parcial: contém turno em andamento, interrompido ou com erro; nenhum evento futuro foi incluído."
+    } else {
+        "Snapshot dos eventos disponíveis da simulação."
+    };
+    if partial {
+        prepared.manifest.omissions.push(completeness.into());
+    }
+    prepared.handoff = format!(
+        "# SIMULAÇÃO — Memory Bee\n\nNenhum harness real foi executado.\n\n{completeness}\n\n{}",
+        prepared.handoff
+    );
+    // HANDOFF is modified before hashes are published.
+    let handoff_hash = format!("{:x}", Sha256::digest(prepared.handoff.as_bytes()));
+    for file in &mut prepared.manifest.files {
+        if file.path == "HANDOFF.md" {
+            file.sha256 = handoff_hash.clone();
+        }
+    }
+    Ok(prepared)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -61,6 +61,22 @@ contexto (`e`), aplicação (`a`), gravação de prompt (`p`) e lançamento (`l`
 prévia e confirmação explícitas; `--once` imprime um quadro em texto
 puro sem precisar de terminal real e sem executar ações. Veja o [contrato do dashboard](docs/specs/dashboard.md).
 
+## TUI unificada experimental
+
+`workspace --demo` demonstra programação na mesma interface Memory Bee: conversa,
+menus, permissões, perfis fictícios, histórico persistente e exportação revisável.
+**É simulação:** não chama Claude/Codex, não autentica contas e não edita o projeto.
+
+```sh
+cargo run --locked -- workspace --demo --project . --state /tmp/bee-demo-state
+cargo run --locked -- workspace --demo --project . --once --no-color
+```
+
+Contrato e teclas em [workspace](docs/specs/workspace.md). A direção aprovada usa
+assinaturas existentes e lançamento real conjunto de Claude e Codex; integração
+real e isolamento continuam pendentes ([ADR 0018](docs/decisions/0018-unified-workspace.md)).
+O dashboard anterior permanece disponível.
+
 ## Desenvolvimento
 
 A toolchain Rust 1.98.1 está fixada em `rust-toolchain.toml`; instale Rust via rustup.

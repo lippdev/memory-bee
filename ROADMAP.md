@@ -26,6 +26,27 @@ A mesma separação vale para ensaios manuais das entregas seguintes. Veja o
 [ADR 0006](docs/decisions/0006-context-export-and-deferred-manual-validation.md)
 e o [roteiro manual](docs/MANUAL_TESTS.md). Dependências de código continuam válidas.
 
+## Ajuste de direção — 2026-09-25
+
+O mantenedor aprovou a TUI permanente da Memory Bee, com Claude/Codex executando
+por trás, assinaturas existentes e lançamento conjunto. Isso amplia as etapas
+05, 06 e 08; a colmeia animada deixa de ser a próxima entrega. Não exige IDE.
+
+1. Protótipo funcional com os dois agentes simulados, menus, streaming,
+   permissões, erro, persistência e exportação: implementado como `workspace --demo`.
+2. Prova real por agente/assinatura, incluindo dois perfis isolados: pendente;
+   integração Claude com assinatura ainda não confirmada para este produto.
+3. Experiência integrada aos dois harnesses, histórico e exportação: pendente.
+4. Troca real entre agentes/contas com revisão e preservação da origem: pendente.
+5. Lançamento conjunto após todos os aceites, sem substituir o requisito por
+   API paga separada ou terminal nativo incorporado: pendente.
+
+Aceite real: conversa, edição, execução, permitir/negar, interrupção e retomada
+com cada harness; isolamento de dois perfis; exportar após falha/limite; recuperar
+histórico sem reenvio; teclado/colagem/resize/sem cor e restauração. Demo e testes
+sintéticos não comprovam esses critérios. Veja [ADR 0018](docs/decisions/0018-unified-workspace.md)
+e [contrato](docs/specs/workspace.md). HTML sinaliza esta revisão; Markdown prevalece.
+
 ## Marcos
 
 | Marco | Etapas | Resultado verificável |

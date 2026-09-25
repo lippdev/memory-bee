@@ -68,3 +68,11 @@ Dashboard: ações `e` (contexto/exclusões), `a` (aplicar pacote), `p` (prompt)
 `l` (lançar com token) implementadas com prévia e confirmação; `--once` permanece
 somente leitura. Contratos em `docs/specs/dashboard.md` e ADR 0017. Cena animada,
 exportação de código pela TUI e ensaios humanos pendentes.
+
+TUI unificada: `workspace --demo --project <pasta> --state <pasta-privada>` é
+protótipo funcional com eventos sintéticos, persistência e exportação v1 identificada
+como `memory-bee-demo`; `--once` não grava. ADR 0018 prioriza esta experiência e
+exige lançamento real conjunto Claude/Codex com assinaturas. Protocolo Codex
+experimental em `src/workspace/codex.rs` não está ligado à CLI/TUI; integração
+real, autenticação e isolamento continuam pendentes. Contrato em
+`docs/specs/workspace.md`; teste automatizado adicional `python scripts/check_workspace_pty.py`.
