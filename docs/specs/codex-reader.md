@@ -1,6 +1,6 @@
 # Inspeção Codex — perfil experimental 1
 
-Comando: `memory-pier inspect-codex <rollout.jsonl>`. Somente arquivo explícito,
+Comando: `memory-bee inspect-codex <rollout.jsonl>`. Somente arquivo explícito,
 sem descoberta, execução de ferramentas ou retomada de agentes.
 Exportação separada via [export-codex](codex-export.md); descoberta explícita via
 [sessions-codex](codex-discovery.md).

@@ -4,7 +4,7 @@ Status: contrato v1 com [exportador somente contexto implementado](context-expor
 
 ## Arquivos
 
-- `HANDOFF.md`: entrada legível sem Memory Pier. Pedido original, seleção feita, estado do código, omissões e orientação para conferir a base antes de continuar.
+- `HANDOFF.md`: entrada legível sem Memory Bee. Pedido original, seleção feita, estado do código, omissões e orientação para conferir a base antes de continuar.
 - `manifest.json`: versão, origem, integridade dos arquivos, estado do código e limitações.
 - `history.jsonl`: eventos selecionados normalizados, sem incluir o log bruto por padrão.
 - `changes.patch`: opcional, alterações textuais selecionadas em arquivos rastreados, relativas ao commit base.

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Memory Pier bundle v1",
+  "title": "Memory Bee bundle v1",
   "type": "object",
   "additionalProperties": false,
   "properties": {

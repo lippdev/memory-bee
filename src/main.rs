@@ -1,4 +1,4 @@
-use memory_pier::{
+use memory_bee::{
     bundle::{Options, prepare},
     claude::{Limits, ReadState, inspect},
     discovery::{DiscoveryLimits, discover},
@@ -12,7 +12,7 @@ use std::{
     process::ExitCode,
 };
 
-const USAGE: &str = "Usage:\n  memory-pier export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier inspect-codex <rollout.jsonl>\n  memory-pier inspect <session.jsonl> [--leaf <uuid>]\n  memory-pier sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-pier sessions --root <projects-dir> --project <project-dir>\n  memory-pier export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-pier verify <bundle-dir>\n  memory-pier apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-pier prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file> [--launch <confirmation>])\nOffline; no model calls.\nLaunches an agent only with --launch and a matching confirmation from --preview.\nExit: 0 success, 2 partial or attention needed, 3 possible secrets, 4 launched agent exited non-zero, 1 I/O or selection error, 64 usage error.";
+const USAGE: &str = "Usage:\n  memory-bee export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee inspect-codex <rollout.jsonl>\n  memory-bee inspect <session.jsonl> [--leaf <uuid>]\n  memory-bee sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-bee sessions --root <projects-dir> --project <project-dir>\n  memory-bee export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee verify <bundle-dir>\n  memory-bee apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-bee prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file> [--launch <confirmation>])\nOffline; no model calls.\nLaunches an agent only with --launch and a matching confirmation from --preview.\nExit: 0 success, 2 partial or attention needed, 3 possible secrets, 4 launched agent exited non-zero, 1 I/O or selection error, 64 usage error.";
 fn output(value: &impl Serialize) -> Result<(), (u8, String)> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -26,7 +26,7 @@ fn run() -> Result<u8, (u8, String)> {
         return Ok(0);
     }
     if args.len() == 2 && args[0] == "inspect-codex" {
-        let report = memory_pier::codex::inspect(Path::new(&args[1]), Limits::default())
+        let report = memory_bee::codex::inspect(Path::new(&args[1]), Limits::default())
             .map_err(|e| (1, format!("Cannot inspect Codex session: {e}")))?;
         output(&report)?;
         return Ok(if report.state == ReadState::Partial {
@@ -58,7 +58,7 @@ fn run() -> Result<u8, (u8, String)> {
             return Err((64, USAGE.into()));
         };
         let partial = if args[0] == "sessions-codex" {
-            let report = memory_pier::codex_discovery::discover(
+            let report = memory_bee::codex_discovery::discover(
                 Path::new(root),
                 Path::new(project),
                 DiscoveryLimits::default(),
@@ -79,7 +79,7 @@ fn run() -> Result<u8, (u8, String)> {
         return Ok(if partial { 2 } else { 0 });
     }
     if args.len() == 2 && args[0] == "verify" {
-        let verified = memory_pier::receive::verify(Path::new(&args[1])).map_err(|e| (1, e))?;
+        let verified = memory_bee::receive::verify(Path::new(&args[1])).map_err(|e| (1, e))?;
         output(&verified.report())?;
         return Ok(0);
     }
@@ -88,7 +88,7 @@ fn run() -> Result<u8, (u8, String)> {
         && args[2] == "--project"
         && (args[4] == "--check" || args[4] == "--write")
     {
-        let verified = memory_pier::receive::verify(Path::new(&args[1])).map_err(|e| (1, e))?;
+        let verified = memory_bee::receive::verify(Path::new(&args[1])).map_err(|e| (1, e))?;
         let plan = verified.check(Path::new(&args[3])).map_err(|e| (1, e))?;
         let report = if args[4] == "--write" {
             plan.write().map_err(|e| (1, e))?
@@ -171,9 +171,9 @@ fn export(args: &[std::ffi::OsString], codex: bool) -> Result<u8, (u8, String)> 
         return Err((64, USAGE.into()));
     }
     let prepared = if codex {
-        let report = memory_pier::codex::inspect(Path::new(&args[0]), Limits::default())
+        let report = memory_bee::codex::inspect(Path::new(&args[0]), Limits::default())
             .map_err(|e| (1, format!("Cannot inspect Codex session: {e}")))?;
-        memory_pier::bundle::prepare_codex(report, &options)
+        memory_bee::bundle::prepare_codex(report, &options)
     } else {
         let report = inspect(Path::new(&args[0]), Limits::default())
             .map_err(|e| (1, format!("Cannot inspect session: {e}")))?;
@@ -244,7 +244,7 @@ fn prepare_resume(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
                         target = Some(
                             value
                                 .to_str()
-                                .and_then(memory_pier::resume::Target::parse)
+                                .and_then(memory_bee::resume::Target::parse)
                                 .ok_or((64, "target must be claude or codex".into()))?,
                         )
                     }
@@ -278,24 +278,24 @@ fn prepare_resume(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
     if preview == prompt_file.is_some() || (launch.is_some() && prompt_file.is_none()) {
         return Err((64, USAGE.into()));
     }
-    let request = memory_pier::resume::Request {
+    let request = memory_bee::resume::Request {
         bundle: bundle.into(),
         target,
         project,
         worktree,
     };
-    let mut preparation = memory_pier::resume::prepare(&request, prompt_file.as_deref())
+    let mut preparation = memory_bee::resume::prepare(&request, prompt_file.as_deref())
         .map_err(|e| (1, format!("Cannot prepare resume: {e}")))?;
     if let Some(token) = &launch {
-        memory_pier::resume::check_launch(&preparation, token)
+        memory_bee::resume::check_launch(&preparation, token)
             .map_err(|e| (1, format!("Cannot launch: {e}")))?;
     }
     if prompt_file.is_some() {
-        memory_pier::resume::write_prompt(&preparation).map_err(|e| (1, e))?;
+        memory_bee::resume::write_prompt(&preparation).map_err(|e| (1, e))?;
     }
     if launch.is_some() {
         // The agent owns the terminal; the report is printed after it exits.
-        let started = memory_pier::resume::launch(&mut preparation);
+        let started = memory_bee::resume::launch(&mut preparation);
         output(&preparation)?;
         started.map_err(|e| (1, format!("Cannot launch: {e}")))?;
         return Ok(if preparation.launch_exit_code == Some(0) {

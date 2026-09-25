@@ -1,4 +1,4 @@
-use memory_pier::{
+use memory_bee::{
     bundle::{Options, Prepared, prepare},
     claude::{Limits, inspect},
 };
@@ -16,7 +16,7 @@ impl Workspace {
     fn new() -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let path = std::env::temp_dir().join(format!(
-            "memory-pier-bundle-{}-{}",
+            "memory-bee-bundle-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -319,7 +319,7 @@ fn ids_are_data_not_destination_paths() {
 #[test]
 fn cli_preview_export_partial_and_usage_codes() {
     let work = Workspace::new();
-    let bin = env!("CARGO_BIN_EXE_memory-pier");
+    let bin = env!("CARGO_BIN_EXE_memory-bee");
     let src = fixture("basic.jsonl");
     let result = Command::new(bin)
         .arg("export")
@@ -371,7 +371,7 @@ fn cli_reports_secret_findings_without_echoing_values_or_writing() {
     let token = format!("{}{}", "ghp_", "syntheticfixture".repeat(3));
     let src = work.source(&[record("u", None, &token)]);
     let out = work.0.join("blocked");
-    let result = Command::new(env!("CARGO_BIN_EXE_memory-pier"))
+    let result = Command::new(env!("CARGO_BIN_EXE_memory-bee"))
         .arg("export")
         .arg(src)
         .arg("--output")

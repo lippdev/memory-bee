@@ -1,4 +1,4 @@
-use memory_pier::{
+use memory_bee::{
     bundle::{Options, Prepared, prepare},
     claude::{Limits, inspect},
 };
@@ -15,7 +15,7 @@ impl Repo {
     fn new() -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let path = std::env::temp_dir().join(format!(
-            "memory-pier-code-{}-{}",
+            "memory-bee-code-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -283,7 +283,7 @@ fn removed_secrets_and_new_secrets_block_writes_without_echo_in_cli() {
     assert!(!p.findings().is_empty());
     assert!(p.findings().iter().all(|f| f.selection.is_some()));
     assert!(p.write(&repo.0.join("blocked")).is_err());
-    let result = Command::new(env!("CARGO_BIN_EXE_memory-pier"))
+    let result = Command::new(env!("CARGO_BIN_EXE_memory-bee"))
         .args(["export", "testdata/claude/basic.jsonl", "--project"])
         .arg(&repo.0)
         .args(["--include-path", "old", "--output"])
@@ -410,7 +410,7 @@ fn conflicts_are_omitted_and_cli_requires_explicit_project() {
             .to_string()
             .contains("conflict_unsupported")
     );
-    let result = Command::new(env!("CARGO_BIN_EXE_memory-pier"))
+    let result = Command::new(env!("CARGO_BIN_EXE_memory-bee"))
         .args([
             "export",
             "testdata/claude/basic.jsonl",

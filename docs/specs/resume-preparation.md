@@ -8,8 +8,8 @@ Claude Code ou Codex e, só com confirmação explícita, inicia o agente. Decis
 ## Comando
 
 ```sh
-memory-pier prepare-resume <pacote> --target claude --project <checkout> --preview
-memory-pier prepare-resume <pacote> --target codex --project <repo> --worktree <pasta-nova> --output <prompt.md>
+memory-bee prepare-resume <pacote> --target claude --project <checkout> --preview
+memory-bee prepare-resume <pacote> --target codex --project <repo> --worktree <pasta-nova> --output <prompt.md>
 ```
 
 Exige exatamente um de `--preview` ou `--output`. `--launch <confirmação>` só é
@@ -40,9 +40,9 @@ Códigos de atenção: `source_unrecognized`, `project_not_git`, `project_partia
 ## Lançamento confirmado
 
 ```sh
-memory-pier prepare-resume <pacote> --target claude --project <checkout> --preview
+memory-bee prepare-resume <pacote> --target claude --project <checkout> --preview
 # revise attention, steps e prompt; copie confirmation
-memory-pier prepare-resume <pacote> --target claude --project <checkout> --output <prompt.md> --launch <confirmation>
+memory-bee prepare-resume <pacote> --target claude --project <checkout> --output <prompt.md> --launch <confirmation>
 ```
 
 O comando refaz verificação e observação e recalcula o token; divergência recusa

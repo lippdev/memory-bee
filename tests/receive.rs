@@ -1,4 +1,4 @@
-use memory_pier::{
+use memory_bee::{
     bundle::{Options, prepare},
     claude::{Limits, inspect},
     receive,
@@ -16,7 +16,7 @@ impl Workspace {
     fn new() -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let root = std::env::temp_dir().join(format!(
-            "memory-pier-receive-{}-{}",
+            "memory-bee-receive-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -146,7 +146,7 @@ fn verify_check_and_explicit_write_roundtrip_preserve_source_and_index() {
         e.unwrap()
             .file_name()
             .to_string_lossy()
-            .starts_with(".memory-pier-apply-")
+            .starts_with(".memory-bee-apply-")
     }));
 }
 
@@ -347,7 +347,7 @@ fn mode_only_empty_deletion_and_empty_addition_roundtrip() {
 #[test]
 fn cli_verifies_v1_and_checks_v2_without_implicit_writes() {
     let work = Workspace::fixture();
-    let binary = env!("CARGO_BIN_EXE_memory-pier");
+    let binary = env!("CARGO_BIN_EXE_memory-bee");
     let verified = Command::new(binary)
         .arg("verify")
         .arg(work.0.join("bundle"))

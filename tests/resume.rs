@@ -1,4 +1,4 @@
-use memory_pier::{
+use memory_bee::{
     bundle::{Options, prepare},
     claude::{Limits, inspect},
     receive,
@@ -19,7 +19,7 @@ impl Workspace {
     fn new() -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let root = std::env::temp_dir().join(format!(
-            "memory-pier-resume-{}-{}",
+            "memory-bee-resume-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -93,7 +93,7 @@ impl Workspace {
     /// Runs with PATH restricted to a fake agent directory plus system Git locations,
     /// so tests can never start a real Claude Code or Codex installation.
     fn run_path(&self, args: &[&str], fake_bin: Option<&Path>) -> (i32, Value, String) {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_memory-pier"));
+        let mut command = Command::new(env!("CARGO_BIN_EXE_memory-bee"));
         command.current_dir(&self.0).args(args);
         if let Some(bin) = fake_bin {
             command.env("PATH", format!("{}:/usr/bin:/bin", bin.display()));
@@ -158,7 +158,7 @@ fn same_checkout_at_clean_base_plans_explicit_apply_then_manual_launch() {
     assert_eq!(
         step_argv(&report, 0),
         [
-            "memory-pier",
+            "memory-bee",
             "apply",
             &bundle,
             "--project",
@@ -300,8 +300,8 @@ fn new_worktree_mode_plans_detached_worktree_and_printed_steps_work() {
     for index in 0..3 {
         let step = &report["steps"][index];
         let mut argv = step_argv(&report, index);
-        let program = if argv[0] == "memory-pier" {
-            env!("CARGO_BIN_EXE_memory-pier").to_owned()
+        let program = if argv[0] == "memory-bee" {
+            env!("CARGO_BIN_EXE_memory-bee").to_owned()
         } else {
             argv[0].clone()
         };

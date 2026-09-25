@@ -15,7 +15,7 @@ for version in (1, 2):
     schema = json.loads((ROOT / f"schemas/bundle-v{version}.schema.json").read_text())
     Draft202012Validator.check_schema(schema)
     VALIDATORS[version] = Draft202012Validator(schema, format_checker=FormatChecker())
-BINARY = ROOT / "target/debug/memory-pier"
+BINARY = ROOT / "target/debug/memory-bee"
 
 
 def check_bundle(path, excluded_lines, code_state="unknown"):
@@ -40,7 +40,7 @@ def check_bundle(path, excluded_lines, code_state="unknown"):
     assert json.loads(verified.stdout)["valid"]
 
 
-with tempfile.TemporaryDirectory(prefix="memory-pier-schema-") as directory:
+with tempfile.TemporaryDirectory(prefix="memory-bee-schema-") as directory:
     cases = [("basic.jsonl", 0, []), ("basic.jsonl", 0, [1]), ("truncated.jsonl", 2, []), ("tools.jsonl", 2, [])]
     for index, (fixture, code, excluded_lines) in enumerate(cases):
         output = Path(directory) / str(index)

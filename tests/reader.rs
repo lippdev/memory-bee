@@ -1,4 +1,4 @@
-use memory_pier::claude::{Limits, ReadState, Report, inspect};
+use memory_bee::claude::{Limits, ReadState, Report, inspect};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -22,7 +22,7 @@ impl Input {
     fn new(bytes: &[u8]) -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let dir = std::env::temp_dir().join(format!(
-            "memory-pier-test-{}-{}",
+            "memory-bee-test-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -244,7 +244,7 @@ fn timestamps_do_not_reorder_and_mixed_sessions_require_selection() {
 }
 #[test]
 fn cli_exposes_json_and_exit_codes() {
-    let bin = env!("CARGO_BIN_EXE_memory-pier");
+    let bin = env!("CARGO_BIN_EXE_memory-bee");
     for (name, code, state) in [
         ("basic.jsonl", 0, "read"),
         ("empty.jsonl", 0, "empty"),
