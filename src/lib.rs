@@ -9,3 +9,4 @@ pub mod git;
 pub mod receive;
 pub mod resume;
 pub mod selection;
+pub mod workspace;

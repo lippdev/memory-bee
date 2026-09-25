@@ -748,3 +748,79 @@ item 40 e registrar versões, autenticação, aceitação do prompt e retorno à
 | 43: exportação por teclado, ramo, exclusões e cancelamento | Pendente | — |
 | 44: aplicação confirmada e checkout alterado entre prévia/escrita | Pendente | — |
 | 45: prompt e lançamento, restauração e agentes reais | Pendente | — |
+
+## 46. Conversa unificada e permissões simuladas (pendente)
+
+```sh
+cargo build --locked
+mb_workspace_tmp=$(mktemp -d)
+mkdir "$mb_workspace_tmp/project"
+target/debug/memory-bee workspace --demo --project "$mb_workspace_tmp/project" --state "$mb_workspace_tmp/state" --no-color
+```
+
+Enter abre a conversa. Enviar tarefa sintética, abrir F2 durante eventos, Esc
+volta com texto digitado preservado. Tab abre permissão: negar, depois repetir
+e permitir uma vez. Ctrl+C durante evento/permissão interrompe; aprovação antiga
+não pode ser aceita. Enviar `[erro]`: erro aparece sem perder histórico.
+Ctrl+Q durante turno exige escolha; Esc cancela. Nenhum arquivo do projeto muda.
+
+Repetir com `--agent codex` e outra pasta `--state`; em estado existente a sessão
+persistida prevalece. Esperado: SIMULAÇÃO visível, nenhum login/modelo/processo
+Claude ou Codex; ferramentas/diff são fictícios. Não usar conversas ou tokens reais.
+
+## 47. Perfis, contexto e persistência da demo (pendente)
+
+Na sessão do item 46, F2 → `/accounts`: adicionar perfil fictício. Com turno
+parado, selecionar outro agente/perfil, revisar passagem com PgDn/Home e digitar
+`CONTINUAR`; Esc antes disso preserva origem sem nova sessão. `/sessions` deve
+permitir consultar a origem intacta. Perfil não autentica nem modifica conta real.
+
+Sair e executar o mesmo comando: histórico reaparece sem reenviar mensagens.
+Segundo processo com mesma pasta deve recusar. Para simular crash, usar apenas
+estado descartável e encerrar seu processo abruptamente: conferir que não resta
+processo, inspecionar/remover manualmente `workspace.lock`, reabrir e verificar
+interrupção registrada. `workspace.new` remanescente também requer inspeção;
+não remover arquivos de outra sessão. Corrupção de JSON e projeto diferente devem
+recusar preservando os bytes originais. Rascunho/tema não são restaurados.
+
+## 48. Exportar a simulação e revisar origem (pendente)
+
+F2 → `/export`, informar pasta nova absoluta fora do projeto, excluir número de
+registro existente (visível entre colchetes), revisar manifesto/Markdown/histórico.
+Esc cancela. Repetir e digitar `EXPORTAR`; destino existente deve ser recusado.
+
+```sh
+# Substitua pelo destino usado no formulário.
+target/debug/memory-bee verify /caminho/do/pacote-demo
+```
+
+Esperado: fonte `memory-bee-demo`, aviso de origem desconhecida, marca SIMULAÇÃO,
+proveniência `user_input`/`simulated`, omissões das exclusões. Snapshot após erro
+ou interrupção é parcial. Nenhum patch ou referência Git inferida. Detector de
+segredos bloqueia escrita de suspeitas até exclusão; não promete detectar tudo.
+
+## 49. Terminal e limites de lançamento (pendente)
+
+Testar 100×30, 60×20, 40×12 e 30×10, claro/escuro e `NO_COLOR`. Rolar menus longos,
+prévia, colar texto multilinha (não deve enviar), Ctrl+J, Unicode e Backspace.
+Entrada curta mantém Enter/F2 acessíveis; abaixo do mínimo há aviso. Sair e
+conferir terminal restaurado. A colmeia deste recorte é estática.
+
+```sh
+target/debug/memory-bee workspace --demo --project . --agent codex --once --width 40 --height 12 --no-color
+# Deve recusar sem criar o estado nem iniciar agente:
+target/debug/memory-bee workspace --project . --state /tmp/bee-live-refused
+# Automatizado, separado do ensaio humano; requer dependências de validação:
+python3 scripts/check_workspace_pty.py
+```
+
+Aceite real continua pendente: os dois agentes com assinaturas existentes,
+edição/execução real, permitir/negar, interrupção/retomada, exportar após falha/limite
+e dois perfis sem mistura. Não interpretar a demo como evidência desses aceites.
+
+| Itens novos | Estado | Evidência manual |
+|---|---|---|
+| 46: conversa e permissões simuladas | Pendente | — |
+| 47: perfis fictícios, contexto, reinício e crash | Pendente | — |
+| 48: exportação revisada com proveniência e omissões | Pendente | — |
+| 49: terminal, acessibilidade e recusa de modo real | Pendente | — |

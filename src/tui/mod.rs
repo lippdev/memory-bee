@@ -6,3 +6,5 @@ pub mod ui;
 
 #[cfg(test)]
 mod action_tests;
+
+pub mod workspace;

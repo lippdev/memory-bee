@@ -5,10 +5,12 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex e lançamento confirmado por token implementados, experimentais; dashboard de terminal (ratatui) com lista, detalhe, exportação de contexto/exclusões, aplicação e prompt/lançamento confirmado implementados; cena animada, exportação de código pela TUI e contas pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex e lançamento confirmado por token implementados, experimentais; dashboard de terminal (ratatui) com lista, detalhe, exportação de contexto/exclusões, aplicação e prompt/lançamento confirmado implementados; workspace unificado disponível apenas com simulação explícita (ADR 0018); cena animada, exportação de código pela TUI e contas reais pendentes.
 - Nome decidido: **Memory Bee** (`memory-bee`), com mascote abelha e colmeia dos projetos, conforme o [ADR 0015](decisions/0015-memory-bee-identity.md); crate, binário, pacotes e documentos renomeados para `memory-bee` (registros anteriores mantêm o nome da época). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
-- Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
+- Remoto atual: [lippdev/memory-bee](https://github.com/lippdev/memory-bee), público.
+  Em 2026-09-25 o push confirmou redirecionamento da URL local antiga
+  `lippdev/memory-pier`; links históricos foram preservados.
 - Documentação inicial integrada na `main` pelo PR #1.
 
 ## Revisão de sequência — orientação do mantenedor
@@ -26,16 +28,20 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Etapa 06 — Cena da colmeia e revisão de experiência.** Dois recortes funcionais
-implementados: leitura e ações confirmadas (exportar contexto, aplicar pacote,
-gravar prompt e lançar no mesmo checkout). Próxima entrega: portar a cena aprovada
-para módulo puro testável `src/tui/scene.rs`, respeitando redução de movimento,
-sem cor e telas estreitas; revisar navegação e legibilidade com dados sintéticos.
-Referência Git/código selecionado na exportação e nova worktree permanecem na CLI;
-não declarar paridade completa nem certificação real. Sem contas/uso neste recorte.
+**TUI unificada — prova de integração com assinaturas.** A orientação de
+2026-09-25 substitui a prioridade anterior da cena animada: interface permanente
+Memory Bee, assinaturas existentes e lançamento real somente com Claude e Codex.
+Primeiro recorte `workspace --demo` implementado; não declarar programação real.
+Próximo: confirmar a integração Claude elegível e fazer prova controlada de ambos
+os harnesses (conversa, edição, execução, permissões, interrupção, retomada e dois
+perfis isolados). Protocolo Codex experimental existe, sem conexão à TUI nem
+validação real. Não copiar credenciais globais, não substituir assinatura por API
+paga e não lançar só um provedor. Ver ADR 0018 e contrato `specs/workspace.md`.
+Cena, exportação de código pela TUI e worktree na interface continuam pendentes.
 
-A renomeação no código está feita (seção "Renomeação — memory-bee"); resta o
-remoto GitHub, só com confirmação do mantenedor.
+A renomeação no código está feita (seção "Renomeação — memory-bee"). O GitHub
+já informa `lippdev/memory-bee`; a URL local antiga redireciona. Não foi feita
+renomeação remota nesta retomada.
 
 Compatibilidade real de Claude Code e ensaios de leitura/retomada do pacote estão
 pendentes com o mantenedor em [docs/MANUAL_TESTS.md](MANUAL_TESTS.md), sem bloquear
@@ -538,7 +544,7 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
 - Publicação e verificações remotas vinculadas ao [PR #18](https://github.com/lippdev/memory-pier/pull/18).
 
 
-### Proposta em discussão — trabalhar dentro da TUI
+### Proposta em discussão — trabalhar dentro da TUI (registro histórico)
 
 O mantenedor perguntou sobre manter a interface Memory Bee durante a programação,
 usando os harnesses Claude/Codex. Possibilidade técnica pesquisada em 2026-09-25:
@@ -549,3 +555,38 @@ limites claude.ai, indicando chave de API como caminho padrão. Perfis isolados 
 continuidade entre provedores exigem desenho e validação próprios. Proposta ainda
 não adotada como arquitetura nem implementada; não substitui silenciosamente o
 escopo da entrega atual nem a próxima tarefa aprovada.
+
+
+## TUI unificada — primeiro recorte demonstrável
+
+- Retomada: sessão anterior deixou implementação local sem commit em
+  `codex/unified-workspace`. A nova sessão preservou e concluiu esse recorte;
+  o transcript anterior foi consultado somente para recuperar o plano aprovado.
+- ADR 0018 registra a mudança de direção: interface própria permanente,
+  assinaturas existentes e lançamento real conjunto. README, roadmap, aviso
+  no HTML, AGENTS, contrato e roteiro manual atualizados.
+- `workspace --demo`: conversa, eventos incrementais, ferramentas/diff fictícios,
+  decisões, interrupção/erro, menus, perfis fictícios, sessões persistidas e
+  exportação com prévia/exclusões/confirmação. Sem `--demo`, recusa antes de escrever.
+  `--once` só renderiza estado sintético em memória.
+- Pacote v1 com fonte `memory-bee-demo`, proveniência de entrada/simulação e
+  indicação de snapshot parcial. `verify` aceita com avisos; não é sessão nativa.
+- Autorrevisão: corrigidas aprovação já resolvida e eventos de turno antigo no
+  protocolo experimental, symlink pendente no estado, contexto omitido da prévia,
+  omissão de interrupção no Markdown e controles cortados na entrada estreita.
+  Sem revisão independente.
+- Limites: demo não edita código nem autentica. Protocolo Codex parcial, separado
+  da TUI; nenhum harness real ou modelo chamado. Perfis não provam isolamento.
+  Disco síncrono, trava por pasta de estado, recuperação de trava manual após
+  crash, rascunho/tema não persistidos, projeto único e colmeia estática.
+- Validação local macOS: build, fmt e Clippy aprovados; suíte completa de 176
+  testes aprovada, seguida de 17 testes do workspace após adicionar um teste de
+  transporte falso (177 testes no total). Pacotes v1/v2 aprovados no validador
+  Python; PTYs do dashboard e workspace aprovados, incluindo schema do pacote
+  demo e restauração do terminal. Links Markdown, JavaScript do roadmap,
+  numeração 1–49/sintaxe shell do roteiro e `git diff --check` conferidos.
+  CI remota e integração vinculadas ao [PR #19](https://github.com/lippdev/memory-bee/pull/19);
+  não houve validação com agentes reais.
+- Ensaios humanos 46–49 pendentes; não substituídos por testes automatizados.
+- Próximo passo: prova de integração descrita no topo. O plano completo permanece
+  em andamento; integração Claude com assinatura depende de confirmação externa.

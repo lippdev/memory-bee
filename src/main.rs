@@ -18,7 +18,7 @@ use std::{
     process::ExitCode,
 };
 
-const USAGE: &str = "Usage:\n  memory-bee export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee inspect-codex <rollout.jsonl>\n  memory-bee inspect <session.jsonl> [--leaf <uuid>]\n  memory-bee sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-bee sessions --root <projects-dir> --project <project-dir>\n  memory-bee export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee verify <bundle-dir>\n  memory-bee apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-bee prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file> [--launch <confirmation>])\n  memory-bee dashboard --project <project-dir> [--claude-root <dir>] [--codex-root <dir>] [--bundle <dir>] [--theme (dark|light)] [--no-color] [--once [--width <n>] [--height <n>]]\nOffline; no model calls.\nCLI launch requires --launch and a matching confirmation from --preview.\nDashboard actions require a preview and explicit confirmation.\nExit: 0 success, 2 partial or attention needed, 3 possible secrets, 4 launched agent exited non-zero, 1 I/O or selection error, 64 usage error.";
+const USAGE: &str = "Usage:\n  memory-bee workspace --demo --project <dir> (--state <private-dir> | --once [--width <n>] [--height <n>]) [--agent claude|codex] [--theme dark|light] [--no-color]\n  memory-bee export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee inspect-codex <rollout.jsonl>\n  memory-bee inspect <session.jsonl> [--leaf <uuid>]\n  memory-bee sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-bee sessions --root <projects-dir> --project <project-dir>\n  memory-bee export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee verify <bundle-dir>\n  memory-bee apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-bee prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file> [--launch <confirmation>])\n  memory-bee dashboard --project <project-dir> [--claude-root <dir>] [--codex-root <dir>] [--bundle <dir>] [--theme (dark|light)] [--no-color] [--once [--width <n>] [--height <n>]]\nOffline; no model calls.\nCLI launch requires --launch and a matching confirmation from --preview.\nDashboard actions require a preview and explicit confirmation.\nExit: 0 success, 2 partial or attention needed, 3 possible secrets, 4 launched agent exited non-zero, 1 I/O or selection error, 64 usage error.";
 fn output(value: &impl Serialize) -> Result<(), (u8, String)> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -112,6 +112,9 @@ fn run() -> Result<u8, (u8, String)> {
     }
     if args.first().is_some_and(|arg| arg == "export-codex") {
         return export(&args[1..], true);
+    }
+    if args.first().is_some_and(|arg| arg == "workspace") {
+        return workspace(&args[1..]);
     }
     if args.first().is_some_and(|arg| arg == "dashboard") {
         return dashboard(&args[1..]);
@@ -515,4 +518,158 @@ fn prepare_resume(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
     }
     output(&preparation)?;
     Ok(if preparation.needs_attention() { 2 } else { 0 })
+}
+
+fn workspace(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
+    use memory_bee::workspace::{
+        Agent,
+        store::{State, Store},
+    };
+    let mut project: Option<PathBuf> = None;
+    let mut state: Option<PathBuf> = None;
+    let mut demo = false;
+    let mut once = false;
+    let mut agent = Agent::Claude;
+    let mut mode = tui::theme::Mode::Dark;
+    let mut no_color = env::var_os("NO_COLOR").is_some();
+    let (mut width, mut height) = (100u16, 30u16);
+    let mut seen = std::collections::BTreeSet::new();
+    let mut i = 0;
+    while i < args.len() {
+        let flag = args[i].to_str().ok_or((64, USAGE.into()))?;
+        if !seen.insert(flag.to_owned()) {
+            return Err((64, USAGE.into()));
+        }
+        match flag {
+            "--demo" => demo = true,
+            "--once" => once = true,
+            "--no-color" => no_color = true,
+            "--project" | "--state" | "--agent" | "--theme" | "--width" | "--height" => {
+                i += 1;
+                let value = args.get(i).ok_or((64, USAGE.into()))?;
+                match flag {
+                    "--project" => project = Some(value.into()),
+                    "--state" => state = Some(value.into()),
+                    "--agent" => {
+                        agent = value
+                            .to_str()
+                            .and_then(Agent::parse)
+                            .ok_or((64, USAGE.into()))?
+                    }
+                    "--theme" => {
+                        mode = value
+                            .to_str()
+                            .and_then(tui::theme::Mode::parse)
+                            .ok_or((64, USAGE.into()))?
+                    }
+                    _ => {
+                        let n = value
+                            .to_str()
+                            .and_then(|s| s.parse::<u16>().ok())
+                            .filter(|n| *n > 0 && *n <= 500)
+                            .ok_or((64, "Dimensions must be between 1 and 500".into()))?;
+                        if flag == "--width" {
+                            width = n;
+                        } else {
+                            height = n;
+                        }
+                    }
+                }
+            }
+            _ => return Err((64, USAGE.into())),
+        }
+        i += 1;
+    }
+    if !demo {
+        memory_bee::workspace::live_gate().map_err(|e| (64, e))?;
+    }
+    let project = project
+        .ok_or((64, USAGE.into()))?
+        .canonicalize()
+        .map_err(|e| (1, e.to_string()))?;
+    if !project.is_dir() {
+        return Err((64, "Project must be a directory".into()));
+    }
+    let project = project
+        .to_str()
+        .ok_or((64, "Project must be UTF-8".into()))?
+        .to_owned();
+    if once && state.is_some() || !once && (seen.contains("--width") || seen.contains("--height")) {
+        return Err((64, USAGE.into()));
+    }
+    if once {
+        let state = State::new(project, agent);
+        let mut app = tui::workspace::App::new(state, None, mode, no_color);
+        app.draft = "Adicione busca por nome na lista de sessões. (exemplo sintético)".into();
+        app.key(crossterm::event::KeyEvent::new(
+            crossterm::event::KeyCode::Enter,
+            crossterm::event::KeyModifiers::NONE,
+        ));
+        for _ in 0..5 {
+            app.tick();
+        }
+        let mut terminal =
+            Terminal::new(TestBackend::new(width, height)).map_err(|e| (1, e.to_string()))?;
+        terminal
+            .draw(|f| tui::workspace::draw(f, &app))
+            .map_err(|e| (1, e.to_string()))?;
+        print_plain(terminal.backend().buffer());
+        return Ok(0);
+    }
+    if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
+        return Err((
+            64,
+            "workspace needs a terminal; use --once for a read-only demo".into(),
+        ));
+    }
+    let state_path = state.ok_or((64, "Interactive demo requires --state <private-dir>".into()))?;
+    let (store, state) = Store::open(&state_path, &project, agent).map_err(|e| (1, e))?;
+    let mut app = tui::workspace::App::new(state, Some(store), mode, no_color);
+    app.home = true;
+    run_workspace(app).map_err(|e| (1, e))?;
+    Ok(0)
+}
+
+fn run_workspace(mut app: tui::workspace::App) -> Result<(), String> {
+    use crossterm::{
+        cursor::Show,
+        event::{self, DisableBracketedPaste, EnableBracketedPaste, Event, KeyEventKind},
+        terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
+    };
+    struct Restore;
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            let _ = terminal::disable_raw_mode();
+            let _ = crossterm::execute!(
+                io::stdout(),
+                DisableBracketedPaste,
+                LeaveAlternateScreen,
+                Show
+            );
+        }
+    }
+    terminal::enable_raw_mode().map_err(|e| e.to_string())?;
+    let _restore = Restore;
+    crossterm::execute!(io::stdout(), EnterAlternateScreen, EnableBracketedPaste)
+        .map_err(|e| e.to_string())?;
+    let mut terminal =
+        Terminal::new(CrosstermBackend::new(io::stdout())).map_err(|e| e.to_string())?;
+    let mut last = std::time::Instant::now();
+    while !app.quit {
+        terminal
+            .draw(|f| tui::workspace::draw(f, &app))
+            .map_err(|e| e.to_string())?;
+        if event::poll(std::time::Duration::from_millis(50)).map_err(|e| e.to_string())? {
+            match event::read().map_err(|e| e.to_string())? {
+                Event::Key(key) if key.kind == KeyEventKind::Press => app.key(key),
+                Event::Paste(text) => app.paste(&text),
+                _ => {}
+            }
+        }
+        if last.elapsed() >= std::time::Duration::from_millis(250) {
+            app.tick();
+            last = std::time::Instant::now();
+        }
+    }
+    Ok(())
 }
