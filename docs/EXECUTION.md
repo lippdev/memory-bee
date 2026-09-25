@@ -5,7 +5,7 @@
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex e lançamento confirmado por token implementados, experimentais; TUI e contas pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex e lançamento confirmado por token implementados, experimentais; dashboard de terminal (ratatui) com lista de sessões, detalhe e prévia de retomada/verificação implementada, somente leitura; exportar/aplicar/lançar pela TUI e contas pendentes.
 - Nome decidido: **Memory Bee** (`memory-bee`), com mascote abelha e colmeia dos projetos, conforme o [ADR 0015](decisions/0015-memory-bee-identity.md); crate, binário, pacotes e documentos renomeados para `memory-bee` (registros anteriores mantêm o nome da época). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
@@ -26,19 +26,19 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Etapa 06 — Primeiro recorte do dashboard terminal.** A etapa 05 tem todas as
-entregas implementadas; resta a validação real com os agentes (itens 38–40), que
-por orientação do mantenedor não bloqueia a implementação. Propor em ADR a
-biblioteca TUI, com justificativa e impacto em dependências/CI, e entregar uma
-tela somente leitura que liste sessões Claude/Codex de um projeto sob raízes
-explícitas e mostre o relatório de prepare-resume. Sem executar exportação, apply
-ou lançamento pela TUI neste recorte; sem contas, uso ou alertas.
+**Etapa 06 — Segundo recorte do dashboard terminal.** O primeiro recorte
+(listar, inspecionar, prévia de retomada e verificação, somente leitura) está
+implementado — ver "Dashboard de terminal (ratatui)" abaixo e
+[docs/specs/dashboard.md](specs/dashboard.md). Falta, para fechar a etapa:
+exportar pela TUI (com confirmação explícita do destino, mesma trava da CLI
+contra sobrescrever pacotes), preparar e lançar a retomada pela TUI (mesmo
+padrão de confirmação por token do ADR 0014, sem pular a prévia) e, se sobrar
+tempo do recorte, portar a cena animada da colmeia do protótipo aprovado para
+`src/tui/scene.rs` como módulo puro testável. Sem contas nem uso (etapas 08 e
+07) nesta tarefa.
 
 A renomeação no código está feita (seção "Renomeação — memory-bee"); resta o
-remoto GitHub, só com confirmação do mantenedor. O dashboard segue a cena aprovada
-no protótipo [Clareira da Colmeia](https://claude.ai/artifact/W5a8EAd4UKXLS84Nsqa8Ab):
-a colmeia é o painel central e o seletor de projetos (um gominho por repositório,
-mel por sessões e pacotes), com lista de sessões e detalhe abaixo.
+remoto GitHub, só com confirmação do mantenedor.
 
 Compatibilidade real de Claude Code e ensaios de leitura/retomada do pacote estão
 pendentes com o mantenedor em [docs/MANUAL_TESTS.md](MANUAL_TESTS.md), sem bloquear
@@ -75,7 +75,7 @@ substituída pela revisão de sequência do mantenedor registrada acima.
 | 03 Exportação revisável | P0 | Em andamento | Exportador somente contexto com prévia, exclusões e testes implementado; ensaios manuais de pacote/retomada pendentes. |
 | 04 Estado do código | P0 | Em andamento | Referência Git, código selecionado, verify e apply explícito implementados; ensaios manuais/M1 pendentes. |
 | 05 Troca de agente | P1 | Em andamento | Inspeção/exportação Codex, descoberta, preparação de retomada e lançamento confirmado implementados, experimentais; validação real com os agentes pendente (itens 38–40). |
-| 06 Dashboard terminal | P1 | Pendente | Depende de 05. HTML existente é planejamento, não implementação. |
+| 06 Dashboard terminal | P1 | Em andamento | Primeiro recorte (leitura) implementado; exportar/apply/lançar pela TUI pendentes. |
 | 07 Uso e alertas | P1 | Pendente | Depende de 01 e 06; falta referência de consumo. |
 | 08 Perfis de conta | P1 | Pendente | Depende de 05–06 e prova de isolamento. |
 | 09 Captura contínua | P2 | Pendente | Depende de 02–06. |
@@ -471,3 +471,46 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   confirmação; o GitHub redireciona o nome antigo); a pasta local pode manter o
   nome antigo. Os comandos do roteiro manual passam a usar `memory-bee`.
 - Próximo passo: primeiro recorte do dashboard em Rust seguindo a cena aprovada.
+
+## Dashboard de terminal (ratatui) — primeiro recorte
+
+- Recorte: subcomando `memory-bee dashboard`, somente leitura. ADR 0016 escolhe
+  `ratatui 0.30.2` + `crossterm 0.29`. `src/tui/{mod,theme,app,ui}.rs` (módulo do
+  binário, não da biblioteca): paleta escura/clara e `NO_COLOR`, descoberta
+  unificada Claude/Codex por `App::new`, detalhe de sessão com seleção de ramo
+  por teclado (`1`–`9`), prévia de `prepare-resume` e `receive::verify` sob
+  `--bundle`, degradação em terminais estreitos (< 80 colunas: um painel por
+  vez) e pequenos (< 30×8: aviso). `--once` renderiza um quadro em texto puro
+  (sem terminal real) para acessibilidade, automação e os testes deste
+  projeto; sem TTY e sem `--once`, saída 64. Contrato completo em
+  [docs/specs/dashboard.md](specs/dashboard.md).
+- Aceite parcial: os fluxos de listar, inspecionar e a prévia de retomada são
+  concluídos por teclado, com e sem cor, sem cortar informações essenciais (a
+  contagem de eventos, de diagnósticos e o símbolo de estado nunca são
+  cortados; só o rótulo da sessão trunca com `…`). A dashboard chama só o
+  núcleo já usado pela CLI. **Não** cobre "exportar e continuar pelo teclado"
+  do critério de aceite da etapa — isso é o próximo recorte.
+- Validação local macOS: `cargo fmt --all -- --check`,
+  `cargo clippy --locked --all-targets -- -D warnings`, `cargo build --locked`
+  e `cargo test --locked` aprovados (147 testes: 129 anteriores inalterados +
+  10 unitários novos em `src/tui/app.rs` cobrindo navegação, seleção de ramo,
+  retomada e verificação contra fixtures reais, + 8 de integração novos em
+  `tests/dashboard.rs` cobrindo uso inválido, raiz inexistente, a guarda de
+  TTY e `--once` em quatro tamanhos e dois temas); `python scripts/check_bundle.py`
+  aprovado. Rodei manualmente `dashboard --once` contra `testdata/claude-projects`
+  e `testdata/codex-sessions` em 140×40, 100×30, 60×20 e 40×12 para revisar o
+  layout; dois problemas reais encontrados e corrigidos antes de comitar:
+  agente e rótulo colados na lista, e o caminho do projeto sobrepondo e
+  apagando a aba "ajuda" no cabeçalho estreito. A animação real num terminal
+  interativo (não `--once`) não foi vista rodando pelo agente.
+- Autorrevisão; sem revisão independente.
+- Limitações: exportar, aplicar e lançar a retomada continuam só na CLI — a
+  TUI não tem essas teclas. A cena animada da colmeia (abelha, favo) do
+  protótipo aprovado não foi portada; o cabeçalho tem só o sinal estático
+  `⬢`. Caminhos de arquivo longos no detalhe ainda podem quebrar no meio de
+  uma palavra quando envolvem duas linhas (`Paragraph` não quebra por
+  diretório); a informação continua completa, só a quebra é menos elegante.
+  Compatibilidade real de terminal (emuladores sem 24 bits, larguras mínimas
+  de fato usáveis) não foi ensaiada manualmente.
+- Próximo passo: segundo recorte do dashboard — exportar, aplicar e lançar a
+  retomada pela TUI, com as mesmas confirmações explícitas da CLI (ADR 0014).

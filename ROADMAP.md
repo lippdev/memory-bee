@@ -123,6 +123,12 @@ Dar acesso ao núcleo em uma interface bonita e inclusiva.
 
 **Aceite:** Os fluxos principais são concluídos por teclado, com e sem cor, sem cortar informações essenciais. A dashboard chama o mesmo núcleo da CLI.
 
+**Status:** primeiro recorte entregue — listar, inspecionar e uma prévia de
+retomada/verificação somente leitura, com degradação de terminal e modo sem
+cor. Exportar e lançar a retomada pela própria TUI ficam para um recorte
+seguinte; hoje só a CLI faz isso. Detalhe em
+[docs/specs/dashboard.md](docs/specs/dashboard.md).
+
 ### 07 — Uso, limites e alertas
 
 **Prioridade:** P1. **Dependências:** 01 + 06.

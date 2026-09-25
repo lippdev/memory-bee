@@ -1,18 +1,24 @@
+mod tui;
+
 use memory_bee::{
     bundle::{Options, prepare},
     claude::{Limits, ReadState, inspect},
     discovery::{DiscoveryLimits, discover},
     selection::select,
 };
+use ratatui::{
+    Terminal,
+    backend::{CrosstermBackend, TestBackend},
+};
 use serde::Serialize;
 use std::{
     env,
-    io::{self, Write},
+    io::{self, IsTerminal, Write},
     path::{Path, PathBuf},
     process::ExitCode,
 };
 
-const USAGE: &str = "Usage:\n  memory-bee export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee inspect-codex <rollout.jsonl>\n  memory-bee inspect <session.jsonl> [--leaf <uuid>]\n  memory-bee sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-bee sessions --root <projects-dir> --project <project-dir>\n  memory-bee export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee verify <bundle-dir>\n  memory-bee apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-bee prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file> [--launch <confirmation>])\nOffline; no model calls.\nLaunches an agent only with --launch and a matching confirmation from --preview.\nExit: 0 success, 2 partial or attention needed, 3 possible secrets, 4 launched agent exited non-zero, 1 I/O or selection error, 64 usage error.";
+const USAGE: &str = "Usage:\n  memory-bee export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee inspect-codex <rollout.jsonl>\n  memory-bee inspect <session.jsonl> [--leaf <uuid>]\n  memory-bee sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-bee sessions --root <projects-dir> --project <project-dir>\n  memory-bee export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee verify <bundle-dir>\n  memory-bee apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-bee prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file> [--launch <confirmation>])\n  memory-bee dashboard --project <project-dir> [--claude-root <dir>] [--codex-root <dir>] [--bundle <dir>] [--theme (dark|light)] [--no-color] [--once [--width <n>] [--height <n>]]\nOffline; no model calls.\nLaunches an agent only with --launch and a matching confirmation from --preview.\nThe dashboard is read-only: it never exports, applies or launches.\nExit: 0 success, 2 partial or attention needed, 3 possible secrets, 4 launched agent exited non-zero, 1 I/O or selection error, 64 usage error.";
 fn output(value: &impl Serialize) -> Result<(), (u8, String)> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -106,6 +112,9 @@ fn run() -> Result<u8, (u8, String)> {
     }
     if args.first().is_some_and(|arg| arg == "export-codex") {
         return export(&args[1..], true);
+    }
+    if args.first().is_some_and(|arg| arg == "dashboard") {
+        return dashboard(&args[1..]);
     }
     Err((64, USAGE.into()))
 }
@@ -201,6 +210,172 @@ fn export(args: &[std::ffi::OsString], codex: bool) -> Result<u8, (u8, String)> 
     }
     Ok(code)
 }
+fn dashboard(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
+    let mut project: Option<PathBuf> = None;
+    let mut claude_root: Option<PathBuf> = None;
+    let mut codex_root: Option<PathBuf> = None;
+    let mut bundle: Option<PathBuf> = None;
+    let mut theme_set = false;
+    let mut mode = tui::theme::Mode::Dark;
+    let mut no_color = env::var_os("NO_COLOR").is_some();
+    let mut once = false;
+    let (mut width_set, mut height_set) = (false, false);
+    let (mut width, mut height): (u16, u16) = (100, 30);
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].to_str() {
+            Some("--no-color") => {
+                no_color = true;
+                index += 1;
+            }
+            Some("--once") => {
+                once = true;
+                index += 1;
+            }
+            Some(
+                flag @ ("--project" | "--claude-root" | "--codex-root" | "--bundle" | "--theme"
+                | "--width" | "--height"),
+            ) if index + 1 < args.len() => {
+                let value = &args[index + 1];
+                let slot_empty = match flag {
+                    "--project" => project.is_none(),
+                    "--claude-root" => claude_root.is_none(),
+                    "--codex-root" => codex_root.is_none(),
+                    "--bundle" => bundle.is_none(),
+                    "--theme" => !theme_set,
+                    "--width" => !width_set,
+                    _ => !height_set,
+                };
+                if !slot_empty {
+                    return Err((64, USAGE.into()));
+                }
+                match flag {
+                    "--project" => project = Some(value.into()),
+                    "--claude-root" => claude_root = Some(value.into()),
+                    "--codex-root" => codex_root = Some(value.into()),
+                    "--bundle" => bundle = Some(value.into()),
+                    "--theme" => {
+                        theme_set = true;
+                        mode = value
+                            .to_str()
+                            .and_then(tui::theme::Mode::parse)
+                            .ok_or((64, "theme must be dark or light".into()))?;
+                    }
+                    "--width" => {
+                        width_set = true;
+                        width = value
+                            .to_str()
+                            .and_then(|v| v.parse::<u16>().ok())
+                            .filter(|n| *n > 0)
+                            .ok_or((64, "width must be a positive integer".into()))?;
+                    }
+                    _ => {
+                        height_set = true;
+                        height = value
+                            .to_str()
+                            .and_then(|v| v.parse::<u16>().ok())
+                            .filter(|n| *n > 0)
+                            .ok_or((64, "height must be a positive integer".into()))?;
+                    }
+                }
+                index += 2;
+            }
+            _ => return Err((64, USAGE.into())),
+        }
+    }
+    let Some(project) = project else {
+        return Err((64, USAGE.into()));
+    };
+    if claude_root.is_none() && codex_root.is_none() {
+        return Err((64, USAGE.into()));
+    }
+    if (width_set || height_set) && !once {
+        return Err((64, USAGE.into()));
+    }
+    let app = tui::app::App::new(project, claude_root, codex_root, bundle, mode, no_color)
+        .map_err(|e| (1, e))?;
+    let partial = app.partial;
+    if once {
+        let mut app = app;
+        let mut terminal = Terminal::new(TestBackend::new(width, height))
+            .map_err(|e| (1, format!("Cannot render: {e}")))?;
+        terminal
+            .draw(|f| tui::ui::draw(f, &mut app))
+            .map_err(|e| (1, format!("Cannot render: {e}")))?;
+        print_plain(terminal.backend().buffer());
+        return Ok(if partial { 2 } else { 0 });
+    }
+    if !io::stdout().is_terminal() {
+        return Err((
+            64,
+            "dashboard needs a terminal; use --once for plain text output".into(),
+        ));
+    }
+    run_interactive(app).map_err(|e| (1, e))?;
+    Ok(if partial { 2 } else { 0 })
+}
+
+/// Dumps a rendered frame as plain text (glyphs only, no color) for `--once`:
+/// accessibility, automation and tests, without a real terminal.
+fn print_plain(buffer: &ratatui::buffer::Buffer) {
+    let area = buffer.area();
+    let mut out = String::new();
+    for y in area.top()..area.bottom() {
+        for x in area.left()..area.right() {
+            out.push_str(buffer[(x, y)].symbol());
+        }
+        out.push('\n');
+    }
+    print!("{out}");
+}
+
+/// Owns the terminal for the session: raw mode and the alternate screen are
+/// entered here and always left before returning, including on error or
+/// panic. Never calls `resume::launch` or anything that writes or executes.
+fn run_interactive(mut app: tui::app::App) -> Result<(), String> {
+    crossterm::terminal::enable_raw_mode()
+        .and_then(|()| crossterm::execute!(io::stdout(), crossterm::terminal::EnterAlternateScreen))
+        .map_err(|e| e.to_string())?;
+    std::panic::set_hook(Box::new(|info| {
+        let _ = crossterm::terminal::disable_raw_mode();
+        let _ = crossterm::execute!(io::stdout(), crossterm::terminal::LeaveAlternateScreen);
+        eprintln!("{info}");
+    }));
+    let result = (|| -> Result<(), String> {
+        let backend = CrosstermBackend::new(io::stdout());
+        let mut terminal = Terminal::new(backend).map_err(|e| e.to_string())?;
+        loop {
+            terminal
+                .draw(|f| tui::ui::draw(f, &mut app))
+                .map_err(|e| e.to_string())?;
+            if app.quit {
+                return Ok(());
+            }
+            if crossterm::event::poll(std::time::Duration::from_millis(200))
+                .map_err(|e| e.to_string())?
+                && let crossterm::event::Event::Key(key) =
+                    crossterm::event::read().map_err(|e| e.to_string())?
+                && key.kind == crossterm::event::KeyEventKind::Press
+            {
+                // Raw mode disables SIGINT delivery, so Ctrl+C arrives as a
+                // plain key; without this it would do nothing and only `q`
+                // could quit, breaking a near-universal terminal expectation.
+                if key.code == crossterm::event::KeyCode::Char('c')
+                    && key
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::CONTROL)
+                {
+                    return Ok(());
+                }
+                app.on_key(key.code);
+            }
+        }
+    })();
+    let _ = crossterm::terminal::disable_raw_mode();
+    let _ = crossterm::execute!(io::stdout(), crossterm::terminal::LeaveAlternateScreen);
+    result
+}
+
 fn main() -> ExitCode {
     match run() {
         Ok(code) => ExitCode::from(code),
