@@ -628,3 +628,30 @@ diferenças de flags. Não usar conversas reais.
 |---|---|---|
 | 39: lançamento confirmado com agente falso e token divergente | Pendente | — |
 | 40: lançamento real controlado em Claude Code e Codex | Pendente | — |
+
+## 41. Protótipo da colmeia no navegador (pendente)
+
+Abrir o protótipo privado [Clareira da Colmeia](https://claude.ai/artifact/W5a8EAd4UKXLS84Nsqa8Ab)
+e conferir, clicando no terminal para dar foco:
+
+- Abertura: os gominhos nascem um a um a partir do galho e a abelha circula a
+  colmeia antes de patrulhar as flores.
+- `←`/`→`: o gominho aceso muda, a abelha voa até ele, deposita e o nível de mel
+  pulsa; o nome do projeto aparece à esquerda da colmeia e na linha abaixo da cena.
+- `receipts-ocr` (terceiro gominho): contorno piscando e `?` sobre a abelha; a
+  lista mostra a sessão ambígua.
+- `enter` pousa a abelha no gominho; `esc` a solta. `n` acrescenta um gominho.
+  `f` solta pólen e vagalumes. Vinte segundos sem tecla: ela dorme no alto da
+  colmeia com zzz; qualquer tecla acorda.
+- Controles: 140×40, 100×30 (colmeia miúda), 60×20 (três gominhos) e 40×12 (sem
+  cena, cabeçalho com `n/total projeto`); paletas entardecer e fim de tarde;
+  24 bits, 256 e `NO_COLOR` (gominhos vazios ocos, sem fundo colorido); glifos
+  básicos; movimento reduzido (quadro fixo com a abelha pousada).
+
+Esperado: nada corta texto, a colmeia nunca invade a grama, a abelha fica dentro
+da cena e o tema claro mantém a abelha legível sobre o céu pêssego. Anotar
+navegador e o que destoar; o visual só é aprovado com esse registro.
+
+| Itens novos | Estado | Evidência manual |
+|---|---|---|
+| 41: protótipo da colmeia, teclas, tamanhos e modos | Pendente | — |

@@ -1,6 +1,6 @@
 # 0002 — Nome do produto
 
-Status: aceito pelo mantenedor em 2026-09-24.
+Status: aceito pelo mantenedor em 2026-09-24. Substituído pelo [ADR 0015](0015-memory-bee-identity.md) em 2026-09-24: o produto passa a se chamar Memory Bee.
 
 ## Decisão
 
