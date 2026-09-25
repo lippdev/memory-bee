@@ -901,3 +901,18 @@ ensaio humano. Exportação integrada e perfis reais ainda pendentes.
 | Item novo | Estado | Evidência manual |
 |---|---|---|
 | 52: UI Bee sobre Claude real oculto, ferramentas, permissões e retomada | Pendente | — |
+
+## 53. Revisão do Pullfrog em PR (pendente)
+
+Após integrar `.github/pullfrog/review.md` e sincronizar `prompts.review` pelo
+comando em `CONTRIBUTING.md`, abrir um PR pequeno com uma mudança revisável.
+Conferir no PR que o check `pullfrog` termina e que há parecer em português,
+com referência a um risco concreto quando existir. Enviar um novo commit ao PR
+e conferir a revisão incremental. Testar um PR de rascunho: a revisão automática
+deve aguardar a marcação como pronto. Um parecer sem achados não prova que todos
+os comportamentos foram testados. Anotar links dos PRs/runs e qualquer falha;
+não contar esta seção como executada pelo resultado de CI deste ajuste.
+
+| Item novo | Estado | Evidência manual |
+|---|---|---|
+| 53: revisão inicial, incremental e rascunho | Pendente | — |
