@@ -28,14 +28,13 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Claude invisível na TUI Bee — próxima entrega de produto.** O mantenedor
-rejeitou a exibição da tela nativa do Claude. `workspace --claude` hospeda a CLI
-em PTY e retoma ID, mas é apenas prova experimental. Próximo: adaptador de eventos
-estruturados com Claude em segundo plano, UI Bee de conversa/ações/permissões e
-exportação revisável. Testar primeiro com CLI falsa, negando ferramentas sem
-decisão explícita. Verificar a fronteira de autenticação para usar assinatura
-existente no modo programático antes de habilitá-lo como produto. O modo atual
-guarda apenas IDs, não memória; perfis reais e Codex integrado seguem pendentes.
+**Claude invisível na TUI Bee — próximo recorte de produto.** O mantenedor
+rejeitou a exibição da tela nativa do Claude. `workspace --claude` agora hospeda
+a CLI interativa em PTY oculto e usa hooks para mostrar texto, ações e permissões
+na Bee. Uma resposta real curta foi recebida na UI; negação/aprovação e retomada
+foram testadas com CLI falsa. Próximo: ensaio humano de ferramentas/permissões
+reais, tratamento de prompts nativos sem hook e histórico/exportação revisável.
+O modo ainda guarda só IDs; perfis reais e Codex integrado seguem pendentes.
 O lançamento da experiência completa ainda exige os dois agentes (ADR 0018).
 
 **Refinamento visual.** Referência HTML e [plano visual](specs/workspace-visual.md)
@@ -671,3 +670,37 @@ escopo da entrega atual nem a próxima tarefa aprovada.
   README. Autorrevisão documental; sem revisão independente. Próximo: prova
   sintética do adaptador estruturado e da UI Bee, seguida da resolução da
   fronteira de assinatura e ensaio real autorizado.
+
+## Claude interativo oculto — primeira interface Bee funcional
+
+- `workspace --claude` mantém o Claude Code original no PTY sem desenhar sua
+  tela. Hooks oficiais carregados por `--settings` entregam texto, ações, status
+  e solicitações de permissão à Bee via socket Unix privado. Decisões exigem
+  `y`/`n`; falha/timeout negam. `--claude-terminal` preserva o recorte visível
+  anterior para diagnóstico. Nenhum token é lido pela Memory Bee.
+- Evidências: CLI falsa cobriu tela original invisível, mensagens, negar/permitir,
+  IDs, retomada, restauração do terminal e negação quando o socket falta.
+  O Claude instalado 2.1.282 foi iniciado em projeto já confiado; hook de sessão
+  e resposta curta real apareceram na Bee, sem marca nativa visível, e a saída
+  concluiu com código 0. No projeto descartável não confiado, `SessionStart`
+  ocorreu mas um prompt nativo oculto impediu a saída normal; limite registrado.
+- Autorrevisão; sem revisão independente. Teste manual de ferramentas reais,
+  permissão, interrupção e retomada permanece pendente (item 52). O histórico
+  completo ainda não é reidratado na tela e a exportação nativa não está ligada.
+- Uma tentativa controlada de solicitar ação Bash real não produziu um pedido
+  observável na Bee dentro do prazo; nenhum arquivo temporário foi criado. Esse
+  ensaio é inconclusivo para o fluxo de permissão real, não um aceite.
+- Próximo: cobrir estados nativos invisíveis de confiança/login com falha clara
+  ou ação explícita, validar ferramentas/permissões reais e ligar a sessão Claude
+  à exportação revisável. Não declarar o fluxo completo pronto nesta etapa.
+- Retomada deste recorte em 2026-09-25: `cargo fmt --all -- --check`, `cargo
+  test --locked`, `cargo clippy --locked --all-targets -- -D warnings`, `cargo
+  build --locked` e testes PTY sintéticos da moldura nativa e da UI oculta
+  passaram. O teste oculto agora cobre `Ctrl+Q` com permissão pendente, que deve
+  negar antes de sair. A suíte Rust exigiu execução fora do sandbox para criar
+  um socket Unix; o mesmo valeu para o teste PTY da ponte. Links relativos e
+  `git diff --check` conferidos. Autorrevisão, sem revisão independente.
+- Corrigida a decisão por teclado: somente `y`, `n` ou Esc resolvem uma
+  permissão; `Ctrl+C` e `Ctrl+Q` negam antes de interromper/sair. O roteiro 51
+  identifica `--claude-terminal` como diagnóstico. Ainda não há prova de
+  ferramentas e permissões reais além da resposta curta já observada.

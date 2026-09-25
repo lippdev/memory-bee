@@ -840,7 +840,7 @@ cor, tema claro/escuro, larguras 140/100/60/40 e janela estreita. A cena inicial
 continua disponível. Nenhum teste, arquivo ou agente real é executado pelo HTML.
 Esse roteiro não valida o renderizador Rust, ainda pendente.
 
-## 51. Claude Code nativo dentro da Memory Bee (pendente)
+## 51. Claude Code nativo na moldura de diagnóstico (pendente)
 
 Em um projeto descartável, faça login primeiro pelo Claude Code original e
 confirme que ele funciona fora da Memory Bee. Depois rode:
@@ -848,8 +848,8 @@ confirme que ele funciona fora da Memory Bee. Depois rode:
 ```sh
 cargo build --locked
 mkdir -p /tmp/bee-claude-project
-target/debug/memory-bee workspace --claude --project /tmp/bee-claude-project --state /tmp/bee-claude-state
-target/debug/memory-bee workspace --claude --project /tmp/bee-claude-project --state /tmp/bee-claude-state --resume
+target/debug/memory-bee workspace --claude --claude-terminal --project /tmp/bee-claude-project --state /tmp/bee-claude-state
+target/debug/memory-bee workspace --claude --claude-terminal --project /tmp/bee-claude-project --state /tmp/bee-claude-state --resume
 ```
 
 Na primeira sessão, enviar tarefa simples, observar resposta e, só no projeto
@@ -862,10 +862,42 @@ ou conteúdo da conversa no repositório. Estado com outro projeto e chamada sem
 TTY devem ser recusados. Anotar versão do Claude, resultado de cada ação e se
 houve uso da assinatura já autenticada.
 
-O teste automatizado sintético, sem login/modelo, é
+Este modo mantém a tela nativa visível apenas para diagnóstico. O teste
+automatizado sintético, sem login/modelo, é
 `python3 scripts/check_claude_native_pty.py`; aprovação nele não conclui este
 ensaio. Exportação da memória pelo modo nativo e perfis isolados seguem pendentes.
 
 | Item novo | Estado | Evidência manual |
 |---|---|---|
 | 51: conversa, permissões, interrupção e retomada Claude reais | Pendente | — |
+
+## 52. Claude oculto com interface da Bee (pendente)
+
+Antes, abra `claude` no projeto escolhido para concluir login e confirmação de
+confiança por ele. Depois rode em um projeto descartável já confiado:
+
+```sh
+cargo build --locked
+target/debug/memory-bee workspace --claude --project /caminho/do/projeto --state /tmp/bee-claude-hidden
+target/debug/memory-bee workspace --claude --project /caminho/do/projeto --state /tmp/bee-claude-hidden --resume
+```
+
+Esperado: apenas moldura e conversa da Memory Bee; logo, campo de entrada e
+permissões originais do Claude não aparecem. Enviar mensagem curta e conferir
+resposta, pedir leitura, edição e execução no projeto descartável. Para cada
+solicitação, verificar que `n` nega e `y` permite somente a ação exibida.
+Testar `Ctrl+C`, colagem, resize, `Ctrl+Q`, retomada e restauração do terminal.
+Com permissão pendente, conferir que outra tecla não decide e que `Ctrl+C` ou
+`Ctrl+Q` negam antes de interromper ou sair.
+Confirmar que a sessão continua acessível no Claude original. Registrar versão
+e resultados, sem copiar dados reais da conversa para o repositório.
+
+Prompts de login/confiança não cobertos por hook podem ficar invisíveis; se a
+tela não avançar, sair com `Ctrl+Q` e preparar o projeto diretamente no Claude.
+`--claude-terminal` mostra o modo antigo apenas para diagnóstico. O teste
+sintético é `python3 scripts/check_claude_hidden_pty.py`; não substitui este
+ensaio humano. Exportação integrada e perfis reais ainda pendentes.
+
+| Item novo | Estado | Evidência manual |
+|---|---|---|
+| 52: UI Bee sobre Claude real oculto, ferramentas, permissões e retomada | Pendente | — |

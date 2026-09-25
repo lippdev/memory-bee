@@ -2,15 +2,16 @@
 
 Contrato dos primeiros recortes do [ADR 0018](../decisions/0018-unified-workspace.md).
 `workspace --demo` não é programação real: Claude/Codex, ferramentas, mudanças e
-permissões são simulados. `workspace --claude` inicia o Claude Code instalado.
+permissões são simulados. `workspace --claude` inicia o Claude Code instalado em
+segundo plano e desenha conversa/ações na TUI Bee.
 
 Para a versão real, a TUI deverá hospedar os CLIs oficiais como processos locais.
 O usuário autentica cada um pelo seu próprio fluxo. A Memory Bee não lê nem
 armazena tokens; associa sessões, eventos e exportações ao processo e ao perfil
 selecionado. App Server é o transporte candidato para Codex; para Claude, testar
 o binário original em PTY e verificar se a CLI permite uma conversa própria com
-permissões fiéis. O PTY é o primeiro transporte Claude implementado; ainda não
-fornece eventos estruturados nem conversa renderizada pela Memory Bee.
+permissões fiéis. O PTY oculto e hooks oficiais fornecem o primeiro transporte
+Claude com eventos para uma conversa Bee, ainda experimental.
 
 ## Claude local experimental
 
@@ -21,26 +22,39 @@ memory-bee workspace --claude --project . --state /tmp/bee-claude-state --resume
 
 Exige `claude` no PATH, TTY interativo, projeto existente e pasta de estado
 privada (pai existente). Inicia o binário original com `--session-id <uuid>` ou
-`--resume <uuid>`, sem copiar tokens. O login, a conversa, as ferramentas e as
-decisões de permissão pertencem ao Claude Code. A Memory Bee encaminha teclado,
-colagem e resize ao PTY, desenha sua saída em moldura própria e restaura o terminal
-ao sair. `Ctrl+G` abre ajuda Bee; `Ctrl+C` vai ao Claude; `/exit` encerra a sessão.
+`--resume <uuid>`, sem copiar tokens. A Memory Bee usa `--settings` apenas na
+invocação para registrar hooks `SessionStart`, `MessageDisplay`, `PreToolUse`,
+`PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, `Stop` e `StopFailure`.
+O Claude continua controlando login, sessão e execução. Um socket Unix em pasta
+temporária 0700 recebe eventos; o subprocesso de hook devolve decisão `allow` ou
+`deny` ao Claude. Falha de ponte e timeout negam permissões. A tela nativa fica
+oculta; a Bee mostra mensagens, nomes de ações e decisão `y`/`n`, com negação
+inicial. Enter envia prompt, `Ctrl+C` interrompe e `Ctrl+Q` encerra. O terminal
+volta ao estado anterior na saída. `--claude-terminal` reabre o modo anterior com
+a TUI nativa visível para diagnóstico. Se houver permissão pendente, `Ctrl+C` e
+`Ctrl+Q` negam antes de interromper ou sair; outras teclas além de `y`, `n` e
+Esc não decidem a permissão.
+O painel mostra o `tool_input` completo; quando não cabe para revisão, `y` também
+nega. `Ctrl+Q` aguarda até cinco segundos por `/exit` e encerra o processo se
+o CLI nativo estiver preso em um prompt invisível.
 
 `claude-native.json` guarda projeto canônico, IDs e códigos de saída (até 128
 sessões, 64 KiB), sem transcrição. A pasta é 0700 e arquivos são 0600 em Unix;
 `claude-native.lock` impede segundo escritor. Após crash, verificar que não há
 processo ativo antes de remover a trava antiga. `--resume` usa o último ID desta
 pasta; não reenvia prompt. A sessão nativa pode não existir quando se sai antes
-de enviar uma mensagem. Exportação/revisão de memória, isolamento de perfis,
-decisões em UI própria e integração Codex estão pendentes. O modo não comprova
+de enviar uma mensagem. Exportação/revisão de memória, isolamento de perfis e
+integração Codex estão pendentes. O modo não comprova
 conversa/permissões reais por si só; ver [roteiro manual](../MANUAL_TESTS.md).
 
-**Direção atual:** o mantenedor não quer ver a TUI original do Claude. Este
-terminal embutido permanece apenas como recorte experimental. A UI aceita deve
-mostrar somente componentes da Memory Bee e receber eventos estruturados do
-Claude em segundo plano, inclusive solicitações de permissão. Antes de ligar
-assinaturas ao modo programático, resolver o limite de autenticação documentado
-no [ADR 0018](../decisions/0018-unified-workspace.md).
+**Direção atual:** o mantenedor não quer ver a TUI original do Claude. O modo
+padrão `--claude` já oculta essa tela e mostra componentes da Memory Bee. O
+terminal embutido anterior requer `--claude-terminal`. A UI Bee ainda é um
+recorte funcional sem histórico/exportação nativos integrados; prompts de login,
+confiança do projeto ou outros controles do Claude que não emitam hooks podem
+ficar ocultos e bloquear a sessão. Preparar o projeto no Claude original antes
+de usar a Bee e conferir o [roteiro manual](../MANUAL_TESTS.md). O [ADR 0018](../decisions/0018-unified-workspace.md)
+registra por que o transporte mantém o binário interativo sem usar `-p`.
 
 ```sh
 cargo run --locked -- workspace --demo --project . --state /tmp/bee-demo-state
@@ -126,5 +140,8 @@ colagem, decisão negada, exportação/schema/verify, resize, interrupção e re
 em PTY com projeto sintético. O [roteiro manual](../MANUAL_TESTS.md) mantém ensaios
 humanos separados. `scripts/check_claude_native_pty.py` usa CLI falsa para testar
 entrada, ID, retomada, estado privado e restauração do terminal. Adaptador Codex
-experimental é apenas protocolo não conectado; ensaio de conversa Claude real,
-contas, isolamento real, exportação nativa e lançamento conjunto pendentes.
+experimental é apenas protocolo não conectado. `scripts/check_claude_hidden_pty.py`
+cobre a UI Bee sobre CLI falsa com hooks, texto nativo oculto, decisões de
+permissão, retomada e negação na falha da ponte. Uma mensagem curta real chegou
+à Bee; ferramentas/permissões reais, contas, isolamento, exportação nativa e
+lançamento conjunto seguem pendentes.

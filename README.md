@@ -72,7 +72,9 @@ cargo run --locked -- workspace --demo --project . --state /tmp/bee-demo-state
 cargo run --locked -- workspace --demo --project . --once --no-color
 ```
 
-O primeiro recorte real abre o **Claude Code original** em um PTY dentro da TUI.
+O primeiro recorte real abre o **Claude Code original** em segundo plano, com
+conversa e permissões desenhadas pela Memory Bee. O processo ainda usa um PTY,
+mas sua tela não é exibida; hooks oficiais entregam texto e ações à Bee.
 Faça login pelo próprio `claude` antes; a Memory Bee não solicita nem armazena
 credenciais. Use um projeto e uma pasta de estado explícitos:
 
@@ -81,13 +83,13 @@ cargo run --locked -- workspace --claude --project . --state /tmp/bee-claude-sta
 cargo run --locked -- workspace --claude --project . --state /tmp/bee-claude-state --resume
 ```
 
-`/exit` encerra o Claude; `Ctrl+G` abre ajuda da Memory Bee e `Ctrl+C` vai ao Claude.
+Enter envia mensagem, `Ctrl+C` interrompe e `Ctrl+Q` sai. Quando Claude pedir
+permissão, `y` permite uma vez e `n` nega; sem resposta a ponte nega.
 A pasta privada guarda apenas IDs de sessão e códigos de saída, enquanto o Claude
-mantém a conversa nativa. Este recorte ainda mostra a interface do Claude dentro
-da moldura Bee. **É uma prova experimental, não a tela final desejada:** o Claude
-deve rodar invisível e a Memory Bee deve desenhar toda a conversa e as permissões.
-Memória/exportação integrada, perfis isolados e interface própria continuam
-pendentes. Contrato e teclas em
+mantém a conversa nativa. A interface antiga dentro da moldura continua disponível
+para diagnóstico com `--claude-terminal`. A nova tela Bee é funcional, mas ainda
+experimental: exportação integrada, perfis isolados, histórico completo na tela
+e refinamento visual continuam pendentes. Contrato e teclas em
 [workspace](docs/specs/workspace.md). O lançamento da experiência completa com
 Claude e Codex segue condicionado aos aceites do [ADR 0018](docs/decisions/0018-unified-workspace.md).
 O dashboard anterior permanece disponível.

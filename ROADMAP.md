@@ -35,8 +35,9 @@ por trás, assinaturas existentes e lançamento conjunto. Isso amplia as etapas
 1. Protótipo funcional com os dois agentes simulados, menus, streaming,
    permissões, erro, persistência e exportação: implementado como `workspace --demo`.
 2. Prova real por agente/assinatura, incluindo dois perfis isolados: em andamento.
-   `workspace --claude` hospeda o binário Claude Code original em PTY e retoma
-   seu ID nativo; conversa, permissões e perfis reais ainda exigem ensaio humano.
+   `workspace --claude` hospeda o binário Claude Code original em PTY oculto,
+   usa hooks para conversa e permissões na Bee e retoma o ID nativo. Mensagem real
+   curta comprovada; ferramentas/perfis reais ainda exigem ensaio humano.
 3. Experiência integrada aos dois harnesses, histórico e exportação: pendente.
 4. Troca real entre agentes/contas com revisão e preservação da origem: pendente.
 5. Lançamento conjunto após todos os aceites, sem substituir o requisito por
@@ -52,14 +53,13 @@ uso da assinatura em um produto de terceiros. A prova deve preservar permissões
 reais, interrupção, retomada e exportação. Se a interface estruturada Claude não
 atender a esse contrato, registrar a lacuna antes do lançamento conjunto.
 
-O mantenedor priorizou a implementação nativa **Claude primeiro**. O PTY com
-sessão nativa é a primeira entrega desse caminho, disponível como modo experimental;
+O mantenedor priorizou a implementação nativa **Claude primeiro**. O PTY oculto
+com hooks e UI Bee é a primeira entrega desse caminho, em modo experimental;
 não altera o aceite do lançamento conjunto da experiência completa. O próximo
-recorte deve desenhar a conversa Claude **inteiramente na TUI da Memory Bee**,
-com o processo invisível, eventos estruturados, permissões explícitas, histórico
-e exportação revisável. A moldura PTY atual é prova técnica, não a UI aceita.
-Verificar também se o transporte programático pode usar a assinatura existente
-nesse produto; não presumir essa autorização nem trocar por API paga em silêncio.
+recorte deve completar histórico/exportação revisável, cobrir prompts nativos que
+não emitem hooks e ensaiar ferramentas/permissões reais. A moldura PTY anterior
+virou diagnóstico opcional. O transporte atual continua com o binário interativo
+original e login próprio; não usa `-p` nem API separada.
 O HTML ainda representa o plano
 visual anterior; este Markdown e o ADR 0018 prevalecem para a sequência.
 
