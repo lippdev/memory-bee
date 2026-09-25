@@ -46,9 +46,14 @@
   .github/pullfrog/review.md --repo lippdev/memory-bee` retornou `updated`; `get`
   devolveu o texto completo. O primeiro parecer no PR #49 veio em português e
   apontou ambiguidade na explicação da sincronização; o texto foi corrigido.
-  A revisão incremental e o ensaio do item 53 seguem pendentes; isso não altera
-  o status das etapas do produto. Autorrevisão documental; Pullfrog é revisor
-  automatizado, não revisão humana independente.
+  A revisão incremental no commit `e542f2a` confirmou a correção sem novos
+  achados. CI Linux passou; o primeiro job macOS falhou por timeout no teste
+  sintético de PTY e passou no rerun do mesmo commit. A intermitência foi
+  registrada na [issue #50](https://github.com/lippdev/memory-bee/issues/50).
+  O ensaio de rascunho do item 53 segue pendente. Isso não altera o status das
+  etapas do produto.
+  Autorrevisão documental; Pullfrog é revisor automatizado, não revisão humana
+  independente.
 
 ## Revisão de sequência — orientação do mantenedor
 
