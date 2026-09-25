@@ -63,3 +63,8 @@ Preparação de retomada via `prepare-resume <pacote> --target claude|codex --pr
 <projeto> [--worktree <pasta>] (--preview | --output <arquivo>)` implementada;
 `--launch <confirmação>` inicia o agente só quando o token da prévia confere
 (ADR 0014). Contrato em `docs/specs/resume-preparation.md` (ADR 0013).
+
+Dashboard: ações `e` (contexto/exclusões), `a` (aplicar pacote), `p` (prompt) e
+`l` (lançar com token) implementadas com prévia e confirmação; `--once` permanece
+somente leitura. Contratos em `docs/specs/dashboard.md` e ADR 0017. Cena animada,
+exportação de código pela TUI e ensaios humanos pendentes.

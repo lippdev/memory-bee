@@ -38,6 +38,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         ])
         .split(area);
 
+    if app.dialog.is_some() {
+        draw_dialog(f, app, area);
+        return;
+    }
     draw_header(f, app, rows[0]);
     match app.view {
         View::Help => draw_help(f, app, rows[1]),
@@ -110,7 +114,7 @@ fn draw_status(f: &mut Frame, app: &App, area: Rect) {
         (
             "●",
             p.ok,
-            format!("{} sessões · somente leitura", app.sessions.len()),
+            format!("{} sessões · ações com prévia", app.sessions.len()),
         )
     };
     let line = Line::from(vec![
@@ -127,6 +131,7 @@ fn draw_hints(f: &mut Frame, app: &App, area: Rect) {
         View::Sessions if app.bundle.is_some() => &[
             ("↑↓", "mover"),
             ("tab", "detalhe"),
+            ("e", "exportar"),
             ("esc", "voltar"),
             ("r", "retomada"),
             ("?", "ajuda"),
@@ -135,12 +140,16 @@ fn draw_hints(f: &mut Frame, app: &App, area: Rect) {
         View::Sessions => &[
             ("↑↓", "mover"),
             ("tab", "detalhe"),
+            ("e", "exportar"),
             ("esc", "voltar"),
             ("?", "ajuda"),
             ("q", "sair"),
         ],
         View::Resume => &[
-            ("t", "trocar destino"),
+            ("t", "destino"),
+            ("a", "aplicar"),
+            ("p", "prompt"),
+            ("l", "lançar"),
             ("v", "verificar pacote"),
             ("esc", "voltar"),
             ("q", "sair"),
@@ -360,6 +369,7 @@ fn draw_detail(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(
         Paragraph::new(lines)
             .wrap(Wrap { trim: false })
+            .scroll((app.scroll, 0))
             .block(block),
         area,
     );
@@ -477,7 +487,7 @@ fn draw_resume(f: &mut Frame, app: &App, area: Rect) {
                 )));
             }
             lines.push(Line::from(Span::styled(
-                "lançar só pela CLI com --output e --launch <confirmação>",
+                "p grava prompt · l lança com confirmação · a aplica código",
                 Style::default().fg(p.ink4),
             )));
         }
@@ -498,6 +508,7 @@ fn draw_resume(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(
         Paragraph::new(lines)
             .wrap(Wrap { trim: false })
+            .scroll((app.scroll, 0))
             .block(block),
         area,
     );
@@ -511,6 +522,10 @@ fn draw_help(f: &mut Frame, app: &App, area: Rect) {
         ("1-9", "escolher um ramo quando necessário"),
         ("esc", "voltar"),
         ("s", "lista de sessões"),
+        ("e", "exportar contexto da sessão"),
+        ("a", "conferir e aplicar pacote"),
+        ("p / l", "gravar prompt / lançar agente"),
+        ("PgUp/Dn", "rolar prévia, detalhe e ajuda"),
         ("r", "prévia de retomada (com --bundle)"),
         ("t", "trocar o destino da retomada"),
         ("v", "verificar o pacote (com --bundle)"),
@@ -530,7 +545,13 @@ fn draw_help(f: &mut Frame, app: &App, area: Rect) {
         .borders(Borders::ALL)
         .title(" Atalhos ")
         .border_style(Style::default().fg(p.accent));
-    f.render_widget(Paragraph::new(lines).block(block), area);
+    f.render_widget(
+        Paragraph::new(lines)
+            .wrap(Wrap { trim: false })
+            .scroll((app.scroll, 0))
+            .block(block),
+        area,
+    );
 }
 
 fn kv(p: &crate::tui::theme::Palette, key: &str, value: &str) -> Line<'static> {
@@ -548,4 +569,39 @@ fn truncate(text: &str, max: usize) -> String {
     } else {
         head
     }
+}
+
+fn draw_dialog(f: &mut Frame, app: &mut App, area: Rect) {
+    let dialog = app.dialog.as_mut().unwrap();
+    let rows = Layout::vertical([
+        Constraint::Min(2),
+        Constraint::Length(2),
+        Constraint::Length(2),
+        Constraint::Length(1),
+    ])
+    .split(area);
+    let content = Paragraph::new(dialog.preview.as_str())
+        .wrap(Wrap { trim: false })
+        .block(Block::bordered().title(dialog.title));
+    f.render_widget(content.scroll((dialog.scroll, 0)), rows[0]);
+    let instruction = if dialog.form.is_some() {
+        "Digite o valor; Enter continua".to_string()
+    } else if dialog.pending.is_some() {
+        format!("Confirme digitando: {}", dialog.expected)
+    } else {
+        "Enter fecha o resultado".into()
+    };
+    f.render_widget(
+        Paragraph::new(instruction).wrap(Wrap { trim: false }),
+        rows[1],
+    );
+    // Show the tail while typing long paths. Full paths appear in the review.
+    let width = rows[2].width.saturating_sub(2) as usize;
+    let chars: Vec<char> = dialog.input.chars().collect();
+    let input: String = chars[chars.len().saturating_sub(width)..].iter().collect();
+    f.render_widget(
+        Paragraph::new(format!("> {input}")).wrap(Wrap { trim: false }),
+        rows[2],
+    );
+    f.render_widget(Paragraph::new("Esc cancela · PgUp/Dn · Home"), rows[3]);
 }

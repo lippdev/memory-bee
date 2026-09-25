@@ -1,11 +1,11 @@
 # Estado de execução
 
-Última atualização: 2026-09-24. Este arquivo é o ponto de retomada entre agentes. Não substitui a inspeção do Git nem os critérios do [roadmap](../ROADMAP.md).
+Última atualização: 2026-09-25. Este arquivo é o ponto de retomada entre agentes. Não substitui a inspeção do Git nem os critérios do [roadmap](../ROADMAP.md).
 
 ## Situação atual
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
-- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex e lançamento confirmado por token implementados, experimentais; dashboard de terminal (ratatui) com lista de sessões, detalhe e prévia de retomada/verificação implementada, somente leitura; exportar/aplicar/lançar pela TUI e contas pendentes.
+- CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex e lançamento confirmado por token implementados, experimentais; dashboard de terminal (ratatui) com lista, detalhe, exportação de contexto/exclusões, aplicação e prompt/lançamento confirmado implementados; cena animada, exportação de código pela TUI e contas pendentes.
 - Nome decidido: **Memory Bee** (`memory-bee`), com mascote abelha e colmeia dos projetos, conforme o [ADR 0015](decisions/0015-memory-bee-identity.md); crate, binário, pacotes e documentos renomeados para `memory-bee` (registros anteriores mantêm o nome da época). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
@@ -26,16 +26,13 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Etapa 06 — Segundo recorte do dashboard terminal.** O primeiro recorte
-(listar, inspecionar, prévia de retomada e verificação, somente leitura) está
-implementado — ver "Dashboard de terminal (ratatui)" abaixo e
-[docs/specs/dashboard.md](specs/dashboard.md). Falta, para fechar a etapa:
-exportar pela TUI (com confirmação explícita do destino, mesma trava da CLI
-contra sobrescrever pacotes), preparar e lançar a retomada pela TUI (mesmo
-padrão de confirmação por token do ADR 0014, sem pular a prévia) e, se sobrar
-tempo do recorte, portar a cena animada da colmeia do protótipo aprovado para
-`src/tui/scene.rs` como módulo puro testável. Sem contas nem uso (etapas 08 e
-07) nesta tarefa.
+**Etapa 06 — Cena da colmeia e revisão de experiência.** Dois recortes funcionais
+implementados: leitura e ações confirmadas (exportar contexto, aplicar pacote,
+gravar prompt e lançar no mesmo checkout). Próxima entrega: portar a cena aprovada
+para módulo puro testável `src/tui/scene.rs`, respeitando redução de movimento,
+sem cor e telas estreitas; revisar navegação e legibilidade com dados sintéticos.
+Referência Git/código selecionado na exportação e nova worktree permanecem na CLI;
+não declarar paridade completa nem certificação real. Sem contas/uso neste recorte.
 
 A renomeação no código está feita (seção "Renomeação — memory-bee"); resta o
 remoto GitHub, só com confirmação do mantenedor.
@@ -75,7 +72,7 @@ substituída pela revisão de sequência do mantenedor registrada acima.
 | 03 Exportação revisável | P0 | Em andamento | Exportador somente contexto com prévia, exclusões e testes implementado; ensaios manuais de pacote/retomada pendentes. |
 | 04 Estado do código | P0 | Em andamento | Referência Git, código selecionado, verify e apply explícito implementados; ensaios manuais/M1 pendentes. |
 | 05 Troca de agente | P1 | Em andamento | Inspeção/exportação Codex, descoberta, preparação de retomada e lançamento confirmado implementados, experimentais; validação real com os agentes pendente (itens 38–40). |
-| 06 Dashboard terminal | P1 | Em andamento | Primeiro recorte (leitura) implementado; exportar/apply/lançar pela TUI pendentes. |
+| 06 Dashboard terminal | P1 | Em andamento | Leitura e ações confirmadas implementadas; cena, exportação de código pela TUI e ensaios humanos pendentes. |
 | 07 Uso e alertas | P1 | Pendente | Depende de 01 e 06; falta referência de consumo. |
 | 08 Perfis de conta | P1 | Pendente | Depende de 05–06 e prova de isolamento. |
 | 09 Captura contínua | P2 | Pendente | Depende de 02–06. |
@@ -514,3 +511,41 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   de fato usáveis) não foi ensaiada manualmente.
 - Próximo passo: segundo recorte do dashboard — exportar, aplicar e lançar a
   retomada pela TUI, com as mesmas confirmações explícitas da CLI (ADR 0014).
+
+
+## Dashboard — ações confirmadas (segundo recorte)
+
+- Escopo: `e` exporta contexto Claude/Codex com ramo/exclusões, `a` confere e
+  aplica pacotes v2, `p` grava prompt e `l` lança com token. Formulários de caminho,
+  prévias roláveis, confirmação digitada e Esc sem escrita. ADR 0017 registra
+  snapshots, revalidação, terminal e limites. Sem dependências novas.
+- Exportação/aplicação usam bytes revistos; aplicação revalida checkout. Retomada
+  refaz preparação/token antes de escrever; agente recebe terminal normal e TUI
+  volta com resultado/código de saída. Falha preserva pacote e prompt.
+- Validação: 156 testes Rust (9 novos de ações/teclado/layout), build, fmt,
+  Clippy, schemas/hashes Python e teste PTY com agente falso. O ensaio PTY verifica
+  TTY, modo canônico/echo, saída 7, preservação do prompt e restauração ao sair;
+  script versionado e adicionado à CI. Não foi lançado agente real.
+- Autorrevisão: guardas de escrita, cancelamento, snapshots, token, devolução do
+  terminal e telas estreitas. Corrigida leitura concorrente do manifesto na
+  prévia de aplicação: hash deve coincidir com o verificado. Teclas de detalhe
+  não alteram mais seleção a partir da aba Retomada. Sem revisão independente.
+- Limitações: exportação da TUI somente contexto v1 (Git/código selecionado na
+  CLI); nova worktree na CLI; formulários sem expansão de shell; I/O síncrono;
+  prévia JSON extensa exige rolagem. Cena animada e ensaios humanos pendentes.
+  Itens 43–45 do roteiro manual adicionados, sem marcá-los executados.
+- Próximo passo: cena da colmeia/revisão de experiência, conforme tarefa acima.
+- Publicação e verificações remotas vinculadas ao [PR #18](https://github.com/lippdev/memory-pier/pull/18).
+
+
+### Proposta em discussão — trabalhar dentro da TUI
+
+O mantenedor perguntou sobre manter a interface Memory Bee durante a programação,
+usando os harnesses Claude/Codex. Possibilidade técnica pesquisada em 2026-09-25:
+[Codex App Server](https://learn.chatgpt.com/docs/app-server) oferece integração
+interativa e autenticação; [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview)
+fornece o motor, mas documenta aprovação prévia para terceiros oferecerem login e
+limites claude.ai, indicando chave de API como caminho padrão. Perfis isolados e
+continuidade entre provedores exigem desenho e validação próprios. Proposta ainda
+não adotada como arquitetura nem implementada; não substitui silenciosamente o
+escopo da entrega atual nem a próxima tarefa aprovada.
