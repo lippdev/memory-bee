@@ -35,6 +35,13 @@ de enviar uma mensagem. Exportação/revisão de memória, isolamento de perfis,
 decisões em UI própria e integração Codex estão pendentes. O modo não comprova
 conversa/permissões reais por si só; ver [roteiro manual](../MANUAL_TESTS.md).
 
+**Direção atual:** o mantenedor não quer ver a TUI original do Claude. Este
+terminal embutido permanece apenas como recorte experimental. A UI aceita deve
+mostrar somente componentes da Memory Bee e receber eventos estruturados do
+Claude em segundo plano, inclusive solicitações de permissão. Antes de ligar
+assinaturas ao modo programático, resolver o limite de autenticação documentado
+no [ADR 0018](../decisions/0018-unified-workspace.md).
+
 ```sh
 cargo run --locked -- workspace --demo --project . --state /tmp/bee-demo-state
 cargo run --locked -- workspace --demo --project . --agent codex --once --width 60 --height 20 --no-color

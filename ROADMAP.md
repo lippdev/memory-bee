@@ -55,8 +55,12 @@ atender a esse contrato, registrar a lacuna antes do lançamento conjunto.
 O mantenedor priorizou a implementação nativa **Claude primeiro**. O PTY com
 sessão nativa é a primeira entrega desse caminho, disponível como modo experimental;
 não altera o aceite do lançamento conjunto da experiência completa. O próximo
-recorte deve ligar histórico/exportação revisável e ações à sessão Claude, além
-de validar o fluxo real de conversa e permissões. O HTML ainda representa o plano
+recorte deve desenhar a conversa Claude **inteiramente na TUI da Memory Bee**,
+com o processo invisível, eventos estruturados, permissões explícitas, histórico
+e exportação revisável. A moldura PTY atual é prova técnica, não a UI aceita.
+Verificar também se o transporte programático pode usar a assinatura existente
+nesse produto; não presumir essa autorização nem trocar por API paga em silêncio.
+O HTML ainda representa o plano
 visual anterior; este Markdown e o ADR 0018 prevalecem para a sequência.
 
 Aceite real: conversa, edição, execução, permitir/negar, interrupção e retomada

@@ -129,3 +129,31 @@ O transporte preserva a interface de permissões do próprio Claude e não exige
 API paga separada. É um passo concreto para testar assinatura e conversa nativa,
 mas não comprova uma UI Bee própria para eventos, exportação ou perfis. Essas
 lacunas, o ensaio humano e a integração Codex permanecem no aceite completo.
+
+## Interface Claude invisível — correção do mantenedor em 2026-09-25
+
+Após testar o recorte PTY, o mantenedor esclareceu que **a tela original do
+Claude Code não deve aparecer**. A Memory Bee deve desenhar conversa, ações,
+permissões e memória em sua própria TUI; Claude executa em segundo plano. O
+`workspace --claude` atual é uma prova experimental do processo, login e sessão
+nativa, não a interface de produto desejada. Sua moldura com terminal embutido
+deve ser substituída antes de chamar essa experiência de concluída.
+
+A [CLI oficial](https://code.claude.com/docs/en/cli-reference) oferece modo
+`-p` com entrada/saída `stream-json`, eventos parciais, retomada e um MCP tool
+para prompts de permissão. Isso torna tecnicamente possível desenhar uma TUI
+própria sem mostrar a tela do Claude, desde que o adaptador preserve decisões
+explícitas, interrupção, erros e proveniência. Não interpretar ANSI ou raspar
+pixels do PTY para inferir permissões: a interface visual não é um protocolo
+confiável. O primeiro recorte de implementação deve testar o protocolo com CLI
+falsa, mantendo a ação de ferramenta negada por padrão até uma decisão do usuário.
+
+A [orientação de autenticação da Anthropic](https://code.claude.com/docs/en/legal-and-compliance)
+distingue hospedar o binário intacto com login do usuário de encaminhar requisições
+por credenciais de assinatura em aplicação de terceiros; para produtos
+programáticos recomenda API key ou provedor compatível. A documentação atual
+não resolve por si só se o modo `-p` sob a assinatura do usuário atende ao modelo
+de produto pretendido. Não prometer essa combinação como suportada nem coletar
+tokens. Confirmar a fronteira antes de lançar a TUI própria com assinatura; se
+não for permitida, apresentar a limitação ao mantenedor sem substituir
+silenciosamente a assinatura por cobrança de API.

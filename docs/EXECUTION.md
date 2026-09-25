@@ -28,13 +28,14 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
-**Claude nativo primeiro — próxima entrega de produto.** O mantenedor priorizou
-Claude antes de Codex. `workspace --claude` já hospeda a CLI original em PTY,
-com sessão nativa, entrada/saída interativa e retomada por ID; é experimental.
-Próximo: ensaio humano de conversa, edição, execução, permitir/negar, interrupção
-e retomada com assinatura existente; ligar histórico/exportação revisável e ações
-da Memory Bee à sessão Claude. O modo atual guarda apenas IDs, não a memória.
-Perfis reais, interface de conversa própria e Codex integrado permanecem pendentes.
+**Claude invisível na TUI Bee — próxima entrega de produto.** O mantenedor
+rejeitou a exibição da tela nativa do Claude. `workspace --claude` hospeda a CLI
+em PTY e retoma ID, mas é apenas prova experimental. Próximo: adaptador de eventos
+estruturados com Claude em segundo plano, UI Bee de conversa/ações/permissões e
+exportação revisável. Testar primeiro com CLI falsa, negando ferramentas sem
+decisão explícita. Verificar a fronteira de autenticação para usar assinatura
+existente no modo programático antes de habilitá-lo como produto. O modo atual
+guarda apenas IDs, não memória; perfis reais e Codex integrado seguem pendentes.
 O lançamento da experiência completa ainda exige os dois agentes (ADR 0018).
 
 **Refinamento visual.** Referência HTML e [plano visual](specs/workspace-visual.md)
@@ -653,3 +654,20 @@ escopo da entrega atual nem a próxima tarefa aprovada.
 - Próximo: executar o roteiro 51 com conversa/permissões reais e vincular a sessão
   Claude ao histórico/exportação revisável, mantendo origem e omissões explícitas.
   Lançamento completo com ambos os agentes permanece pendente.
+
+## Correção de produto — Claude em segundo plano
+
+- O mantenedor testou o recorte PTY e esclareceu que não quer a tela original
+  do Claude visível. A interface aceita é totalmente da Memory Bee; o processo
+  Claude roda em segundo plano. A moldura PTY permanece identificada como prova
+  técnica, não como visual final.
+- Pesquisa nas referências oficiais: `claude -p` oferece fluxo `stream-json`,
+  eventos parciais, retomada e prompt de permissão via ferramenta MCP. O modo
+  programático permitiria uma UI própria, mas a orientação de autenticação da
+  Anthropic não certifica o uso da assinatura em produto terceiro desse tipo.
+  Nenhuma chamada a modelo foi feita nesta revisão; não há prova de permissões
+  reais nem decisão de usar API paga.
+- Status: direção e critérios atualizados no ADR 0018, roadmap, contrato e
+  README. Autorrevisão documental; sem revisão independente. Próximo: prova
+  sintética do adaptador estruturado e da UI Bee, seguida da resolução da
+  fronteira de assinatura e ensaio real autorizado.

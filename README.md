@@ -84,8 +84,10 @@ cargo run --locked -- workspace --claude --project . --state /tmp/bee-claude-sta
 `/exit` encerra o Claude; `Ctrl+G` abre ajuda da Memory Bee e `Ctrl+C` vai ao Claude.
 A pasta privada guarda apenas IDs de sessão e códigos de saída, enquanto o Claude
 mantém a conversa nativa. Este recorte ainda mostra a interface do Claude dentro
-da moldura Bee; memória/exportação integrada, perfis isolados e interface de
-conversa própria continuam pendentes. Contrato e teclas em
+da moldura Bee. **É uma prova experimental, não a tela final desejada:** o Claude
+deve rodar invisível e a Memory Bee deve desenhar toda a conversa e as permissões.
+Memória/exportação integrada, perfis isolados e interface própria continuam
+pendentes. Contrato e teclas em
 [workspace](docs/specs/workspace.md). O lançamento da experiência completa com
 Claude e Codex segue condicionado aos aceites do [ADR 0018](docs/decisions/0018-unified-workspace.md).
 O dashboard anterior permanece disponível.
