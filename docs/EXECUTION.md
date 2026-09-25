@@ -6,7 +6,7 @@
 
 - Existe documentação de produto, workflow e um HTML de planejamento.
 - CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex e lançamento confirmado por token implementados, experimentais; TUI e contas pendentes.
-- Nome escolhido: Memory Pier (`memory-pier`). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
+- Nome decidido: **Memory Bee** (`memory-bee`), com mascote abelha e colmeia dos projetos, conforme o [ADR 0015](decisions/0015-memory-bee-identity.md); o código, os pacotes e os documentos ainda usam Memory Pier (`memory-pier`) até o PR de renomeação. Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
 - Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
 - Documentação inicial integrada na `main` pelo PR #1.
@@ -33,6 +33,14 @@ biblioteca TUI, com justificativa e impacto em dependências/CI, e entregar uma
 tela somente leitura que liste sessões Claude/Codex de um projeto sob raízes
 explícitas e mostre o relatório de prepare-resume. Sem executar exportação, apply
 ou lançamento pela TUI neste recorte; sem contas, uso ou alertas.
+
+Antes disso, **renomear o produto no código** (PR próprio, inventário no ADR 0015):
+crate, binário, `memory_pier::`, staging `.memory-pier-apply-*`, textos gravados no
+HANDOFF e no prompt de retomada, títulos dos schemas, `scripts/check_bundle.py` e
+documentação; remoto GitHub só com confirmação do mantenedor. O dashboard segue a
+cena aprovada no protótipo [Clareira da Colmeia](https://claude.ai/artifact/W5a8EAd4UKXLS84Nsqa8Ab):
+a colmeia é o painel central e o seletor de projetos (um gominho por repositório,
+mel por sessões e pacotes), com lista de sessões e detalhe abaixo.
 
 Compatibilidade real de Claude Code e ensaios de leitura/retomada do pacote estão
 pendentes com o mantenedor em [docs/MANUAL_TESTS.md](MANUAL_TESTS.md), sem bloquear
@@ -411,3 +419,31 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   Roteiro manual ampliado com itens 39–40, pendentes.
 - Próximo passo: primeiro recorte do dashboard terminal descrito em "Próxima tarefa".
 - Publicação e verificações remotas vinculadas ao [PR #14](https://github.com/lippdev/memory-pier/pull/14).
+
+## Identidade — Memory Bee e protótipo da colmeia
+
+- Recorte: decisão de nome e identidade visual registrada no
+  [ADR 0015](decisions/0015-memory-bee-identity.md), que substitui o ADR 0002, e
+  protótipo HTML privado [Clareira da Colmeia](https://claude.ai/artifact/W5a8EAd4UKXLS84Nsqa8Ab)
+  com a cena da etapa 06: clareira ao entardecer, árvore com a colmeia pendurada,
+  um gominho por projeto com mel por contexto, abelha que voa até o gominho
+  selecionado, grama e flores. Sem Rust nesta rodada; nada muda em código,
+  schemas ou pacotes.
+- Aceite parcial: o protótipo é a especificação visual e de interação do dashboard
+  (colmeia como seletor, lista e detalhe abaixo, degradações 100×30, 60×20 e 40×12,
+  modos 256, `NO_COLOR`, glifos básicos e movimento reduzido). A aprovação do
+  visual pelo mantenedor continua pendente; o protótipo anterior (farol/Hayate)
+  fica arquivado fora do repositório.
+- Validação local: sintaxe do script conferida com `node --check`; execução sem
+  navegador (DOM simulado) por 300 quadros em 4 tamanhos × 2 paletas × 3 modos de
+  cor com sequência de teclas, mais 900 quadros ociosos para o sono e o despertar
+  da abelha, sem erro; quadros renderizados em PNG e revisados pelo agente. A
+  animação no navegador não foi vista pelo agente. Links relativos e
+  `git diff --check` conferidos.
+- Autorrevisão do desenho e da cena; sem revisão independente.
+- Limitações: dados sintéticos; o protótipo mostra vários projetos, enquanto a
+  CLI atual descobre por um `--project` de cada vez, o que a etapa 06 precisa
+  cobrir; nenhuma verificação de marca ou domínio para o nome.
+- Próximo passo: PR de renomeação para `memory-bee` (inventário no ADR 0015) e,
+  depois, o primeiro recorte do dashboard em Rust seguindo a cena aprovada.
+- Publicação e verificações remotas vinculadas ao [PR #15](https://github.com/lippdev/memory-pier/pull/15).
