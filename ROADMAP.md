@@ -35,11 +35,22 @@ por trás, assinaturas existentes e lançamento conjunto. Isso amplia as etapas
 1. Protótipo funcional com os dois agentes simulados, menus, streaming,
    permissões, erro, persistência e exportação: implementado como `workspace --demo`.
 2. Prova real por agente/assinatura, incluindo dois perfis isolados: pendente;
-   integração Claude com assinatura ainda não confirmada para este produto.
+   hospedar o binário Claude Code original com login do usuário é um caminho
+   documentado, mas o controle da conversa pela nossa TUI ainda não foi provado.
 3. Experiência integrada aos dois harnesses, histórico e exportação: pendente.
 4. Troca real entre agentes/contas com revisão e preservação da origem: pendente.
 5. Lançamento conjunto após todos os aceites, sem substituir o requisito por
-   API paga separada ou terminal nativo incorporado: pendente.
+   API paga separada: pendente.
+
+A Memory Bee deve iniciar os CLIs oficiais como processos locais e atuar como
+interface e memória sobre eles. O usuário autentica cada CLI pelo fluxo próprio
+do fornecedor; a Memory Bee não coleta, copia ou gerencia tokens. Para Codex, o
+App Server oferece eventos estruturados. Para Claude, testar primeiro o binário
+original hospedado em PTY; avaliar quanto da interface própria pode ser dirigido
+pelas interfaces documentadas da CLI sem presumir que `-p`/Agent SDK autoriza o
+uso da assinatura em um produto de terceiros. A prova deve preservar permissões
+reais, interrupção, retomada e exportação. Se a interface estruturada Claude não
+atender a esse contrato, registrar a lacuna antes do lançamento conjunto.
 
 Aceite real: conversa, edição, execução, permitir/negar, interrupção e retomada
 com cada harness; isolamento de dois perfis; exportar após falha/limite; recuperar

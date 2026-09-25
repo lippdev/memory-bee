@@ -40,10 +40,11 @@ animações próprias.
 2026-09-25 substitui a prioridade anterior da cena animada: interface permanente
 Memory Bee, assinaturas existentes e lançamento real somente com Claude e Codex.
 Primeiro recorte `workspace --demo` implementado; não declarar programação real.
-Próximo: confirmar a integração Claude elegível e fazer prova controlada de ambos
-os harnesses (conversa, edição, execução, permissões, interrupção, retomada e dois
-perfis isolados). Protocolo Codex experimental existe, sem conexão à TUI nem
-validação real. Não copiar credenciais globais, não substituir assinatura por API
+Próximo: provar a hospedagem do CLI Claude original autenticado pelo próprio
+usuário e fazer prova controlada de ambos os processos (conversa, edição,
+execução, permissões, interrupção, retomada e dois perfis isolados). Protocolo
+Codex experimental existe, sem conexão à TUI nem
+validação real. Não copiar credenciais, não substituir assinatura por API
 paga e não lançar só um provedor. Ver ADR 0018 e contrato `specs/workspace.md`.
 Cena, exportação de código pela TUI e worktree na interface continuam pendentes.
 
@@ -622,3 +623,17 @@ escopo da entrega atual nem a próxima tarefa aprovada.
   essa implementação. O artifact externo é temporário; o HTML versionado mantém
   a referência local.
 - Publicação e verificações remotas vinculadas ao [PR #20](https://github.com/lippdev/memory-bee/pull/20).
+
+## Esclarecimento — TUI sobre os CLIs oficiais
+
+- O mantenedor esclareceu que o login ocorre no Claude Code e no Codex originais.
+  A Memory Bee será uma interface e camada de memória sobre processos locais,
+  sem capturar ou gerir credenciais. ADR 0018 e roadmap atualizados.
+- Documentação oficial consultada: Anthropic permite login do usuário no binário
+  Claude Code intacto mesmo hospedado por outro produto; Codex App Server tem
+  interface para cliente próprio e conta gerenciada pelo Codex. Isso não valida
+  ainda a TUI real nem libera uso de `-p`/Agent SDK com assinatura como premissa.
+- Status: revisão documental concluída; prova dos dois processos pendente.
+  Autorrevisão; nenhuma revisão independente ou chamada a modelo nesta revisão.
+- Próximo: ensaio controlado com os CLIs oficiais em ambiente explícito, cobrindo
+  conversa, eventos, permissões e interrupção antes de integrar à tela.
