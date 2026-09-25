@@ -28,6 +28,14 @@ de patches e consulta ao Git ficam para a etapa 04.
 
 ## Próxima tarefa de produto
 
+**Refinamento visual — próxima entrega local.** A orientação mais recente do
+mantenedor autoriza a frente visual em paralelo à prova dos harnesses. Referência
+HTML e [plano visual](specs/workspace-visual.md) concluídos; próximo recorte:
+renderizador Rust com abelha à direita do campo amarelo e estados por ação,
+seguido da conexão aos eventos da demo. Não iniciar esse porte na entrega
+restrita ao protótipo/plano. Exportação e troca de agente ainda precisam de
+animações próprias.
+
 **TUI unificada — prova de integração com assinaturas.** A orientação de
 2026-09-25 substitui a prioridade anterior da cena animada: interface permanente
 Memory Bee, assinaturas existentes e lançamento real somente com Claude e Codex.
@@ -590,3 +598,26 @@ escopo da entrega atual nem a próxima tarefa aprovada.
 - Ensaios humanos 46–49 pendentes; não substituídos por testes automatizados.
 - Próximo passo: prova de integração descrita no topo. O plano completo permanece
   em andamento; integração Claude com assinatura depende de confirmação externa.
+
+
+## Workspace — referência visual e plano por ação
+
+- Status: concluído o recorte de referência HTML e planejamento. Retomada da
+  sessão interrompida por limite de uso, preservando suas alterações locais.
+- Protótipo versionado em `docs/prototypes/workspace.html`: Clareira preservada,
+  conversa linear, campo amarelo e abelha à direita. Estados de pensamento,
+  leitura, edição, execução, permissão, conclusão, negação, interrupção, erro e
+  sono. Exportação e troca com animação própria continuam planejadas.
+- Plano em `specs/workspace-visual.md`; roadmap e ADR 0018 registram a frente
+  visual independente da prova de integração, sem mudar o lançamento conjunto.
+- Validação nesta retomada: sintaxe JavaScript via `node --check`; automação em
+  nova página Orca confirmou posição à direita e sequência pensar → ler → editar
+  → permissão → executar → concluir, negação, interrupção sem sucesso atrasado,
+  erro e quadro estável com movimento reduzido. Links relativos e
+  `git diff --check` conferidos. Nenhum código Rust alterado.
+- Autorrevisão de escopo, callbacks invalidados por turno e rótulos de simulação;
+  nenhuma revisão independente. Ensaio humano 50 permanece pendente, assim como
+  compatibilidade de terminal, renderizador Rust e integração/autenticação real.
+- Próximo passo: renderizador Rust conforme plano visual; esta entrega não inicia
+  essa implementação. O artifact externo é temporário; o HTML versionado mantém
+  a referência local.

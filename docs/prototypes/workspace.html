@@ -1,0 +1,1381 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Memory Bee · Clareira da Colmeia e conversa</title>
+<style>
+:root {
+  --page: #efeee9;
+  --text: #1c1b19;
+  --muted: #5f5d56;
+  --line: #d4d1c7;
+  --chip: #e3e1d9;
+  --chip-on: #1c1b19;
+  --chip-on-text: #efeee9;
+  --honey: #9a650c;
+  --focus: #9a650c;
+  --sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0e0e0d;
+    --text: #ecebe6;
+    --muted: #9a978d;
+    --line: #2d2c28;
+    --chip: #1d1c1a;
+    --chip-on: #ecebe6;
+    --chip-on-text: #0e0e0d;
+    --honey: #eeb65b;
+    --focus: #eeb65b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0e0e0d;
+  --text: #ecebe6;
+  --muted: #9a978d;
+  --line: #2d2c28;
+  --chip: #1d1c1a;
+  --chip-on: #ecebe6;
+  --chip-on-text: #0e0e0d;
+  --honey: #eeb65b;
+  --focus: #eeb65b;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--page);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
+  padding-inline: 20px;
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 28px; }
+.intro { display: grid; gap: 8px; max-width: 70ch; }
+.eyebrow {
+  font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.eyebrow .hex { color: var(--honey); }
+h1 { font-size: clamp(28px, 4.2vw, 40px); line-height: 1.1; font-weight: 650; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); }
+
+.window { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--term-bg, #151513); }
+.bar {
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 12px; padding: 8px 14px;
+  border-bottom: 1px solid var(--term-line, #2d2c28); color: var(--term-muted, #858279);
+}
+.bar .cmd { color: var(--term-ink, #eeece6); overflow-wrap: anywhere; }
+.bar .cmd b { color: var(--term-acc, #eeb65b); font-weight: 400; }
+.screen { overflow-x: auto; padding: 12px 14px; outline: none; }
+.screen:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
+canvas { display: block; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-end; }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; min-width: 0; }
+legend { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 6px; }
+.seg { display: flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { font-family: var(--mono); font-size: 13px; padding: 6px 11px; cursor: pointer; background: var(--chip); color: var(--text); border-right: 1px solid var(--line); }
+.seg label:last-of-type { border-right: 0; }
+.seg input:checked + label { background: var(--chip-on); color: var(--chip-on-text); }
+.seg input:focus-visible + label { outline: 2px solid var(--focus); outline-offset: -2px; }
+.keys { display: flex; flex-wrap: wrap; gap: 6px; }
+.keys button {
+  font-family: var(--mono); font-size: 13px; min-width: 40px; padding: 6px 10px;
+  background: var(--chip); color: var(--text); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; cursor: pointer;
+}
+.keys button:hover { border-color: var(--muted); }
+.keys button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; }
+.notes h2 { font-size: 13px; font-family: var(--mono); font-weight: 400; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+dl { margin: 0; display: grid; gap: 10px; }
+dl div { display: grid; grid-template-columns: 11ch 1fr; gap: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+dt { font-family: var(--mono); font-size: 13px; color: var(--honey); }
+dd { margin: 0; }
+code { font-family: var(--mono); font-size: .92em; }
+.foot { color: var(--muted); font-size: 14px; max-width: 72ch; margin: 0; }
+@media (max-width: 520px) { dl div { grid-template-columns: 1fr; gap: 2px; } .screen { padding: 10px; } }
+
+[hidden]{display:none!important}
+.workspace-nav{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--term-line);background:var(--term-bg)}
+.workspace-nav button,.composer button,dialog button{font:12px var(--mono);padding:8px 12px;color:var(--term-ink,var(--text));background:transparent;border:1px solid var(--term-line,var(--line));border-radius:5px;cursor:pointer}
+.workspace-nav button:hover,.composer button:hover,dialog button:hover{border-color:var(--term-acc,var(--honey))}
+.workspace-nav .primary{background:var(--term-acc);color:var(--term-bg);border-color:transparent}
+.composer{padding:0 18px 16px;color:var(--term-ink);font:12px var(--mono)}
+.bee-input-side{display:flex;flex-direction:column;align-items:center;flex:none;width:58px}.bee-rail{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:24px;color:var(--term-acc);font:12px var(--mono);margin:0 0 5px}
+#inputBee{width:54px;height:40px;flex:none;image-rendering:pixelated}
+.bee-rail .state{flex:1;min-width:120px}.bee-rail button{font-size:10px;border:0;padding:3px 5px;color:var(--term-muted)}
+.composer form{display:flex;gap:12px;align-items:start;padding:13px 14px 10px;border:1px solid var(--term-acc);border-radius:5px;background:var(--term-bg)}
+.composer form:focus-within{border-color:var(--term-acc);box-shadow:0 0 0 1px var(--term-acc)}
+.composer .prompt-arrow{font-size:19px;line-height:23px;color:var(--term-acc)}
+.composer textarea{flex:1;resize:vertical;min-width:0;min-height:38px;border:0;outline:0;background:transparent;color:var(--term-ink);font:13px/1.7 var(--mono)}
+.composer textarea::placeholder{color:var(--term-muted);opacity:.65}
+.composer button[type=submit]{border:0;color:var(--term-muted);padding:1px 0;font:11px var(--mono)}
+.composer .hint{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--term-muted);font:10px/1.5 var(--mono);margin:9px 3px 0}
+.conversation-mode .workspace-nav{gap:3px;padding:6px 12px;border-bottom:0}
+.conversation-mode .workspace-nav button{border:0;padding:5px 8px;font-size:11px;color:var(--term-muted)}
+.conversation-mode .workspace-nav button:hover{color:var(--term-acc)}
+.conversation-mode #openWork,.conversation-mode #permissionWork,.conversation-mode #stopWork{display:none}
+.conversation-mode .screen{padding-bottom:0}
+@media(max-width:520px){.composer{padding:0 10px 12px}.composer form{padding:10px;gap:8px}.composer textarea{font-size:12px}.bee-rail{font-size:11px}}
+dialog{width:min(650px,calc(100% - 28px));max-height:85vh;border:1px solid var(--honey);border-radius:8px;background:var(--page);color:var(--text);padding:24px;font:13px/1.65 var(--mono)}
+dialog::backdrop{background:#000a}dialog h2{font-size:17px;margin:0 0 15px;color:var(--honey)}dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:45vh;overflow:auto;font:inherit;color:var(--muted)}#dialogChoices{display:grid;gap:8px}#dialogChoices button{text-align:left}#dialogClose{margin-top:20px;color:var(--muted)}
+.screen canvas{max-width:100%;height:auto!important}.screen{overflow:hidden}
+</style></head><body>
+
+<div class="wrap">
+  <header class="intro">
+    <div class="eyebrow"><span class="hex">⬢</span><span>Memory Bee · design aprovado + conversa unificada</span></div>
+    <h1>Clareira da Colmeia</h1>
+    <p>A clareira original está de volta: a árvore, a colmeia dos projetos e a abelha que leva o contexto de um favo para outro. Selecione um projeto e abra a conversa — a mesma identidade acompanha o trabalho. <strong>Protótipo visual com dados sintéticos; não chama modelos.</strong></p>
+  </header>
+
+  <section class="window" id="window" aria-label="Terminal simulado">
+    <div class="bar">
+      <span class="cmd"><b>$</b> memory-bee · clareira / workspace · simulação</span>
+      <span id="meta">140×40 · 30 fps · 24 bits</span>
+    </div>
+    <nav class="workspace-nav" aria-label="Navegação do protótipo">
+      <button id="homeWork">⬢ Colmeia</button><button id="openWork" class="primary">Abrir conversa →</button><button id="menuWork">Menu / F2</button><button id="demoWork">Demonstrar tarefa</button><button id="permissionWork">Permissão</button><button id="stopWork">Interromper</button>
+    </nav>
+    <div class="screen" id="screen" tabindex="0" aria-label="Dashboard. Use setas, tab, enter, s, p, r, n, f, interrogação, a e q.">
+      <canvas id="term" role="img" aria-label="Dashboard Memory Bee com a colmeia dos projetos, a abelha, a lista de sessões e o detalhe"></canvas>
+    </div>
+    <div class="composer" id="composer" hidden>
+      <div class="bee-rail"><span class="state" id="beeStatus" role="status">Pronta para continuar</span><button id="inlinePermission" type="button" hidden>Revisar permissão ↗</button><button id="inlineStop" type="button" hidden>Interromper</button></div>
+      <form id="workForm"><span class="prompt-arrow">❯</span><textarea id="prompt" rows="2" maxlength="8192" aria-label="Mensagem da demonstração" placeholder="O que vamos construir?  / para comandos"></textarea><div class="bee-input-side"><canvas id="inputBee" width="108" height="80" role="img" aria-label="Abelha da conversa"></canvas><button type="submit" aria-label="Enviar mensagem">↵ enviar</button></div></form>
+      <div class="hint"><span id="composerIdentity">Claude · Pessoal · SIMULAÇÃO</span><span>Enter enviar · Shift+Enter nova linha · F2 menu</span></div><span id="activity" hidden>SIMULAÇÃO</span>
+    </div>
+  </section>
+
+  <div class="controls">
+    <fieldset>
+      <legend>Terminal</legend>
+      <div class="seg">
+        <input type="radio" name="size" id="s140" value="140x40" checked><label for="s140">140×40</label>
+        <input type="radio" name="size" id="s100" value="100x30"><label for="s100">100×30</label>
+        <input type="radio" name="size" id="s60" value="60x20"><label for="s60">60×20</label>
+        <input type="radio" name="size" id="s40" value="40x12"><label for="s40">40×12</label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Paleta</legend>
+      <div class="seg">
+        <input type="radio" name="pal" id="pAuto" value="auto"><label for="pAuto">auto</label>
+        <input type="radio" name="pal" id="pDark" value="dark" checked><label for="pDark">entardecer</label>
+        <input type="radio" name="pal" id="pLight" value="light"><label for="pLight">fim de tarde</label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Cor</legend>
+      <div class="seg">
+        <input type="radio" name="color" id="c24" value="24" checked><label for="c24">24 bits</label>
+        <input type="radio" name="color" id="c256" value="256"><label for="c256">256</label>
+        <input type="radio" name="color" id="cOff" value="off"><label for="cOff">NO_COLOR</label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Glifos</legend>
+      <div class="seg">
+        <input type="radio" name="glyph" id="gBr" value="braille" checked><label for="gBr">braille</label>
+        <input type="radio" name="glyph" id="gBa" value="basic"><label for="gBa">básico</label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Movimento</legend>
+      <div class="seg">
+        <input type="radio" name="motion" id="mOn" value="on" checked><label for="mOn">animado</label>
+        <input type="radio" name="motion" id="mOff" value="off"><label for="mOff">reduzido</label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Teclas</legend>
+      <div class="keys" id="keys">
+        <button type="button" data-k="ArrowLeft" aria-label="projeto anterior">←</button>
+        <button type="button" data-k="ArrowRight" aria-label="próximo projeto">→</button>
+        <button type="button" data-k="ArrowUp" aria-label="seta para cima">↑</button>
+        <button type="button" data-k="ArrowDown" aria-label="seta para baixo">↓</button>
+        <button type="button" data-k="Tab">tab</button>
+        <button type="button" data-k="Enter">enter</button>
+        <button type="button" data-k="Escape">esc</button>
+        <button type="button" data-k="n" aria-label="simular projeto novo">n</button>
+        <button type="button" data-k="p">p</button>
+        <button type="button" data-k="r">r</button>
+        <button type="button" data-k="?">?</button>
+        <button type="button" data-k="f" aria-label="pólen e vagalumes">f</button>
+        <button type="button" data-k="a" aria-label="pausar animação">a</button>
+      </div>
+    </fieldset>
+  </div>
+
+  <section class="notes">
+    <div>
+      <h2>O que a cena conta</h2>
+      <dl>
+        <div><dt>gominho</dt><dd>Um por repositório descoberto. A colmeia cresce a partir do galho, como um favo de verdade, na ordem em que os projetos aparecem.</dd></div>
+        <div><dt>mel</dt><dd>O nível dentro do gominho é o contexto acumulado: quanto mais sessões e pacotes, mais cheio. Cada depósito da abelha faz o nível pulsar.</dd></div>
+        <div><dt>aceso</dt><dd>O projeto selecionado tem o contorno claro e um halo no fundo das células. <code>←</code> e <code>→</code> trocam de gominho e a abelha voa até ele.</dd></div>
+        <div><dt>atenção</dt><dd>Sessão parcial ou ambígua faz o contorno piscar e a abelha parar com um <code>?</code> em braille.</dd></div>
+        <div><dt>abelha</dt><dd>Sem pedido, ela patrulha as flores, pega pólen e leva para o gominho aceso. Vinte segundos sem tecla e ela dorme no alto da colmeia.</dd></div>
+      </dl>
+    </div>
+    <div>
+      <h2>Como o terminal chega lá</h2>
+      <dl>
+        <div><dt>meio-bloco</dt><dd>Colmeia, abelha, árvore e flores são pixel art com <code>▀</code> e <code>▄</code>, duas cores por célula.</dd></div>
+        <div><dt>braille</dt><dd>Grama, sol, estrelas, vagalumes e pólen usam os 2×4 pontos de cada caractere. O balanço da grama anda em fração de célula.</dd></div>
+        <div><dt>brilho</dt><dd>O gominho aceso tinge o fundo das células vizinhas em degradê. No fim de tarde, a abelha ganha uma sombra suave no céu.</dd></div>
+        <div><dt>256</dt><dd>Sem <code>COLORTERM=truecolor</code>, as cores são aproximadas para a paleta de 256 cores.</dd></div>
+        <div><dt>NO_COLOR</dt><dd>Uma cor só. Gominhos vazios ficam ocos e o estado continua legível pelos símbolos <code>●</code>, <code>◐</code> e <code>▲</code>.</dd></div>
+        <div><dt>estreito</dt><dd>Abaixo de 80 colunas, um painel por vez. Abaixo de 60 colunas ou 20 linhas, a cena sai e o cabeçalho mostra só a contagem.</dd></div>
+        <div><dt>reduzido</dt><dd>Um quadro fixo com a abelha pousada no gominho aceso, também por <code>--no-animation</code> ou <code>MEMORY_BEE_REDUCED_MOTION=1</code>.</dd></div>
+      </dl>
+    </div>
+  </section>
+  <p class="foot">Cena, sprites, paletas e animações reaproveitados do HTML original “Clareira da Colmeia”. A conversa tem fluxo linear, marcadores de terminal e campo com contorno amarelo. A abelha acompanha o campo de digitação: a abelha voa, coleta pólen durante o turno, pede permissão com ?, comemora a conclusão e dorme após inatividade. Movimento reduzido mantém poses fixas. Esta é a proposta visual: a TUI Rust atual ainda não renderiza a cena animada. Perfis, respostas, aprovações e alterações aqui são fictícios; baixar a prévia não gera um pacote verificado da CLI. Recarregar apaga as interações desta página.</p>
+</div>
+
+<dialog id="workDialog"><h2 id="dialogTitle"></h2><pre id="dialogText"></pre><div id="dialogChoices"></div><button id="dialogClose">Voltar · Esc</button></dialog>
+<script>
+(() => {
+  // ================= Portable deterministic math (mirrors future src/tui/scene.rs) =================
+  const SEED = 1729;
+  function hash(x, y, seed) {
+    let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(seed | 0, 0x27d4eb2d)) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  }
+  function vnoise(x, y, seed) {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const a = hash(xi, yi, seed), b = hash(xi + 1, yi, seed), c = hash(xi, yi + 1, seed), d = hash(xi + 1, yi + 1, seed);
+    const top = a + (b - a) * u, bot = c + (d - c) * u;
+    return top + (bot - top) * v;
+  }
+  const fbm = (x, y, s) => 0.62 * vnoise(x, y, s) + 0.38 * vnoise(x * 2.1, y * 2.1, s + 1);
+  const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
+  const smooth = (e0, e1, v) => { const t = clamp01((v - e0) / (e1 - e0)); return t * t * (3 - 2 * t); };
+  const ease = k => k * k * (3 - 2 * k);
+  const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+  // ================= Sprites (half-block pixels: 1 column x 2 pixels per cell) =================
+  // Flat-top hexagon with shared 1-px walls. Big: neighbour (q+1) at (+5,+3), (r+1) at (0,+6). Mini: (+4,+2) / (0,+4).
+  const HEX = ['..KKK..', '.K...K.', 'K.....K', 'K.....K', 'K.....K', '.K...K.', '..KKK..'];
+  const HEX_INT = [[1, [2, 3, 4]], [2, [1, 2, 3, 4, 5]], [3, [1, 2, 3, 4, 5]], [4, [1, 2, 3, 4, 5]], [5, [2, 3, 4]]];
+  const MINI = ['.KKK.', 'K...K', 'K...K', 'K...K', '.KKK.'];
+  const MINI_INT = [[1, [1, 2, 3]], [2, [1, 2, 3]], [3, [1, 2, 3]]];
+  // Growth order: the comb hangs from the branch and grows downward from the top cell, row by row, centre first.
+  function ringOrder(R) {
+    const out = [];
+    for (let q = -R; q <= R; q++) for (let r = -R; r <= R; r++) if (Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= R) out.push([q, r]);
+    return out.sort((a, b) => (a[1] * 6 + a[0] * 3) - (b[1] * 6 + b[0] * 3) || Math.abs(a[0]) - Math.abs(b[0]) || a[0] - b[0]);
+  }
+  const RING2 = ringOrder(2), RING1 = ringOrder(1);
+
+  // Bee 10x8, facing right. K outline/head, k stripe, Y body, y shade, H highlight, w wing, v wing shade, e eye, p pollen, a antenna.
+  const BEE = {"fly1": ["..vwwv...a", ".vwwwwv.K.", ".KKKKKK.K.", "KHkHYkHKKK", "KYkYYkYKeK", "KykyykyKKK", ".KKKKKK.K.", "..k..k...."], "fly2": [".........a", ".vwwwwv.K.", ".KwwvvKKK.", "KHkHYkHKKK", "KYkYYkYKeK", "KykyykyKKK", ".KKKKKK.K.", "..k..k...."], "sit": [".........a", "........K.", ".KKKKKK.K.", "KvvvvvvKKK", "KYkYYkYKeK", "KykyykyKKK", ".KKKKKK.K.", "..k..k.k.."], "fly1p": ["..vwwv...a", ".vwwwwv.K.", ".KKKKKK.K.", "KHkHYkHKKK", "KYkYYkYKeK", "KykyykyKKK", ".KKKKKK.K.", "..p..p...."], "fly2p": [".........a", ".vwwwwv.K.", ".KwwvvKKK.", "KHkHYkHKKK", "KYkYYkYKeK", "KykyykyKKK", ".KKKKKK.K.", "..p..p...."], "sitp": [".........a", "........K.", ".KKKKKK.K.", "KvvvvvvKKK", "KYkYYkYKeK", "KykyykyKKK", ".KKKKKK.K.", "..p..p.k.."], "sleep": [".........a", "........K.", ".KKKKKK.K.", "KvvvvvvKKK", "KYkYYkYKkK", "KykyykyKKK", ".KKKKKK.K.", "..k..k.k.."]};
+  const BEE_MIRROR = Object.fromEntries(Object.entries(BEE).map(([k, rows]) => [k, rows.map(r => [...r].reverse().join(''))]));
+
+  // ================= Sample data (synthetic fixtures) =================
+  const WORDS = ['ordenacao', 'parser', 'retomada', 'fixtures', 'hashes', 'worktree', 'schema', 'leitor', 'ci-macos', 'manual', 'handoff', 'tui', 'exportar', 'apply'];
+  function mkSessions(pname, n, seed, special = {}) {
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const agent = hash(i, 1, seed) < 0.55 ? 'claude' : 'codex';
+      const id = pname.split('-')[0] + '-' + WORDS[(i * 5 + seed) % WORDS.length];
+      const state = special[i] || 'ok';
+      const ev = state === 'ambiguous' ? 0 : 1 + Math.floor(hash(i, 2, seed) * 14);
+      const total = state === 'partial' ? ev + 2 : state === 'ambiguous' ? 5 : ev;
+      const day = 24 - Math.floor(hash(i, 3, seed) * 6), hh = String(8 + Math.floor(hash(i, 4, seed) * 11)).padStart(2, '0'), mm = String(Math.floor(hash(i, 5, seed) * 60)).padStart(2, '0');
+      const sub = hash(i, 6, seed) > 0.86;
+      const file = agent === 'claude' ? `${pname}/${sub ? 'session/subagents/' + id : id}.jsonl` : `2026/09/${day}/${id}.jsonl`;
+      const diag = state === 'partial' ? '2 linhas truncadas' : state === 'ambiguous' ? 'conflicting_session_metadata' : sub ? 'subagente listado à parte' : 'nenhum';
+      out.push({ agent, id: state === 'ambiguous' ? '(ambígua)' : id, file, ev, total, state, diag, when: state === 'ambiguous' ? '—' : `2026-09-${day} ${hh}:${mm}`, sub });
+    }
+    return out;
+  }
+  const BUNDLES_MS = [
+    { name: 'exports/tarefa-ordenacao', ver: 2, changes: 1, base: 'match', att: [], redaction: 'pending-review', source: 'claude-code', code: 'base', token: '3f9c1a7b02de64e5' },
+    { name: 'examples/bundle-v1', ver: 1, changes: 0, base: 'not-recorded', att: ['base_not_recorded'], redaction: 'reviewed', source: 'claude-code', code: 'none', token: '9d20e4c7b15a3f08' },
+  ];
+  const PROJECTS = [
+    { name: 'memory-share', branch: 'main', clean: true, sessions: mkSessions('memory-share', 12, 11), bundles: BUNDLES_MS },
+    { name: 'orca-dashboard', branch: 'feat/panes', clean: false, sessions: mkSessions('orca-dashboard', 7, 23), bundles: [] },
+    { name: 'receipts-ocr', branch: 'main', clean: true, sessions: mkSessions('receipts-ocr', 3, 37, { 1: 'ambiguous' }), bundles: [] },
+    { name: 'notas-pessoais', branch: 'main', clean: true, sessions: mkSessions('notas-pessoais', 1, 41), bundles: [] },
+    { name: 'infra-terraform', branch: 'staging', clean: true, sessions: mkSessions('infra-terraform', 5, 53, { 3: 'partial' }), bundles: [{ name: 'exports/plano-vpc', ver: 2, changes: 3, base: 'match', att: [], redaction: 'reviewed', source: 'codex', code: 'base', token: 'a71c0e9d5b2f4c63' }] },
+  ];
+  const NEW_NAMES = ['docs-site', 'billing-api', 'mobile-app', 'ml-notebooks', 'design-tokens', 'edge-proxy', 'sdk-python', 'auth-service', 'data-pipeline', 'cli-tools', 'sandbox', 'landing', 'k8s-manifests', 'observability'];
+  const attention = p => p.sessions.some(s => s.state !== 'ok');
+  const STATE = { ok: ['●', 'ok', 'ok'], partial: ['◐', 'warn', 'parcial'], ambiguous: ['▲', 'warn', 'ambígua'] };
+  const levelOf = (p, rows) => {
+    const n = p.sessions.length + p.bundles.length * 2;
+    const l5 = n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 6 ? 3 : n <= 10 ? 4 : 5;
+    return rows === 5 ? l5 : Math.ceil(l5 * rows / 5);
+  };
+
+  // ================= Palettes (RGB) =================
+  const hex = s => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
+  const mk = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, hex(v)]));
+  const PAL = {
+    dark: mk({
+      bg: '#151513', ink: '#eeece6', ink2: '#b3afa5', ink3: '#858279', ink4: '#55534d', faint: '#353430',
+      acc: '#eeb65b', accDeep: '#b9832f', accHi: '#ffdc95', ok: '#9dbb8e', warn: '#e48a6c',
+      skyTop: '#171230', skyMid: '#3a2a4a', horizon: '#c0684c', ground: '#1c2418',
+      dotLo: '#4a3d5a', dotHi: '#eadfd3', cloud: '#6a4560', star: '#f0e8dc', sun: '#f6b26b', sunRim: '#ffcf8a',
+      wax: '#d9b46a', waxLo: '#b28e48', rim: '#4a3416', honey: '#c9862a', honeyTop: '#e9a93a', empty: '#3b2a20',
+      litWall: '#fff0c0', litHoney: '#f0b040', litTop: '#ffd77a', litEmpty: '#5a4426',
+      trunk: '#4a352a', trunkHi: '#6a4e3c', trunkLo: '#2c1f18', leaf: '#2f4a35', leafHi: '#5d7d4a', leafLo: '#20321f',
+      grassLo: '#3c5a2c', grassHi: '#7da34a', stem: '#4f7a3e',
+      flowerA: '#e07a8a', flowerAc: '#f5b7c1', flowerB: '#f2c14e', flowerBc: '#fff0b0', flowerC: '#b48ad8', flowerCc: '#e0c8f0',
+      firefly: '#d8e88a', pollen: '#f7d95e', shade: '#2c1f18',
+    }),
+    light: mk({
+      bg: '#faf9f6', ink: '#1b1a17', ink2: '#4a4842', ink3: '#7a776f', ink4: '#aeaba1', faint: '#dedbd2',
+      acc: '#d49a2c', accDeep: '#8d5c0c', accHi: '#b87a12', ok: '#4f7d46', warn: '#b5502e',
+      skyTop: '#f1c39a', skyMid: '#f7d9b3', horizon: '#f5b57a', ground: '#a9c27c',
+      dotLo: '#e7cdb0', dotHi: '#6a5040', cloud: '#f3cfae', star: '#8a6a50', sun: '#f79a4a', sunRim: '#ffd9a0',
+      wax: '#a67c2e', waxLo: '#7c5a1c', rim: '#4a3416', honey: '#d29a2c', honeyTop: '#e8b64a', empty: '#6d5a40',
+      litWall: '#5a3a08', litHoney: '#f0a830', litTop: '#ffcf60', litEmpty: '#8a6a3a',
+      trunk: '#5a4234', trunkHi: '#7a5c48', trunkLo: '#3a2a20', leaf: '#4f7a3e', leafHi: '#8fb060', leafLo: '#33552a',
+      grassLo: '#6f9a44', grassHi: '#3f6a2a', stem: '#3f6a2a',
+      flowerA: '#c85a6c', flowerAc: '#f0a0b0', flowerB: '#d9a020', flowerBc: '#ffe28a', flowerC: '#8a5cb8', flowerCc: '#c9a8e8',
+      firefly: '#a0b040', pollen: '#d99f1a', shade: '#3a2a20',
+    }),
+  };
+  PAL.dark.bee = mk({ K: '#14110d', k: '#2a1d0e', Y: '#f0c050', y: '#c4892a', H: '#ffe6a3', w: '#d5dfe8', v: '#9fb0c0', e: '#e8e2d2', p: '#f7d95e', a: '#14110d' });
+  PAL.light.bee = mk({ K: '#0f0d0a', k: '#1c1408', Y: '#e2ab2f', y: '#a86f17', H: '#fff1c2', w: '#ffffff', v: '#b8c4cc', e: '#fff6e0', p: '#d99f1a', a: '#0f0d0a' });
+  PAL.dark.isLight = false; PAL.light.isLight = true;
+
+  // ================= UI state =================
+  const ui = {
+    W: 140, H: 40, view: 'projects', focus: 'list', psel: 0, sel: 0, bsel: 0, detailOpen: false,
+    palette: 'auto', color: '24', glyph: 'braille', motion: true, paused: false, quit: false,
+    t: 0, clock: 0, reveal: 0, revealStart: 0,
+    status: null, geo: null,
+    hive: { born: [], pulse: null },
+    fx: { pollen: [], burst: -99 },
+  };
+  function setStatus(busy, done, secs) { ui.status = { busy, done, until: ui.clock + secs }; }
+  const SCENE_H = () => (ui.H >= 40 ? 21 : ui.H >= 28 ? 12 : ui.H >= 20 ? 8 : 0);
+  const project = () => PROJECTS[ui.psel];
+  const totalSessions = () => PROJECTS.reduce((n, p) => n + p.sessions.length, 0);
+
+  // ================= Scene geometry (hive layout, tree, flowers) =================
+  function geometry(w, h) {
+    const big = h >= 16, mid = h >= 10;
+    const shape = big ? HEX : MINI, intr = big ? HEX_INT : MINI_INT;
+    const pq = big ? [5, 3] : [4, 2], pr = big ? 6 : 4;
+    const order = big ? RING2 : mid ? RING1 : RING1.slice(0, 3);
+    const cap = order.length;
+    const n = PROJECTS.length, count = Math.min(n, cap);
+    const half = shape[0].length >> 1;
+    const cx = Math.round(w * 0.45);
+    const topPx = big ? 6 : mid ? 5 : 3;
+    const o0 = order[0];
+    const ox = cx - half - o0[0] * pq[0], oy = topPx - (o0[1] * pr + o0[0] * pq[1]);
+    const cells = [];
+    for (let i = 0; i < count; i++) {
+      const [q, r] = order[i];
+      const x = ox + q * pq[0], y = oy + r * pr + q * pq[1];
+      cells.push({ i, q, r, x, y, cx: x + half, cy: y + (shape.length >> 1) });
+    }
+    const bb = cells.length ? { x0: Math.min(...cells.map(c => c.x)) - 1, x1: Math.max(...cells.map(c => c.x)) + shape[0].length, y0: topPx - 1, y1: Math.max(...cells.map(c => c.y)) + shape.length } : { x0: cx, x1: cx, y0: topPx, y1: topPx };
+    const groundPx = 2 * (h - 2);
+    const tx = Math.round(w * 0.73);
+    const tree = big ? { tx, rx: Math.round(w * 0.16), ry: 12, ccy: 11, width: 3, branchY: 3 } : mid ? { tx, rx: Math.round(w * 0.13), ry: 6, ccy: 6, width: 3, branchY: 2 } : { tx, rx: Math.round(w * 0.13), ry: 3.5, ccy: 3.5, width: 2, branchY: 1 };
+    const sunX = Math.round(w * 0.1), sunR = big ? 10 : mid ? 7 : 5;
+    const flowers = [];
+    const nf = big ? 8 : mid ? 5 : 3;
+    const fx0 = sunX + (sunR >> 1) + 4;
+    const span = Math.max(10, tx - tree.rx - 6 - fx0);
+    for (let i = 0; i < nf; i++) {
+      const x = fx0 + Math.floor((i + 0.2 + 0.6 * hash(i, 3, SEED + 80)) * span / nf);
+      flowers.push({ x, y: groundPx - 5, kind: Math.floor(hash(i, 4, SEED + 81) * 3) });
+    }
+    return { w, h, big, mid, shape, intr, pq, pr, cells, cap, extra: n - count, half, topPx, stemX: cells.length ? cells[0].cx : cx, bb, groundPx, groundRow: h - 2, tree, flowers, sunX, sunR };
+  }
+
+  // ================= Scene: pure function of (geometry, t, reveal, palette, bee state). Returns terminal cells. =================
+  function scene(G, t, reveal, clock, P, bee, pose, motion) {
+    const { w, h } = G;
+    const cells = Array.from({ length: w * h }, () => ({ ch: ' ', fg: null, bg: null, kind: null }));
+    const DW = w * 2, DH = h * 4, PH = h * 2;
+    const groundDot = G.groundRow * 4, groundPx = G.groundPx;
+    const glow = new Float32Array(w * h), shade = new Float32Array(w * h);
+    const addGlow = (cxc, cyc, radius, amt) => {
+      for (let y = Math.max(0, Math.floor(cyc - radius)); y <= Math.min(h - 1, Math.ceil(cyc + radius)); y++)
+        for (let x = Math.max(0, Math.floor(cxc - radius * 2.05)); x <= Math.min(w - 1, Math.ceil(cxc + radius * 2.05)); x++) {
+          const d = Math.hypot((x + 0.5 - cxc) / 2.05, y + 0.5 - cyc);
+          glow[y * w + x] += amt * Math.exp(-((d / radius) ** 2) * 2.2);
+        }
+    };
+
+    // Dot field (braille resolution).
+    const dotI = new Float32Array(DW * DH), dotC = new Array(DW * DH).fill(null);
+    const dot = (dx, dy, v, color) => {
+      dx = Math.round(dx); dy = Math.round(dy);
+      if (dx < 0 || dx >= DW || dy < 0 || dy >= DH) return;
+      const k = dy * DW + dx;
+      if (v > dotI[k]) { dotI[k] = v; dotC[k] = color || null; }
+    };
+    // Sprite pixels (half-block resolution).
+    const pix = new Array(w * PH).fill(null);
+    const px = (x, y, c) => { if (x >= 0 && x < w && y >= 0 && y < PH && c) pix[y * w + x] = c; };
+
+    // --- Sky: thin dusk haze that drifts, stars only near the top.
+    const drift = t * 0.04;
+    const starRows = Math.min(groundDot, 6 * 4);
+    for (let dy = 0; dy < groundDot; dy++) {
+      for (let dx = 0; dx < DW; dx++) {
+        if (hash(dx, dy, SEED + 1) > reveal * 1.1 + 0.02) continue;
+        const lattice = (dx + dy) % 2 === 0;
+        let v = 0, col = null;
+        if (lattice && dy < groundDot * 0.7) {
+          const n = fbm(dx / 26 + drift, dy / 12, SEED + 3);
+          const p = smooth(0.52, 0.86, n) * 0.6 * (1 - dy / groundDot);
+          if (hash(dx, dy, SEED + 5) < p) { v = 0.18 + 0.5 * smooth(0.55, 0.92, n); col = P.cloud; }
+        }
+        if (!v && dy < starRows && hash(dx, dy, SEED + 7) > 0.994) {
+          v = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * (0.8 + 1.6 * hash(dx, dy, SEED + 11)) + 6.283 * hash(dx, dy, SEED + 13)));
+          col = P.star;
+          if (v > 0.9 && hash(dx, dy, SEED + 17) > 0.6 && G.mid) for (const [ox, oy, f] of [[1, 0, 0.6], [-1, 0, 0.6], [0, 1, 0.6], [0, -1, 0.6]]) dot(dx + ox, dy + oy, v * f, col);
+        }
+        if (v) dot(dx, dy, v, col);
+      }
+    }
+    // --- Sun, half set on the horizon at the left.
+    if (G.mid && reveal > 0.2) {
+      const sr = G.sunR, sx = G.sunX * 2, sy = groundDot;
+      const mr = smooth(0.2, 0.6, reveal);
+      for (let dy = -sr; dy <= 0; dy++) for (let dx = -sr; dx <= sr; dx++) if (Math.hypot(dx, dy * 1.05) <= sr) dot(sx + dx, sy + dy, (0.7 + 0.3 * (1 + dy / sr)) * mr, P.sun);
+      addGlow(G.sunX, G.groundRow - 0.5, G.big ? 4.2 : 3, 0.18 * mr);
+    }
+
+    // --- Tree at the right, branch reaching over the hive.
+    const T = G.tree;
+    for (let x = T.tx - T.rx; x <= T.tx + T.rx; x++) for (let y = Math.floor(T.ccy - T.ry); y <= Math.ceil(T.ccy + T.ry); y++) {
+      const ex = (x - T.tx) / T.rx, ey = (y - T.ccy) / T.ry;
+      const d = ex * ex + ey * ey;
+      const n = fbm(x / 5, y / 3.2, SEED + 60);
+      if (d > 0.55 + 0.5 * n) continue;
+      const tone = -ex * 0.45 - ey * 0.5 + (n - 0.5) * 0.9 + (motion ? 0.08 * Math.sin(t * 1.1 + x * 0.5 + y * 0.7) : 0);
+      px(x, y, tone > 0.28 ? P.leafHi : tone > -0.22 ? P.leaf : P.leafLo);
+    }
+    for (let y = Math.floor(T.ccy); y < PH; y++) {
+      if (T.width === 3) { px(T.tx - 1, y, P.trunkHi); px(T.tx, y, P.trunk); px(T.tx + 1, y, P.trunkLo); }
+      else { px(T.tx, y, P.trunk); px(T.tx + 1, y, P.trunkLo); }
+    }
+    if (G.big) {
+      // Root flare and a bark knot so the trunk reads as wood, not a pole.
+      for (let k = 0; k < 3; k++) { px(T.tx - 2 - (k === 2 ? 1 : 0), PH - 3 + k, P.trunkHi); px(T.tx + 2 + (k === 2 ? 1 : 0), PH - 3 + k, P.trunkLo); }
+      px(T.tx - 2, PH - 3, P.trunkHi); px(T.tx + 2, PH - 3, P.trunkLo);
+      const ky = Math.floor(T.ccy) + 6; px(T.tx, ky, P.trunkLo); px(T.tx, ky + 1, P.trunkLo); px(T.tx - 1, ky + 1, P.trunk);
+      // A second short branch on the far side, hidden in the canopy except for its tip.
+      for (let x = T.tx + 2; x <= T.tx + Math.round(T.rx * 0.7); x++) px(x, Math.floor(T.ccy) + 1 - Math.round((x - T.tx) * 0.08), P.trunkLo);
+    }
+    for (let x = G.stemX; x <= T.tx; x++) {
+      const y = T.branchY - Math.round((x - G.stemX) * 0.05);
+      px(x, y, x > T.tx - T.rx * 0.5 ? P.trunkHi : P.trunk);
+      if (x > T.tx - T.rx * 0.7 || (x - G.stemX) % 9 === 4) px(x, y + 1, P.trunkLo);
+    }
+    // Stem and wax cap holding the comb.
+    for (let y = T.branchY + 1; y < G.topPx - 1; y++) px(G.stemX, y, P.trunkLo);
+    for (let x = G.stemX - 2; x <= G.stemX + 2; x++) px(x, G.topPx - 1, Math.abs(x - G.stemX) === 2 ? P.waxLo : P.wax);
+
+    // --- Hive: one cell per project, grown in order, honey by context, lit cell selected.
+    const nrows = G.intr.length;
+    const occ = new Set();
+    const key = (x, y) => y * w + x;
+    const pulse = ui.hive.pulse && motion ? clamp01(1 - (clock - ui.hive.pulse.t0) / 0.9) : 0;
+    const drawCell = (c, proj) => {
+      const age = motion ? clock - (ui.hive.born[c.i] ?? -99) : 99;
+      if (age < 0) return;
+      const lit = c.i === ui.psel, attn = attention(proj);
+      if (age < 0.28) {
+        const s = age < 0.1 ? 0 : age < 0.19 ? 1 : 2;
+        const col = lit ? P.litWall : P.wax;
+        px(c.cx, c.cy, col);
+        if (s >= 1) for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) px(c.cx + ox, c.cy + oy, col);
+        if (s >= 2) for (const [ox, oy] of [[2, 0], [-2, 0], [0, 2], [0, -2], [1, 1], [-1, 1], [1, -1], [-1, -1]]) px(c.cx + ox, c.cy + oy, col);
+        return;
+      }
+      let lvl = levelOf(proj, nrows);
+      const pulsing = lit && pulse > 0 && ui.hive.pulse.i === c.i;
+      if (pulsing) lvl = Math.min(nrows, lvl + 1);
+      G.intr.forEach(([yy, xs], j) => {
+        const depth = nrows - j, filled = depth <= lvl, top = depth === lvl;
+        let col;
+        if (filled) col = lit ? (top ? P.litTop : P.litHoney) : (top ? P.honeyTop : P.honey);
+        else col = lit ? P.litEmpty : P.empty;
+        if (pulsing && filled) col = mix(col, P.litWall, 0.5 * pulse);
+        for (const xx of xs) { occ.add(key(c.x + xx, c.y + yy)); if (filled || !P.mono) px(c.x + xx, c.y + yy, col); }
+      });
+      const blink = attn && (!motion || Math.floor(t * 5) % 2 === 0);
+      G.shape.forEach((row, yy) => [...row].forEach((ch, xx) => {
+        if (ch !== 'K') return;
+        occ.add(key(c.x + xx, c.y + yy));
+        px(c.x + xx, c.y + yy, lit ? P.litWall : blink ? P.warn : yy <= (G.shape.length >> 1) ? P.wax : P.waxLo);
+      }));
+      if (lit) addGlow(c.cx + 0.5, c.cy / 2, G.big ? 3.4 : 2.4, (0.2 + 0.06 * Math.sin(t * 5)) * (1 + 1.2 * pulse));
+    };
+    const orderIdx = G.cells.map(c => c.i).sort((a, b) => ((a === ui.psel) + attention(PROJECTS[a])) - ((b === ui.psel) + attention(PROJECTS[b])));
+    for (const i of orderIdx) drawCell(G.cells[i], PROJECTS[i]);
+    for (const k of occ) {
+      const x = k % w, y = (k - x) / w;
+      for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (!occ.has(key(x + ox, y + oy)) && pix[key(x + ox, y + oy)] !== P.wax) px(x + ox, y + oy, P.rim);
+    }
+
+    // --- Grass (braille blades swaying) and flowers (pixels).
+    for (let dx = 0; dx < DW; dx++) {
+      if (hash(dx, 0, SEED + 70) > 0.58 || hash(dx, 9, SEED + 72) > reveal * 1.15) continue;
+      const hb = 2 + Math.floor(hash(dx, 1, SEED + 71) * 4);
+      const sw = motion ? 1.3 * Math.sin(1.6 * t + dx * 0.21) * (0.7 + 0.5 * hash(dx, 2, SEED + 73)) : 0.4;
+      for (let k = 0; k < hb; k++) {
+        const bend = k >= hb - 2 ? Math.round(sw) : k >= hb - 3 ? Math.round(sw / 2) : 0;
+        dot(dx + bend, DH - 1 - k, 0.55 + 0.45 * (k / hb), k >= hb - 1 ? P.grassHi : P.grassLo);
+      }
+    }
+    const petal = [[P.flowerA, P.flowerAc], [P.flowerB, P.flowerBc], [P.flowerC, P.flowerCc]];
+    for (const f of G.flowers) {
+      if (hash(f.x, 5, SEED + 82) > reveal * 1.3) continue;
+      const sw = motion ? Math.sin(1.6 * t + f.x * 0.21) : 0.4;
+      const sx = Math.round(sw), sx2 = Math.round(sw / 2);
+      const [pc, cc] = petal[f.kind];
+      px(f.x, groundPx - 1, P.stem); px(f.x + sx2, groundPx - 2, P.stem); px(f.x + sx2 + (f.kind === 1 ? 1 : -1), groundPx - 2, P.grassHi);
+      px(f.x + sx, f.y, pc); px(f.x + sx - 1, f.y + 1, pc); px(f.x + sx, f.y + 1, cc); px(f.x + sx + 1, f.y + 1, pc); px(f.x + sx, f.y + 2, pc);
+    }
+
+    // --- Fireflies (dusk only) and pollen puffs.
+    const burst = clamp01(1 - (clock - ui.fx.burst) / 2.5);
+    if (!P.isLight && G.mid) {
+      const nff = 5 + Math.round(burst * 6);
+      for (let i = 0; i < nff; i++) {
+        const fx = (0.06 + 0.88 * vnoise(t * 0.12 + i * 7.3, i * 1.7, SEED + 90)) * DW;
+        const fy = groundDot * (0.45 + 0.5 * vnoise(i * 3.1, t * 0.16 + i, SEED + 91));
+        const v = 0.5 + 0.5 * Math.sin(t * 1.7 + i * 2.1);
+        if (v > 0.5 || i >= 5) dot(fx, fy, motion ? v : 0.8, P.firefly);
+      }
+    }
+    for (const p of ui.fx.pollen) {
+      const k = p.age / p.life;
+      dot(p.x + p.vx * p.age, p.y + p.vy * p.age + 4 * p.age * p.age, 1 - k, P.pollen);
+    }
+
+    // --- Bee.
+    if (bee) {
+      const rows = (bee.facing > 0 ? BEE : BEE_MIRROR)[pose];
+      const bob = motion && pose !== 'sit' && pose !== 'sitp' && pose !== 'sleep' ? Math.sin(t * 6.9) * 0.8 : 0;
+      const x0 = Math.round(bee.x) - 5, y0 = Math.round(bee.y + bob) - 4;
+      const at = (x, y) => (y < 0 || y >= 8 || x < 0 || x >= 10 ? '.' : rows[y][x]);
+      rows.forEach((row, ry) => [...row].forEach((c, rx) => {
+        if (c === '.') return;
+        let col = P.bee[c];
+        if (c !== 'K' && c !== 'k' && c !== 'a' && (at(rx - 1, ry) === '.' || at(rx, ry - 1) === '.')) col = mix(col, P.sunRim, 0.35);
+        px(x0 + rx, y0 + ry, col);
+      }));
+      if (P.isLight) {
+        const bcx = bee.x, bcy = bee.y / 2;
+        for (let y = Math.max(0, Math.floor(bcy - 3)); y <= Math.min(h - 1, Math.ceil(bcy + 3)); y++) for (let x = Math.max(0, Math.floor(bcx - 7)); x <= Math.min(w - 1, Math.ceil(bcx + 7)); x++) {
+          const d = Math.hypot((x + 0.5 - bcx) / 2.05, y + 0.5 - bcy);
+          shade[y * w + x] = Math.max(shade[y * w + x], 0.28 * Math.exp(-((d / 1.7) ** 2)));
+        }
+      }
+      const a = bee.action || {};
+      if (a.kind === 'deposit' && ui.geo) {
+        const c = G.cells[a.cell] || G.cells[G.cells.length - 1];
+        const k = clamp01((bee.t - a.t0) / a.secs);
+        const hx = bee.x + bee.facing * 5, hy = bee.y;
+        dot((hx + (c.cx + 0.5 - hx) * k) * 2, (hy + (c.cy - hy) * ease(k)) * 2 - Math.sin(k * Math.PI) * 5, 1, P.pollen);
+      }
+      if (a.kind === 'worry') {
+        const bx = (Math.round(bee.x) + (bee.facing > 0 ? 7 : -9)) * 2, by = y0 * 2 - 4;
+        for (const [ox, oy] of [[0, 1], [1, 0], [2, 0], [3, 1], [3, 2], [2, 3], [1, 4], [1, 6]]) dot(bx + ox, by + oy, 1, P.ink);
+      }
+      for (const [zx, zy, age] of bee.zzz) {
+        const yy = zy * 2 - age * 6, v = 1 - age / 2.4;
+        for (const [ox, oy] of [[0, 0], [1, 0], [2, 0], [1, 1], [0, 2], [1, 2], [2, 2]]) dot(zx * 2 + age * 3 + ox, yy + oy, v, P.ink);
+      }
+    }
+
+    // --- Compose cells: sky gradient, glow and shade in the background; pixels over dots.
+    const skyRow = [];
+    for (let y = 0; y < G.groundRow; y++) {
+      const f = y / Math.max(1, G.groundRow - 1);
+      skyRow.push(f < 0.5 ? mix(P.skyTop, P.skyMid, f * 2) : mix(P.skyMid, P.horizon, (f - 0.5) * 2));
+    }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const cell = cells[y * w + x];
+      const a = Math.min(0.5, glow[y * w + x]);
+      let bg = y < G.groundRow ? skyRow[y] : P.ground;
+      if (a > 0.012) bg = mix(bg, P.acc, a);
+      const s = shade[y * w + x];
+      if (s > 0.01) bg = mix(bg, P.shade, s);
+      cell.bg = bg;
+      const top = pix[(2 * y) * w + x], bot = pix[(2 * y + 1) * w + x];
+      if (top || bot) {
+        cell.kind = 'sprite'; cell.top = !!top; cell.bot = !!bot;
+        if (top && bot) { cell.ch = '▀'; cell.fg = top; cell.bg = bot; }
+        else if (top) { cell.ch = '▀'; cell.fg = top; }
+        else { cell.ch = '▄'; cell.fg = bot; }
+        continue;
+      }
+      let bits = 0, maxI = 0, count = 0, colC = null;
+      const map = [[0, 0, 0x01], [0, 1, 0x02], [0, 2, 0x04], [1, 0, 0x08], [1, 1, 0x10], [1, 2, 0x20], [0, 3, 0x40], [1, 3, 0x80]];
+      for (const [ddx, ddy, bit] of map) {
+        const k = (4 * y + ddy) * DW + (2 * x + ddx);
+        const v = dotI[k];
+        if (v > 0.06) { bits |= bit; count++; if (v > maxI) { maxI = v; colC = dotC[k]; } }
+      }
+      if (!bits) continue;
+      cell.kind = 'dots'; cell.count = count;
+      cell.ch = String.fromCharCode(0x2800 + bits);
+      const tone = colC ? mix(bg, colC, clamp01(0.4 + 0.6 * maxI)) : mix(P.dotLo, P.dotHi, maxI);
+      cell.fg = mix(tone, P.accHi, clamp01(a * 1.6));
+    }
+    return cells;
+  }
+
+  // ================= Bee behaviour =================
+  const bee = { x: 40, y: 20, facing: 1, action: null, t: 0, lastInput: 0, zzz: [], pollen: false };
+  function beeDo(kind, extra = {}) { bee.action = { kind, t0: bee.t, ...extra }; }
+  function beeFly(to, then, speed = 48) {
+    const G = ui.geo; if (!G) return;
+    to = [Math.max(6, Math.min(G.w - 7, to[0])), Math.max(5, Math.min(G.groundPx - 5, to[1]))];
+    const d = Math.hypot(to[0] - bee.x, to[1] - bee.y);
+    beeDo('fly', { from: [bee.x, bee.y], to, dur: Math.max(0.45, Math.min(1.8, d / speed)), then });
+  }
+  function cellAnchor(i, mode) {
+    const G = ui.geo;
+    if (!G) return { x: bee.x, y: bee.y, facing: bee.facing };
+    const c = G.cells[Math.min(i, G.cells.length - 1)];
+    if (!c) return { x: G.stemX, y: G.topPx + 4, facing: 1 };
+    if (mode === 'land') return { x: c.cx, y: c.y - 3, facing: bee.facing };
+    if (mode === 'sleep') return { x: c.cx + (G.big ? 6 : 4), y: c.y - 2, facing: -1 };
+    const side = c.cx + 0.5 < (G.bb.x0 + G.bb.x1) / 2 ? -1 : 1;
+    return { x: c.cx + side * (G.big ? 11 : 9), y: c.cy, facing: -side };
+  }
+  function flyToCell(i, kind, extra = {}) { if (!ui.geo) { bee.action = null; return; } const p = cellAnchor(i, kind === 'land' ? 'land' : kind === 'sleep' ? 'sleep' : 'side'); beeFly([p.x, p.y], { kind, secs: 0.6, cell: i, facing: p.facing, ...extra }, 56); }
+  function beeChoose() {
+    const G = ui.geo; if (!G) return;
+    const r = Math.random();
+    if (bee.pollen && r < 0.75) { flyToCell(ui.psel, 'deposit'); return; }
+    if (G.flowers.length && r < 0.8) {
+      const f = G.flowers[Math.floor(Math.random() * G.flowers.length)];
+      beeFly([f.x + 0.5, f.y - 8], { kind: 'onFlower', secs: 0.8 + Math.random() * 0.6 }, 40);
+      return;
+    }
+    beeFly([8 + Math.random() * G.w * 0.6, 6 + Math.random() * G.groundPx * 0.45], { kind: 'hover', secs: 0.4 + Math.random() * 0.6 }, 44);
+  }
+  function beeEvent(type) {
+    bee.lastInput = bee.t;
+    const a = bee.action;
+    if (a && (a.kind === 'sleep' || (a.kind === 'fly' && a.then.kind === 'sleep'))) { bee.zzz = []; beeDo('wake', { secs: 0.3, next: type }); return; }
+    if (a && a.kind === 'wake') { a.next = type; return; }
+    switch (type) {
+      case 'select': flyToCell(ui.psel, 'deposit'); break;
+      case 'detail': flyToCell(ui.psel, 'land'); break;
+      case 'leave': if (a && (a.kind === 'land' || (a.kind === 'fly' && a.then.kind === 'land'))) beeDo('hoverCell', { secs: 5, cell: ui.psel }); break;
+      case 'worry': if (!a || !['fly', 'deposit', 'land'].includes(a.kind)) beeDo('worry', { secs: 2.2, cell: ui.psel }); break;
+      case 'new': flyToCell(ui.psel, 'circle', { secs: 1.8 }); break;
+      case 'burst': if (a && a.kind === 'land') break; if (!a || !['fly', 'deposit'].includes(a.kind)) beeDo('hover', { secs: 0.5 }); break;
+      default: break;
+    }
+  }
+  function beeStep(dt) {
+    bee.t += dt;
+    const G = ui.geo; if (!G) return;
+    let a = bee.action;
+    const sleeping = a && (a.kind === 'sleep' || (a.kind === 'fly' && a.then.kind === 'sleep'));
+    if (bee.t - bee.lastInput > 20 && !sleeping && !(a && (a.kind === 'wake' || a.kind === 'land'))) { flyToCell(0, 'sleep'); a = bee.action; }
+    if (!a) { beeChoose(); return; }
+    const age = bee.t - a.t0;
+    switch (a.kind) {
+      case 'fly': {
+        const k = ease(clamp01(age / a.dur));
+        bee.x = a.from[0] + (a.to[0] - a.from[0]) * k;
+        bee.y = a.from[1] + (a.to[1] - a.from[1]) * k + Math.sin(k * Math.PI) * -2;
+        if (Math.abs(a.to[0] - a.from[0]) > 1.5) bee.facing = a.to[0] > a.from[0] ? 1 : -1;
+        if (age >= a.dur) {
+          bee.x = a.to[0]; bee.y = a.to[1];
+          const n = a.then; beeDo(n.kind, n);
+          if (n.facing) bee.facing = n.facing;
+          if (n.kind === 'deposit') { ui.hive.pulse = { i: n.cell, t0: ui.clock + 0.45 }; bee.pollen = false; }
+        }
+        break;
+      }
+      case 'onFlower': if (age > a.secs) { bee.pollen = true; spawnPollen(bee.x, bee.y + 3, 3); bee.action = null; } break;
+      case 'hover': bee.y += Math.sin(age * 4) * 0.02; if (age > a.secs) bee.action = null; break;
+      case 'deposit': if (age > a.secs) { const p = PROJECTS[a.cell]; if (p && attention(p)) beeDo('worry', { secs: 2.2, cell: a.cell }); else beeDo('hoverCell', { secs: 12, cell: a.cell }); } break;
+      case 'hoverCell': {
+        const an = cellAnchor(a.cell, 'side');
+        bee.x = an.x + Math.sin(age * 1.3) * 2.5; bee.y = an.y + Math.sin(age * 2.1) * 1.5; bee.facing = an.facing;
+        if (age > a.secs) bee.action = null;
+        break;
+      }
+      case 'worry': if (age > a.secs) beeDo('hoverCell', { secs: 8, cell: a.cell ?? ui.psel }); break;
+      case 'land': break;
+      case 'circle': {
+        const c = G.cells[Math.min(a.cell, G.cells.length - 1)];
+        const ang = age * 3.6, rx = G.big ? 10 : 7, ry = G.big ? 6 : 4;
+        bee.x = c.cx + Math.cos(ang) * rx; bee.y = c.cy + Math.sin(ang) * ry; bee.facing = -Math.sin(ang) >= 0 ? 1 : -1;
+        if (age > a.secs) flyToCell(a.cell, 'deposit');
+        break;
+      }
+      case 'sleep': if (Math.floor(bee.t / 1.2) !== Math.floor((bee.t - dt) / 1.2)) bee.zzz.push([bee.x + (bee.facing > 0 ? 6 : -4), bee.y - 4, 0]); break;
+      case 'wake': if (age > a.secs) { bee.action = null; if (a.next === 'select' || a.next === 'new') flyToCell(ui.psel, 'deposit'); else if (a.next === 'detail') flyToCell(ui.psel, 'land'); } break;
+      default: bee.action = null;
+    }
+    bee.zzz.forEach(z => (z[2] += dt));
+    bee.zzz = bee.zzz.filter(z => z[2] < 2.4);
+  }
+  function beePose() {
+    const a = bee.action || { kind: 'hover' };
+    if (a.kind === 'sleep') return 'sleep';
+    const flying = a.kind !== 'onFlower' && a.kind !== 'land';
+    const base = flying ? (Math.floor(bee.t * 24) % 2 ? 'fly1' : 'fly2') : 'sit';
+    return bee.pollen ? base + 'p' : base;
+  }
+  function spawnPollen(x, y, n = 4) {
+    for (let i = 0; i < n; i++) ui.fx.pollen.push({ x: x * 2 + (Math.random() - 0.5) * 6, y: y * 2, vx: (Math.random() - 0.5) * 14, vy: -6 - Math.random() * 8, age: 0, life: 0.6 + Math.random() * 0.4 });
+  }
+
+  // ================= Buffer =================
+  let buf, P;
+  function clear() {
+    buf = Array.from({ length: ui.W * ui.H }, () => ({ ch: ' ', fg: null, bg: null, bold: false, kind: null }));
+  }
+  const len = s => [...s].length;
+  const fit = (s, n) => (n <= 0 ? '' : len(s) <= n ? s : [...s].slice(0, Math.max(0, n - 1)).join('') + '…');
+  const pad = (s, n) => { s = fit(s, n); return s + ' '.repeat(Math.max(0, n - len(s))); };
+  const lpad = (s, n) => { s = fit(s, n); return ' '.repeat(Math.max(0, n - len(s))) + s; };
+  function put(x, y, s, fg, bold) {
+    [...s].forEach((c, i) => {
+      const xx = x + i; if (xx < 0 || xx >= ui.W || y < 0 || y >= ui.H) return;
+      const cell = buf[y * ui.W + xx]; cell.ch = c; cell.fg = fg; cell.bold = !!bold; cell.kind = null;
+    });
+  }
+  function box(x, y, w, h, title, count, active) {
+    const c = active ? P.accDeep : P.faint;
+    put(x, y, '╭' + '─'.repeat(w - 2) + '╮', c);
+    for (let r = 1; r < h - 1; r++) { put(x, y + r, '│', c); put(x + w - 1, y + r, '│', c); }
+    put(x, y + h - 1, '╰' + '─'.repeat(w - 2) + '╯', c);
+    if (title) {
+      const tt = ' ' + title + ' ';
+      put(x + 2, y, tt, active ? P.ink : P.ink2, true);
+      if (count) put(x + 2 + len(tt), y, fit(count, w - 6 - len(tt)) + ' ', P.ink4);
+    }
+  }
+  function bar(x, y, frac, cells) {
+    const n = Math.round(frac * cells);
+    put(x, y, '▓'.repeat(n), P.ink2); put(x + n, y, '░'.repeat(cells - n), P.ink4);
+    put(x + cells + 1, y, lpad(String(Math.round(frac * 100)).padStart(2, '0') + '%', 4), P.ink3);
+  }
+  function kv(x, y, w, k, v, fg) { put(x, y, pad(k, 11), P.ink3); put(x + 11, y, fit(v, w - 11), fg || P.ink); }
+
+  // ================= Views =================
+  function header(narrow) {
+    put(1, 0, '⬢', P.acc); put(3, 0, 'memory bee', P.ink, true);
+    if (narrow) {
+      const p = project();
+      const label = `${ui.psel + 1}/${PROJECTS.length} ${p.name}`;
+      put(ui.W - len(label) - 1, 0, fit(label, ui.W - 16), P.ink3);
+      return;
+    }
+    const tabs = [['projetos', 'projects'], ['pacotes', 'bundles'], ['retomar', 'resume'], ['ajuda', 'help']];
+    let x = 16;
+    tabs.forEach(([label, v], i) => {
+      const on = ui.view === v;
+      put(x, 0, label, on ? P.ink : P.ink3, on);
+      x += len(label);
+      if (i < tabs.length - 1) { put(x + 1, 0, '·', P.ink4); x += 3; }
+    });
+    const right = `${PROJECTS.length} projetos · ${totalSessions()} sessões · somente leitura`;
+    if (x + len(right) + 3 < ui.W) put(ui.W - len(right) - 1, 0, right, P.ink4);
+  }
+  function projectLine(y) {
+    const p = project();
+    const n = p.sessions.length, nb = p.bundles.length;
+    let x = 1;
+    put(x, y, '⬢', P.acc); x += 2;
+    put(x, y, p.name, P.ink, true); x += len(p.name) + 2;
+    const git = `${p.branch} · ${p.clean ? 'limpo' : 'alterações locais'}`;
+    put(x, y, git, p.clean ? P.ink3 : P.warn); x += len(git) + 3;
+    const cnt = `${n} ${n === 1 ? 'sessão' : 'sessões'} · ${nb} ${nb === 1 ? 'pacote' : 'pacotes'}`;
+    put(x, y, cnt, P.ink2); x += len(cnt) + 3;
+    if (attention(p)) { const w = p.sessions.filter(s => s.state !== 'ok').length; const t = `▲ ${w} ${w === 1 ? 'sessão precisa' : 'sessões precisam'} de atenção`; put(x, y, t, P.warn); x += len(t) + 3; }
+    const hint = '← → trocar projeto';
+    if (x + len(hint) + 1 < ui.W) put(ui.W - len(hint) - 1, y, hint, P.ink4);
+  }
+  function statusLine(y) {
+    const s = ui.status;
+    if (s && ui.clock < s.until) {
+      const frames = '◴◷◶◵';
+      put(1, y, frames[Math.floor(ui.clock * 8) % 4], P.acc);
+      const text = s.busy;
+      const center = ((ui.clock * 22) % (len(text) + 16)) - 8;
+      [...text].forEach((c, i) => {
+        const k = Math.exp(-((i - center) ** 2) / 10);
+        put(3 + i, y, c, mix(P.ink3, P.ink, k));
+      });
+    } else {
+      put(1, y, '●', P.ok);
+      put(3, y, fit(s ? s.done : '', ui.W - 4), P.ink3);
+    }
+  }
+  function hints(single) {
+    const y = ui.H - 1;
+    const items = ui.W < 60
+      ? [['←→', ''], ['↑↓', ''], ['enter', ''], ['esc', ''], ['?', ''], ['q', '']]
+      : single
+        ? [['←→', 'projeto'], ['↑↓', 'mover'], ['enter', 'abrir'], ['esc', 'voltar'], ['r', 'retomar'], ['q', 'sair']]
+        : [['←→', 'projeto'], ['↑↓', 'sessão'], ['tab', 'painel'], ['enter', 'detalhe'], ['r', 'retomada'], ['n', 'projeto novo'], ['f', 'pólen'], ['a', ui.paused ? 'animar' : 'pausar'], ['q', 'sair']];
+    let x = 1;
+    for (const [k, v] of items) {
+      const need = len(k) + (v ? len(v) + 1 : 0);
+      if (x + need >= ui.W) break;
+      put(x, y, k, P.ink2); x += len(k);
+      if (v) { put(x + 1, y, v, P.ink4); x += len(v) + 1; }
+      x += 3;
+    }
+  }
+  function sessionsList(x, y, w, h, active) {
+    const S = project().sessions;
+    const cl = S.filter(s => s.agent === 'claude').length;
+    box(x, y, w, h, 'Sessões', `claude ${cl} · codex ${S.length - cl}`, active);
+    const vis = h - 2, start = Math.max(0, Math.min(ui.sel - vis + 1, S.length - vis));
+    S.slice(start, start + vis).forEach((s, k) => {
+      const i = start + k, row = y + 1 + k, sel = i === ui.sel;
+      const [g, tone] = STATE[s.state];
+      const name = s.sub ? s.id + ' (sub)' : s.id;
+      const ev = s.state === 'ambiguous' ? '—' : s.ev + ' ev';
+      const right = lpad(ev, 5);
+      const nameW = w - 6 - 7 - len(right) - 3;
+      put(x + 2, row, sel ? '❯' : ' ', P.acc);
+      put(x + 4, row, pad(s.agent, 7), sel ? P.ink2 : P.ink3);
+      put(x + 11, row, fit(name, nameW), sel ? P.ink : s.state === 'ambiguous' ? P.ink3 : P.ink2, sel);
+      put(x + w - 4 - len(right), row, right, P.ink4);
+      put(x + w - 3, row, g, P[tone]);
+    });
+    if (start + vis < S.length) put(x + w - 4, y + h - 1, '↓', P.ink4);
+    if (start > 0) put(x + w - 4, y, '↑', P.ink4);
+  }
+  function sessionDetail(x, y, w, h, active) {
+    const s = project().sessions[ui.sel];
+    box(x, y, w, h, 'Detalhe', s.agent, active);
+    const iw = w - 4, ix = x + 2; let r = y + 1;
+    const [g, tone, label] = STATE[s.state];
+    const rows = [
+      () => kv(ix, r, iw, 'Sessão', s.id),
+      () => kv(ix, r, iw, 'Projeto', project().name, P.ink2),
+      () => kv(ix, r, iw, 'Agente', s.agent === 'claude' ? 'claude-code' : 'codex'),
+      () => { put(ix, r, pad('Estado', 11), P.ink3); put(ix + 11, r, g + ' ' + label, P[tone]); },
+      () => { put(ix, r, pad('Retidos', 11), P.ink3); bar(ix + 11, r, s.total ? s.ev / s.total : 0, Math.max(6, Math.min(20, iw - 17))); },
+      () => kv(ix, r, iw, 'Compat.', s.agent === 'claude' ? 'não certificada' : 'leitor experimental', P.ink2),
+      () => kv(ix, r, iw, 'Arquivo', s.file, P.ink2),
+      () => kv(ix, r, iw, 'Atividade', s.when, P.ink2),
+    ];
+    for (const fn of rows) { if (r >= y + h - 1) break; fn(); r++; }
+    if (r < y + h - 2) { put(ix, r, '⎿', P.ink4); put(ix + 2, r, fit(s.diag, iw - 2), s.state === 'ok' ? P.ink3 : P.warn); r++; }
+    if (r + 1 < y + h - 1) put(ix, y + h - 2, fit('r prepara a retomada · nada é executado', iw), P.ink4);
+  }
+  function bundlesList(x, y, w, h, active) {
+    const B = project().bundles;
+    box(x, y, w, h, 'Pacotes', String(B.length), active);
+    if (!B.length) { put(x + 2, y + 1, fit('nenhum pacote exportado deste projeto', w - 4), P.ink3); return; }
+    B.forEach((b, i) => {
+      const row = y + 1 + i, sel = i === ui.bsel;
+      if (row >= y + h - 1) return;
+      put(x + 2, row, sel ? '❯' : ' ', P.acc);
+      put(x + 4, row, fit(b.name, w - 12), sel ? P.ink : P.ink2, sel);
+      put(x + w - 6, row, 'v' + b.ver, P.ink4);
+      put(x + w - 3, row, b.att.length ? '▲' : '●', b.att.length ? P.warn : P.ok);
+    });
+  }
+  function bundleDetail(x, y, w, h, active) {
+    const b = project().bundles[Math.min(ui.bsel, project().bundles.length - 1)];
+    if (!b) { box(x, y, w, h, 'Verificação', '', active); put(x + 2, y + 1, fit('exporte com memory-bee export --project …', w - 4), P.ink3); return; }
+    box(x, y, w, h, 'Verificação', 'v' + b.ver, active);
+    const iw = w - 4, ix = x + 2; let r = y + 1;
+    const rows = [
+      ['Integridade', 'hashes e layout conferidos', P.ok],
+      ['Origem', b.source, P.ink],
+      ['Código', b.changes ? b.changes + (b.changes === 1 ? ' mudança selecionada' : ' mudanças selecionadas') : 'somente contexto', P.ink2],
+      ['Base', b.base === 'match' ? 'confere com HEAD' : 'não registrada', b.base === 'match' ? P.ok : P.warn],
+      ['Redaction', b.redaction, b.redaction === 'reviewed' ? P.ink2 : P.warn],
+      ['Atenção', b.att.length ? b.att.join(', ') : 'nenhuma', b.att.length ? P.warn : P.ink2],
+    ];
+    for (const [k, v, c] of rows) { if (r >= y + h - 1) break; kv(ix, r, iw, k, v, c); r++; }
+    if (r + 1 < y + h - 1) put(ix, y + h - 2, fit('integridade não prova autoria nem ausência de segredos', iw), P.ink4);
+  }
+  function resumeView(x, y, w, h) {
+    const b = project().bundles[Math.min(ui.bsel, project().bundles.length - 1)];
+    box(x, y, w, h, 'Retomada', 'prévia de prepare-resume', true);
+    const iw = w - 4, ix = x + 2; let r = y + 1;
+    if (!b) { put(ix, r, fit('este projeto não tem pacote verificado · exporte antes de preparar a retomada', iw), P.ink3); return; }
+    const out = [
+      () => kv(ix, r, iw, 'Pacote', b.name),
+      () => kv(ix, r, iw, 'Destino', 'claude · mesmo checkout', P.ink2),
+      () => kv(ix, r, iw, 'Base', b.base, b.base === 'match' ? P.ok : P.warn),
+      () => kv(ix, r, iw, 'Atenção', b.att.length ? '▲ ' + b.att.join(', ') : 'nenhuma', b.att.length ? P.warn : P.ink2),
+      () => put(ix, r, 'Passos', P.ink3),
+    ];
+    const steps = b.changes ? ['memory-bee apply … --check', 'memory-bee apply … --write', 'claude "<prompt>" --add-dir …'] : ['claude "<prompt>" --add-dir …'];
+    steps.forEach((s, i) => out.push(() => { put(ix + 1, r, '⎿', P.ink4); put(ix + 3, r, String(i + 1), P.acc); put(ix + 5, r, fit(s, iw - 5), P.ink); }));
+    out.push(() => kv(ix, r, iw, 'Confirmação', b.token, P.acc));
+    for (const fn of out) { if (r >= y + h - 2) break; fn(); r++; }
+    put(ix, y + h - 2, fit('lançar só pela CLI com --output e --launch <confirmação>', iw), P.ink4);
+  }
+  function helpView(x, y, w, h) {
+    box(x, y, w, h, 'Atalhos', '', true);
+    const rows = [['← →  h l', 'trocar de projeto (gominho)'], ['↑ ↓  j k', 'mover a seleção'], ['tab', 'trocar de painel'], ['enter', 'abrir o detalhe'], ['esc', 'voltar'], ['s p r', 'projetos, pacotes, retomada'], ['n', 'simular um projeto novo'], ['f', 'pólen e vagalumes'], ['a', 'pausar ou retomar a animação'], ['q', 'sair e restaurar o terminal']];
+    rows.forEach(([k, v], i) => { const r = y + 1 + i; if (r >= y + h - 1) return; put(x + 2, r, pad(k, 10), P.ink); put(x + 12, r, fit(v, w - 14), P.ink3); });
+  }
+
+  function compose() {
+    P = Object.assign({}, palette(), { mono: ui.color === 'off' });
+    clear();
+    const narrow = ui.W < 60 || ui.H < 20;
+    const single = narrow || ui.W < 80;
+    if(work.active){P.acc=P.isLight?[155,111,8]:[242,207,85];ui.geo=null;workView();return;}
+    header(narrow);
+    hints(single);
+    statusLine(ui.H - 2);
+    if (ui.quit) {
+      put(2, 2, 'memory bee encerrado · terminal restaurado', P.ink2);
+      put(2, 3, 'qualquer tecla reabre o protótipo', P.ink4);
+      ui.geo = null;
+      return;
+    }
+    const sh = narrow ? 0 : SCENE_H();
+    let top = 1;
+    if (sh) {
+      const G = geometry(ui.W, sh);
+      ui.geo = G;
+      const t = ui.motion ? ui.t : 6.2;
+      const rev = ui.motion ? ui.reveal : 1;
+      let pose;
+      if (ui.motion) pose = beePose();
+      else { const an = cellAnchor(ui.psel, 'land'); bee.x = an.x; bee.y = an.y; bee.facing = 1; pose = 'sit'; }
+      const cells = scene(G, t, rev, ui.clock, P, bee, pose, ui.motion);
+      const y0 = top;
+      cells.forEach((c, i) => { const k = (y0 + Math.floor(i / ui.W)) * ui.W + (i % ui.W); if (c.ch !== ' ' || c.bg) buf[k] = c; });
+      // Label the lit cell and the overflow badge.
+      const c = G.cells[Math.min(ui.psel, G.cells.length - 1)];
+      if (c && G.mid && (ui.motion ? ui.clock - (ui.hive.born[c.i] ?? -99) > 0.28 : true)) {
+        const p = project();
+        const label = `${p.name} · ${p.sessions.length}` + (attention(p) ? ' ▲' : '');
+        const lx = G.bb.x0 - 3 - len(label), ly = y0 + (c.cy >> 1);
+        if (lx > 1) { put(lx, ly, label, P.ink, true); if (attention(p)) put(lx + len(label) - 1, ly, '▲', P.warn); put(G.bb.x0 - 2, ly, '▸', P.accHi); }
+      }
+      if (G.extra > 0) {
+        const s = `+${G.extra} ${G.extra === 1 ? 'projeto' : 'projetos'}`;
+        const by = y0 + (G.bb.y1 >> 1) + 1;
+        if (by < y0 + G.groundRow) put(Math.round((G.bb.x0 + G.bb.x1) / 2 - len(s) / 2), by, s, P.ink2);
+      }
+      projectLine(top + sh);
+      top += sh + 1;
+    } else ui.geo = null;
+    const bottom = ui.H - 3;
+    const ph = bottom - top + 1;
+    if (ui.view === 'help') return helpView(0, top, ui.W, ph);
+    if (ui.view === 'resume') return resumeView(0, top, ui.W, ph);
+    const L = ui.view === 'projects' ? sessionsList : bundlesList;
+    const D = ui.view === 'projects' ? sessionDetail : bundleDetail;
+    if (single) return ui.detailOpen ? D(0, top, ui.W, ph, true) : L(0, top, ui.W, ph, true);
+    const lw = Math.floor(ui.W * 0.44);
+    L(0, top, lw, ph, ui.focus === 'list');
+    D(lw, top, ui.W - lw, ph, ui.focus === 'detail');
+  }
+
+  // ================= Renderer =================
+  const canvas = document.getElementById('term');
+  const ctx = canvas.getContext('2d');
+  const screenEl = document.getElementById('screen');
+  const winEl = document.getElementById('window');
+  let fs = 14, cw = 8.4, chh = 17, dpr = 1;
+  const FAMILY = 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace';
+  const FONT = (s, bold) => `${bold ? 700 : 400} ${s}px ${FAMILY}`;
+
+  function palette() {
+    if (ui.palette !== 'auto') return PAL[ui.palette];
+    const forced = document.documentElement.getAttribute('data-theme');
+    if (forced) return PAL[forced === 'dark' ? 'dark' : 'light'];
+    return matchMedia('(prefers-color-scheme: dark)').matches ? PAL.dark : PAL.light;
+  }
+  function measure() {
+    const avail = Math.max(200, screenEl.clientWidth - 28);
+    fs = 15;
+    for (; fs > 6; fs -= 0.5) { ctx.font = FONT(fs); cw = ctx.measureText('M').width; if (cw * ui.W <= avail) break; }
+    ctx.font = FONT(fs); cw = ctx.measureText('M').width;
+    chh = Math.round(cw * 2.05);
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.ceil(cw * ui.W * dpr);
+    canvas.height = Math.ceil(chh * ui.H * dpr);
+    canvas.style.width = Math.ceil(cw * ui.W) + 'px';
+    canvas.style.height = Math.ceil(chh * ui.H) + 'px';
+  }
+  // xterm 256-color approximation
+  const CUBE = [0, 95, 135, 175, 215, 255];
+  function q256(c) {
+    const qi = v => { let bi = 0; for (let i = 1; i < 6; i++) if (Math.abs(CUBE[i] - v) < Math.abs(CUBE[bi] - v)) bi = i; return CUBE[bi]; };
+    const cube = [qi(c[0]), qi(c[1]), qi(c[2])];
+    const avg = (c[0] + c[1] + c[2]) / 3;
+    const gi = Math.max(0, Math.min(23, Math.round((avg - 8) / 10)));
+    const gray = [8 + 10 * gi, 8 + 10 * gi, 8 + 10 * gi];
+    const d = a => (a[0] - c[0]) ** 2 + (a[1] - c[1]) ** 2 + (a[2] - c[2]) ** 2;
+    return d(gray) < d(cube) ? gray : cube;
+  }
+  const css = c => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+
+  function geom(ch, x, y, w, h) {
+    const lw = Math.max(1, Math.round(fs / 12));
+    const mx = x + w / 2, my = y + h / 2;
+    const H = (x0, x1) => ctx.fillRect(x0, Math.round(my - lw / 2), x1 - x0, lw);
+    const V = (y0, y1) => ctx.fillRect(Math.round(mx - lw / 2), y0, lw, y1 - y0);
+    const arc = (cx, cy, a0, a1) => { const r = Math.min(w, h) / 2; ctx.save(); ctx.lineWidth = lw; ctx.strokeStyle = ctx.fillStyle; ctx.beginPath(); ctx.arc(cx, cy, r, a0, a1); ctx.stroke(); ctx.restore(); return r; };
+    switch (ch) {
+      case '─': H(x, x + w + 0.5); return true;
+      case '│': V(y, y + h + 0.5); return true;
+      case '╭': { const r = Math.min(w, h) / 2; arc(mx + r, my + r, Math.PI, 1.5 * Math.PI); H(mx + r, x + w + 0.5); V(my + r, y + h + 0.5); return true; }
+      case '╮': { const r = Math.min(w, h) / 2; arc(mx - r, my + r, 1.5 * Math.PI, 2 * Math.PI); H(x, mx - r); V(my + r, y + h + 0.5); return true; }
+      case '╰': { const r = Math.min(w, h) / 2; arc(mx + r, my - r, 0.5 * Math.PI, Math.PI); H(mx + r, x + w + 0.5); V(y, my - r); return true; }
+      case '╯': { const r = Math.min(w, h) / 2; arc(mx - r, my - r, 0, 0.5 * Math.PI); H(x, mx - r); V(y, my - r); return true; }
+      case '█': ctx.fillRect(x, y, w + 0.5, h + 0.5); return true;
+      case '▀': ctx.fillRect(x, y, w + 0.5, h / 2 + 0.5); return true;
+      case '▄': ctx.fillRect(x, y + h / 2, w + 0.5, h / 2 + 0.5); return true;
+      case '▐': ctx.fillRect(x + w / 2, y, w / 2 + 0.5, h + 0.5); return true;
+      case '▌': ctx.fillRect(x, y, w / 2, h + 0.5); return true;
+      case '░': case '▓': ctx.globalAlpha = ch === '░' ? 0.3 : 0.8; ctx.fillRect(x + 0.5, y + 1, w - 1, h - 2); ctx.globalAlpha = 1; return true;
+      default: return false;
+    }
+  }
+  function brailleDots(code, x, y, w, h, path) {
+    const r = Math.min(w / 2, h / 4) * 0.34;
+    const pos = [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [0, 3], [1, 3]];
+    for (let b = 0; b < 8; b++) if (code & (1 << b)) {
+      const px = x + (pos[b][0] + 0.5) * (w / 2), py = y + (pos[b][1] + 0.5) * (h / 4);
+      path.moveTo(px + r, py); path.arc(px, py, r, 0, Math.PI * 2);
+    }
+  }
+  function paint() {
+    const mode = ui.color;
+    const mono = mode === 'off';
+    const fix = c => (c == null ? null : mode === '256' ? q256(c) : c);
+    winEl.style.setProperty('--term-bg', css(P.bg));
+    winEl.style.setProperty('--term-ink', css(P.ink));
+    winEl.style.setProperty('--term-muted', css(P.ink3));
+    winEl.style.setProperty('--term-acc', css(mono ? P.ink : P.acc));
+    winEl.style.setProperty('--term-line', css(P.faint));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = css(P.bg); ctx.fillRect(0, 0, cw * ui.W + 1, chh * ui.H + 1);
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+    const dotPaths = new Map();
+    for (let y = 0; y < ui.H; y++) for (let x = 0; x < ui.W; x++) {
+      const c = buf[y * ui.W + x];
+      const px = x * cw, py = y * chh;
+      if (!mono && c.bg) { ctx.fillStyle = css(fix(c.bg)); ctx.fillRect(px, py, cw + 0.6, chh + 0.6); }
+      if (c.ch === ' ') continue;
+      let ch = c.ch;
+      const fg = mono ? P.ink : fix(c.fg || P.ink);
+      if (c.kind === 'sprite' && mono) ch = c.top && c.bot ? '█' : c.top ? '▀' : '▄';
+      const code = ch.charCodeAt(0);
+      if (code >= 0x2800 && code <= 0x28ff) {
+        if (ui.glyph === 'basic') {
+          ctx.font = FONT(fs); ctx.fillStyle = css(fg);
+          ctx.fillText(c.count >= 4 ? '•' : '·', px + cw / 2, py + chh / 2 + 1);
+          continue;
+        }
+        const key = css(fg);
+        if (!dotPaths.has(key)) dotPaths.set(key, new Path2D());
+        brailleDots(code - 0x2800, px, py, cw, chh, dotPaths.get(key));
+        continue;
+      }
+      ctx.fillStyle = css(fg);
+      if (geom(ch, px, py, cw, chh)) continue;
+      ctx.font = FONT(fs, c.bold);
+      ctx.fillText(ch, px + cw / 2, py + chh / 2 + 1);
+    }
+    for (const [color, path] of dotPaths) { ctx.fillStyle = color; ctx.fill(path); }
+  }
+  function render() {
+    compose(); paint();
+    if(work.active)workBee();
+    const description=work.active ? 'Conversa simulada · '+project().name+' · '+work.agent+' / '+work.profile+'\n'+work.events.map(e=>e.role+': '+e.text).join('\n') : 'Clareira da Colmeia · projeto selecionado '+project().name+' · árvore, favos, abelha, flores e sessões sintéticas';
+    if(canvas.getAttribute('aria-label')!==description)canvas.setAttribute('aria-label',description);
+  }
+
+  // ================= Loop =================
+  let last = performance.now(), lastFrame = -1;
+  const reducedPref = matchMedia('(prefers-reduced-motion: reduce)');
+  function startReveal() {
+    ui.revealStart = ui.clock; ui.reveal = 0;
+    ui.hive.born = PROJECTS.map((_, i) => ui.clock + 0.5 + i * 0.22);
+    ui.hive.pulse = null;
+    bee.action = null; bee.pollen = false; bee.zzz = []; bee.lastInput = bee.t;
+    if (ui.geo) { bee.x = ui.geo.stemX; bee.y = ui.geo.topPx + 6; }
+    bee.action = { kind: 'circle', t0: bee.t, cell: 0, secs: 1.6 + PROJECTS.length * 0.22 };
+  }
+  function tick(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    ui.clock += dt;
+    let dirty = false;
+    if (ui.motion && !ui.paused) {
+      ui.t += dt;
+      const r = clamp01((ui.clock - ui.revealStart) / 1.4);
+      ui.reveal = r * r * (3 - 2 * r);
+      for (const p of ui.fx.pollen) p.age += dt;
+      ui.fx.pollen = ui.fx.pollen.filter(p => p.age < p.life);
+      beeStep(dt);
+      dirty = true;
+    }
+    if (ui.status && ui.clock < ui.status.until + 0.1) dirty = true;
+    const frame = Math.floor(ui.clock * 30);
+    if (dirty && frame !== lastFrame) { lastFrame = frame; render(); }
+    requestAnimationFrame(tick);
+  }
+
+  // ================= Input =================
+  function selectProject(i, announce = true) {
+    if(work.running){setStatus('Turno simulado ativo', 'Interrompa ou aguarde antes de trocar de projeto.',0);return;}
+    if(work.events.length&&((i+PROJECTS.length)%PROJECTS.length)!==ui.psel){work.histories.push({agent:work.agent,profile:work.profile,project:project().name,events:work.events});work.events=[];work.offset=0;}
+
+    ui.psel = (i + PROJECTS.length) % PROJECTS.length; ui.sel = 0; ui.bsel = 0;
+    const p = project();
+    if (announce) setStatus(`Abrindo ${p.name}…`, `${p.name} · ${p.sessions.length} ${p.sessions.length === 1 ? 'sessão' : 'sessões'} · ${p.branch}`, 0.7);
+    beeEvent('select');
+  }
+  function addProject() {
+    if(work.running)return;
+    if(work.events.length){work.histories.push({agent:work.agent,profile:work.profile,project:project().name,events:work.events});work.events=[];}
+    if (PROJECTS.length >= 40) return;
+    const name = NEW_NAMES[(PROJECTS.length - 5 + NEW_NAMES.length) % NEW_NAMES.length] + (PROJECTS.length >= 5 + NEW_NAMES.length ? '-' + (PROJECTS.length - 4) : '');
+    const seed = 100 + PROJECTS.length * 17;
+    const n = 1 + Math.floor(hash(PROJECTS.length, 1, seed) * 4);
+    PROJECTS.push({ name, branch: 'main', clean: true, sessions: mkSessions(name, n, seed), bundles: [] });
+    ui.hive.born[PROJECTS.length - 1] = ui.clock;
+    ui.psel = PROJECTS.length - 1; ui.sel = 0; ui.bsel = 0;
+    setStatus(`Projeto novo descoberto: ${name}…`, `${name} · ${n} ${n === 1 ? 'sessão' : 'sessões'} · gominho ${PROJECTS.length}`, 1.2);
+    beeEvent('new');
+  }
+  function key(k) {
+    if(k==='F2'){workCommand('/menu');return true;}
+    if(work.active){
+      if(k==='Escape')workHome();
+      else if(k==='Tab')workCommand('/permissions');
+      else if(k==='ArrowUp'||k==='PageUp')work.offset+=3;
+      else if(k==='ArrowDown'||k==='PageDown')work.offset=Math.max(0,work.offset-3);
+      else if(k==='Enter')inputEl.focus();
+      else return false;
+      render();return true;
+    }
+    if (ui.quit) { ui.quit = false; startReveal(); setStatus('Lendo sessões em testdata…', `${PROJECTS.length} projetos · ${totalSessions()} sessões · somente leitura`, 1.4); render(); return true; }
+    const single = ui.W < 80 || ui.H < 20;
+    const S = project().sessions, B = project().bundles;
+    switch (k) {
+      case 'ArrowLeft': case 'h': selectProject(ui.psel - 1); break;
+      case 'ArrowRight': case 'l': selectProject(ui.psel + 1); break;
+      case 'ArrowUp': case 'k':
+        if (ui.view === 'projects') ui.sel = (ui.sel + S.length - 1) % S.length;
+        else if (ui.view !== 'help' && B.length) ui.bsel = (ui.bsel + B.length - 1) % B.length;
+        break;
+      case 'ArrowDown': case 'j':
+        if (ui.view === 'projects') ui.sel = (ui.sel + 1) % S.length;
+        else if (ui.view !== 'help' && B.length) ui.bsel = (ui.bsel + 1) % B.length;
+        break;
+      case 'Tab': ui.focus = ui.focus === 'list' ? 'detail' : 'list'; if (single) ui.detailOpen = !ui.detailOpen; break;
+      case 'Enter': ui.focus = 'detail'; ui.detailOpen = true; break;
+      case 'Escape': ui.focus = 'list'; ui.detailOpen = false; if (ui.view === 'help' || ui.view === 'resume') ui.view = 'projects'; break;
+      case 's': case 'S': ui.view = 'projects'; ui.focus = 'list'; ui.detailOpen = false; break;
+      case 'p': case 'P': ui.view = 'bundles'; ui.focus = 'list'; ui.detailOpen = false; setStatus('Verificando pacotes…', `${B.length} ${B.length === 1 ? 'pacote verificado' : 'pacotes verificados'} · hashes conferidos`, 0.9); break;
+      case 'r': case 'R': ui.view = 'resume'; setStatus('Preparando prévia de retomada…', 'prévia pronta · nada foi executado', 1.0); break;
+      case 'n': case 'N': addProject(); break;
+      case '?': ui.view = 'help'; break;
+      case 'f': case 'F': case '*': if (ui.motion) { spawnPollen(bee.x, bee.y + 2, 6); ui.fx.burst = ui.clock; beeEvent('burst'); } break;
+      case 'a': case 'A': ui.paused = !ui.paused; break;
+      case 'q': case 'Q': ui.quit = true; break;
+      default: return false;
+    }
+    if (k !== 'n' && k !== 'N' && k !== 'ArrowLeft' && k !== 'ArrowRight' && k !== 'h' && k !== 'l') bee.lastInput = bee.t;
+    if (['ArrowUp', 'ArrowDown', 'k', 'j'].includes(k)) {
+      const warn = ui.view === 'projects' ? S[ui.sel].state !== 'ok' : ui.view !== 'help' && B.length > 0 && B[ui.bsel].att.length > 0;
+      if (warn) beeEvent('worry');
+    }
+    if (k === 'Enter') beeEvent('detail');
+    if (k === 'Escape' || k === 'Tab') beeEvent('leave');
+    render();
+    return true;
+  }
+  screenEl.addEventListener('keydown', e => { if(work.active&&e.ctrlKey&&e.key==='c'){e.preventDefault();workStop();return;} if (e.metaKey || e.ctrlKey || e.altKey) return; if (key(e.key)) e.preventDefault(); });
+  canvas.addEventListener('click', e => {
+    screenEl.focus();
+    const r = canvas.getBoundingClientRect();
+    const col = (e.clientX - r.left) / cw, row = (e.clientY - r.top) / chh;
+    const G = ui.geo;
+    if (!G || ui.view === 'help' || row < 1 || row >= 1 + G.h) return;
+    const px = col, py = (row - 1) * 2;
+    const hit = G.cells.find(c => Math.abs(px - c.cx - 0.5) <= G.half + 0.5 && Math.abs(py - c.cy - 0.5) <= (G.shape.length >> 1) + 0.5);
+    if (hit) { selectProject(hit.i); render(); return; }
+    if (ui.motion && py < G.groundPx) { spawnPollen(px, py, 5); ui.fx.burst = ui.clock; beeEvent('burst'); render(); }
+  });
+  document.getElementById('keys').addEventListener('click', e => { const b = e.target.closest('button'); if (b) key(b.dataset.k); });
+  const meta = document.getElementById('meta');
+  function applyControls() {
+    const [W, H] = document.querySelector('input[name=size]:checked').value.split('x').map(Number);
+    const changed = W !== ui.W || H !== ui.H;
+    ui.W = W; ui.H = H;
+    ui.palette = document.querySelector('input[name=pal]:checked').value;
+    document.documentElement.dataset.theme=ui.palette==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):ui.palette;
+    ui.color = document.querySelector('input[name=color]:checked').value;
+    ui.glyph = document.querySelector('input[name=glyph]:checked').value;
+    ui.motion = document.querySelector('input[name=motion]:checked').value === 'on';
+    const colorLabel = { '24': '24 bits', '256': '256 cores', off: 'NO_COLOR' }[ui.color];
+    meta.textContent = `${W}×${H} · ${ui.motion ? '30 fps' : 'quadro fixo'} · ${colorLabel}`;
+    measure();
+    if (changed) { ui.geo = null; startReveal(); }
+    render();
+  }
+  document.querySelectorAll('.controls input').forEach(i => i.addEventListener('change', applyControls));
+  reducedPref.addEventListener?.('change', () => { if (reducedPref.matches) { document.getElementById('mOff').checked = true; applyControls(); } });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', render);
+  new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { measure(); render(); }, 80); });
+
+  // Unified conversation extension; the approved scene/renderer above is preserved.
+  const work = { active:false, panel:null, selected:0, agent:'Claude', profile:'Pessoal', running:false, action:"thinking", approval:false, offset:0, serial:0, events:[], histories:[], outcome:null, outcomeAt:0, awakeAt:0 };
+  const inputEl = document.getElementById('prompt');
+  const composer = document.getElementById('composer');
+  const activity = document.getElementById('activity');
+  function workEvent(role,text) { work.events.push({role,text}); work.offset=0; render(); }
+  function workWrap(text,width) {
+    const out=[];
+    for(const raw of text.split('\n')) { let chars=[...raw];if(!chars.length)out.push('');while(chars.length){let n=Math.min(width,chars.length);if(chars.length>width){const space=chars.slice(0,width+1).lastIndexOf(' ');if(space>width/2)n=space;}out.push(chars.slice(0,n).join(''));chars=chars.slice(n);if(chars[0]===' ')chars.shift();} }
+    return out;
+  }
+  // Reuse the clearing's wing, pollen, mirrored and sleeping sprites.
+  // The mascot lives next to the yellow input box, outside the transcript.
+  function workBeeFrame(t) {
+    const age=t-work.outcomeAt;
+    const state=work.approval?'approval':work.running?work.action:work.outcome&&age<4?work.outcome:t-work.awakeAt>20?'sleep':'idle';
+    const moving=ui.motion;
+    const speed=({thinking:9,reading:7,editing:14,executing:20,approval:5})[state]||11;
+    const flying=moving&&!['sleep','interrupted','denied','error'].includes(state);
+    const phase=Math.floor(t*speed)%2;
+    const pollen=['editing','completed'].includes(state);
+    const pose=state==='sleep'?'sleep':flying?(phase?'fly1':'fly2')+(pollen?'p':''):'sit';
+    const sway=flying?Math.sin(t*(state==='reading'?3:state==='executing'?4:1.1))*2:0;
+    const bob=flying?Math.sin(t*(state==='editing'?6:1.8))*(state==='approval'?.5:1):0;
+    return {state,pose,x:ui.W-15+Math.round(sway),y:6+Math.round(bob),left:sway<-.8,phase,moving,age};
+  }
+  function workBee() {
+    const b=workBeeFrame(ui.t),c=document.getElementById('inputBee'),g=c.getContext('2d');
+    const names={idle:'Pronta para continuar',thinking:'Pensando na tarefa…',reading:'Lendo arquivos…',editing:'Preparando alteração…',executing:'Executando teste simulado…',approval:'Preciso da sua permissão',completed:'Feito. Contexto preservado.',denied:'Tudo bem. Ação negada.',interrupted:'Turno interrompido.',error:'Algo deu errado. Histórico preservado.',sleep:'Descansando. Escreva para continuar.'};
+    c.dataset.beeState=b.state;canvas.dataset.beeState=b.state;
+    const label='Abelha · '+names[b.state];if(c.getAttribute('aria-label')!==label)c.setAttribute('aria-label',label);
+    const status=document.getElementById('beeStatus');if(status.textContent!==names[b.state])status.textContent=names[b.state];
+    document.getElementById('composerIdentity').textContent=work.agent+' · '+work.profile+' · SIMULAÇÃO';
+    document.getElementById('inlinePermission').hidden=!work.approval;
+    document.getElementById('inlineStop').hidden=!work.running;
+    g.clearRect(0,0,108,80);g.imageSmoothingEnabled=false;
+    const sprite=(b.left?BEE_MIRROR:BEE)[b.pose],scale=5;
+    const dx=28+(b.x-(ui.W-15))*3,dy=20+(b.y-6)*3;
+    for(let y=0;y<sprite.length;y++)for(let x=0;x<sprite[y].length;x++){
+      const rgb=P.bee[sprite[y][x]];if(!rgb)continue;
+      g.fillStyle=css(ui.color==='off'?P.ink:ui.color==='256'?q256(rgb):rgb);g.fillRect(dx+x*scale,dy+y*scale,scale,scale);
+    }
+    g.fillStyle=css(ui.color==='off'?P.ink:P.acc);g.font='bold 17px monospace';
+    if(b.state==='approval'||b.state==='error')g.fillText(b.state==='approval'?'?':'!',dx+25,dy-4);
+    const mark={thinking:'…',reading:'≡',editing:'+',executing:'›_',completed:'✓',denied:'−',interrupted:'■'}[b.state];if(mark)g.fillText(mark,dx+22,dy-4);
+    if(b.state==='sleep')g.fillText(ui.motion?['z','zz','zzz'][Math.floor(ui.t)%3]:'zzz',dx+28,dy-4);
+    if(b.moving&&['editing','completed'].includes(b.state))for(let i=0;i<4;i++){
+      const life=(ui.t*.8+i/4)%1,px=dx+22+Math.sin(ui.t+i*2)*22,py=dy+42+life*10;
+      g.globalAlpha=1-life;g.fillRect(px,py,3,3);
+    }
+    g.globalAlpha=1;
+  }
+  function workView(){
+    const small=ui.W<60;
+    put(1,0,'⬢ memory bee',P.acc,true);
+    put(16,0,fit(`${work.agent} · ${work.profile} · SIMULAÇÃO`,ui.W-17),P.ink3);
+    put(1,2,fit(`${project().name} / ${project().branch}`,ui.W-2),P.ink,true);
+    if(!small)put(ui.W-34,2,'F2 menu · esc volta à colmeia',P.ink4);
+    put(1,3,'─'.repeat(ui.W-2),P.faint);
+    const cols=ui.W-5, lines=[];
+    for(const e of work.events){
+      if(e.role==='user'){
+        const wrapped=workWrap(e.text,cols-2);wrapped.forEach((text,i)=>lines.push({text:(i?'  ':'❯ ')+text,color:P.ink}));
+      }else if(e.role==='assistant'){
+        lines.push({text:'● '+work.agent,color:P.acc});for(const text of workWrap(e.text,cols-2))lines.push({text:'  '+text,color:P.ink});
+      }else{
+        const wrapped=workWrap(e.text,cols-2);wrapped.forEach((text,i)=>lines.push({text:(i?'  ':'⎿ ')+text,color:P.ink3}));
+      }
+      lines.push({text:'',color:P.ink});
+    }
+    if(!lines.length){lines.push({text:'O contexto fica na colmeia.',color:P.acc},{text:'A conversa continua aqui.',color:P.ink});for(const text of workWrap('Escreva uma tarefa abaixo. O agente simulado demonstra leitura, alteração e permissão.',cols))lines.push({text,color:P.ink3});}
+    const height=ui.H-6,start=Math.max(0,lines.length-height-work.offset);
+    lines.slice(start,start+height).forEach((line,i)=>put(2,5+i,fit(line.text,cols),line.color));
+
+  }
+  function workOpen(){work.awakeAt=ui.t;work.active=true;work.panel=null;ui.quit=false;composer.hidden=false;winEl.classList.add('conversation-mode');activity.textContent='SIMULAÇÃO · sem modelos, login ou edição real';render();inputEl.focus();}
+  function workHome(){winEl.classList.remove('conversation-mode');work.active=false;composer.hidden=true;work.panel=null;render();screenEl.focus();}
+  function workLater(ms,fn){const id=work.serial;setTimeout(()=>{if(id===work.serial)fn()},ms);}
+  function workSend(){const text=inputEl.value.trim();if(!text||work.running)return;inputEl.value='';if(text.startsWith('/')){workCommand(text);return;}work.serial++;work.outcome=null;work.awakeAt=ui.t;work.running=true;work.action='thinking';workEvent('user',text);workLater(250,()=>workEvent('assistant','Vou mostrar o fluxo de leitura, alteração e permissão. Esta é uma simulação; nenhum arquivo será alterado.'));if(text.includes('[erro]')){workLater(1000,()=>{work.running=false;work.outcome='error';work.outcomeAt=ui.t;work.awakeAt=ui.t;workEvent('system','Erro sintético do provedor. Histórico preservado.');});return;}workLater(1400,()=>{work.action='reading';workEvent('system','Leitura simulada · src/example.rs');});workLater(3000,()=>{work.action='editing';workEvent('system','Alteração fictícia preparada · /diff para revisar');});workLater(4600,()=>{work.approval=true;workEvent('system','cargo test aguarda sua decisão. Abra Permissão ou pressione Tab no terminal.');});}
+  function workStop(){if(!work.running)return;work.serial++;work.running=false;work.approval=false;work.outcome='interrupted';work.outcomeAt=ui.t;work.awakeAt=ui.t;workEvent('system','Turno interrompido; aprovação invalidada. O histórico foi preservado.');}
+  const dialogEl=document.getElementById('workDialog');
+  function workDialog(title,text,choices=[]){document.getElementById('dialogTitle').textContent=title;document.getElementById('dialogText').textContent=text;const list=document.getElementById('dialogChoices');list.replaceChildren();for(const [label,fn]of choices){const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;list.append(b);}if(!dialogEl.open)dialogEl.showModal();}
+  function workSwitch(agent,profile,context){
+    if(work.running){workDialog('Turno em andamento','Aguarde ou interrompa antes de trocar.');return;}
+    const source=work.events.map(e=>({...e}));work.histories.push({agent:work.agent,profile:work.profile,project:project().name,events:source});
+    work.agent=agent;work.profile=profile;work.events=[];work.serial++;work.outcome=null;work.awakeAt=ui.t;
+    if(context)work.events.push({role:'system',text:'Contexto revisado da sessão anterior (simulação):\n'+source.map(e=>e.role+': '+e.text).join('\n')});
+    dialogEl.close();workOpen();
+  }
+  function workSwitchPreview(agent,profile){if(work.running){workDialog('Turno em andamento','Aguarde ou interrompa antes de trocar.');return;}workDialog('Nova sessão · '+agent+' / '+profile,'A origem será preservada. Escolha como começar.',[['Conversa vazia',()=>workSwitch(agent,profile,false)],['Revisar contexto',()=>workDialog('Revisar passagem · '+agent+' / '+profile,workText(),[['Confirmar nova sessão',()=>workSwitch(agent,profile,true)]])]]);}
+  function workText(){return '# SIMULAÇÃO — Memory Bee\n\nProjeto sintético: '+project().name+'\nAgente simulado: '+work.agent+'\nPerfil fictício: '+work.profile+'\n\n'+work.events.map(e=>'## '+(e.role==='user'?'Entrada do usuário':e.role==='assistant'?'Resposta simulada':'Evento demonstrativo')+'\n\n'+e.text).join('\n\n')+'\n\nPrévia ilustrativa. Não é pacote verificado da CLI. Nenhum modelo chamado; nenhum código editado.';}
+  function workCommand(command){switch(command){
+    case '/menu':workDialog('⬢ Menu Memory Bee','O trabalho continua na mesma interface.',[
+      ['Colmeia dos projetos   /projects',()=>{dialogEl.close();workHome();}],['Trocar agente          /agent',()=>workCommand('/agent')],['Perfis fictícios       /accounts',()=>workCommand('/accounts')],['Sessões preservadas    /sessions',()=>workCommand('/sessions')],['Exportar prévia        /export',()=>workCommand('/export')],['Revisar permissão      /permissions',()=>workCommand('/permissions')],['Ver alteração          /diff',()=>workCommand('/diff')]]);break;
+    case '/agent':workDialog('Agentes simulados','Assinaturas e execução real continuam pendentes.',[['Claude',()=>workSwitchPreview('Claude',work.profile)],['Codex',()=>workSwitchPreview('Codex',work.profile)]]);break;
+    case '/accounts':workDialog('Perfis fictícios','Nenhuma conta real é conectada ou modificada.',[['Pessoal',()=>workSwitchPreview(work.agent,'Pessoal')],['Trabalho',()=>workSwitchPreview(work.agent,'Trabalho')]]);break;
+    case '/sessions':workDialog('Histórico da demonstração','Sessões de origem preservadas. Recarregar reinicia esta página.',work.histories.map((s,i)=>['#'+(i+1)+' · '+s.agent+' / '+s.profile,()=>workDialog('Sessão #'+(i+1),s.events.map(e=>e.role+': '+e.text).join('\n\n'))]));break;
+    case '/permissions':{if(!work.approval){workDialog('Permissões','Nenhuma ação pendente.');break;}const id=work.serial;workDialog('▲ Permissão simulada',`${work.agent} · ${work.profile}\nProjeto: ${project().name}\nComando: cargo test\nNada será executado de verdade.`,[['Negar',()=>decide(false,id)],['Permitir uma vez',()=>decide(true,id)]]);break;}
+    case '/export':{const text=workText();workDialog('Revisar contexto antes de baixar',text,[['Baixar prévia Markdown',()=>{const url=URL.createObjectURL(new Blob([text],{type:'text/markdown;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='memory-bee-previa.md';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);dialogEl.close();}]]);break;}
+    case '/diff':workDialog('Alteração fictícia · src/example.rs','--- exemplo sintético\n+++ exemplo sintético\n- todo!()\n+ buscar_por_nome()');break;
+    case '/projects':workHome();break;
+    default:workDialog('Comando não reconhecido','Use /menu. Nenhuma entrada foi enviada ao provedor.');
+  }}
+  function decide(allow,id){
+    if(!work.approval||id!==work.serial){workDialog('Permissão encerrada','A decisão não está mais ativa.');return;}
+    work.approval=false;dialogEl.close();
+    if(allow){work.action='executing';workEvent('system','Permissão aceita · teste simulado em andamento.');workLater(1800,()=>{work.running=false;work.outcome='completed';work.outcomeAt=ui.t;work.awakeAt=ui.t;workEvent('system','Teste simulado concluído. Nenhum comando real executado.');});}
+    else{work.running=false;work.outcome='denied';work.outcomeAt=ui.t;work.awakeAt=ui.t;workEvent('system','Permissão negada · nenhum comando executado.');}
+  }
+  document.getElementById('openWork').onclick=workOpen;
+  document.getElementById('homeWork').onclick=workHome;
+  document.getElementById('menuWork').onclick=()=>workCommand('/menu');
+  document.getElementById('permissionWork').onclick=()=>workCommand('/permissions');
+  document.getElementById('stopWork').onclick=workStop;
+  document.getElementById('inlineStop').onclick=workStop;
+  document.getElementById('inlinePermission').onclick=()=>workCommand('/permissions');
+  document.getElementById('demoWork').onclick=()=>{workOpen();inputEl.value='Adicione busca por nome na lista de sessões.';workSend();};
+  document.getElementById('workForm').onsubmit=e=>{e.preventDefault();workSend();};
+  document.getElementById('dialogClose').onclick=()=>dialogEl.close();
+  inputEl.addEventListener('input',()=>{work.awakeAt=ui.t;render();});
+  inputEl.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();workSend();}else if(e.key==='F2'){e.preventDefault();workCommand('/menu');}else if(e.key==='/'&&!inputEl.value){e.preventDefault();workCommand('/menu');}else if(e.ctrlKey&&e.key==='c'){e.preventDefault();workStop();}});
+  screenEl.addEventListener('wheel',e=>{if(!work.active)return;e.preventDefault();work.offset=Math.max(0,Math.min(work.offset+(e.deltaY>0?-3:3),work.events.reduce((n,event)=>n+workWrap(event.text,Math.max(1,ui.W-7)).length+2,0)));render();},{passive:false});
+
+  if (reducedPref.matches) document.getElementById('mOff').checked = true;
+  setStatus('Lendo sessões em testdata/claude-projects e testdata/codex-sessions…', `${PROJECTS.length} projetos · ${totalSessions()} sessões · somente leitura`, 1.8);
+  applyControls();
+  startReveal();
+  requestAnimationFrame(tick);
+  if (document.fonts && document.fonts.load) document.fonts.load(FONT(14)).then(() => { measure(); render(); }).catch(() => {});
+})();
+</script>
+
+</body></html>
