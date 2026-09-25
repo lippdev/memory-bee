@@ -839,3 +839,33 @@ histórico. Após inatividade, digitar acorda. Conferir movimento desligado, sem
 cor, tema claro/escuro, larguras 140/100/60/40 e janela estreita. A cena inicial
 continua disponível. Nenhum teste, arquivo ou agente real é executado pelo HTML.
 Esse roteiro não valida o renderizador Rust, ainda pendente.
+
+## 51. Claude Code nativo dentro da Memory Bee (pendente)
+
+Em um projeto descartável, faça login primeiro pelo Claude Code original e
+confirme que ele funciona fora da Memory Bee. Depois rode:
+
+```sh
+cargo build --locked
+mkdir -p /tmp/bee-claude-project
+target/debug/memory-bee workspace --claude --project /tmp/bee-claude-project --state /tmp/bee-claude-state
+target/debug/memory-bee workspace --claude --project /tmp/bee-claude-project --state /tmp/bee-claude-state --resume
+```
+
+Na primeira sessão, enviar tarefa simples, observar resposta e, só no projeto
+descartável, pedir uma edição/execução que solicite permissão. Ensaiar **Negar** e
+**Permitir** separadamente. Verificar `Ctrl+C` durante resposta, colagem,
+redimensionamento, `Ctrl+G` e `/exit`; conferir restauração do terminal. Na
+segunda chamada, verificar que a conversa nativa retorna sem reenviar o prompt.
+Conferir `claude-native.json` e permissões 0700/0600, sem registrar conta, tokens
+ou conteúdo da conversa no repositório. Estado com outro projeto e chamada sem
+TTY devem ser recusados. Anotar versão do Claude, resultado de cada ação e se
+houve uso da assinatura já autenticada.
+
+O teste automatizado sintético, sem login/modelo, é
+`python3 scripts/check_claude_native_pty.py`; aprovação nele não conclui este
+ensaio. Exportação da memória pelo modo nativo e perfis isolados seguem pendentes.
+
+| Item novo | Estado | Evidência manual |
+|---|---|---|
+| 51: conversa, permissões, interrupção e retomada Claude reais | Pendente | — |

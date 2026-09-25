@@ -112,3 +112,20 @@ de tokens externos na Memory Bee. Um terminal incorporado pode ser um transporte
 ou um escape para interações nativas, mas não substitui sozinho o aceite da
 conversa unificada e da exportação. Nenhum login ou modelo foi acionado nesta
 revisão documental.
+
+## Recorte Claude primeiro — 2026-09-25
+
+O mantenedor mudou a ordem de implementação: tornar Claude nativo na TUI antes
+de integrar Codex. A experiência completa ainda depende dos dois agentes, mas
+o modo Claude pode ser entregue e ensaiado separadamente, identificado como
+experimental. Isso substitui a restrição anterior de não disponibilizar um
+provedor isoladamente durante o desenvolvimento.
+
+Escolhemos iniciar o binário Claude Code original em PTY, com o login já feito
+na CLI oficial. `--session-id` cria uma referência controlada pela Memory Bee;
+`--resume` retoma esse ID no mesmo projeto. A TUI encaminha entrada e desenha
+a saída; a pasta privada guarda apenas IDs/códigos, sem token ou transcrição.
+O transporte preserva a interface de permissões do próprio Claude e não exige
+API paga separada. É um passo concreto para testar assinatura e conversa nativa,
+mas não comprova uma UI Bee própria para eventos, exportação ou perfis. Essas
+lacunas, o ensaio humano e a integração Codex permanecem no aceite completo.

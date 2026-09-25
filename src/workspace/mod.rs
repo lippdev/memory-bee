@@ -1,5 +1,6 @@
 //! Unified workspace contracts. Demo and native providers are never conflated.
 pub mod adapter;
+pub mod claude_native;
 pub mod codex;
 pub mod store;
 

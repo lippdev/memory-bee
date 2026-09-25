@@ -34,9 +34,9 @@ por trás, assinaturas existentes e lançamento conjunto. Isso amplia as etapas
 
 1. Protótipo funcional com os dois agentes simulados, menus, streaming,
    permissões, erro, persistência e exportação: implementado como `workspace --demo`.
-2. Prova real por agente/assinatura, incluindo dois perfis isolados: pendente;
-   hospedar o binário Claude Code original com login do usuário é um caminho
-   documentado, mas o controle da conversa pela nossa TUI ainda não foi provado.
+2. Prova real por agente/assinatura, incluindo dois perfis isolados: em andamento.
+   `workspace --claude` hospeda o binário Claude Code original em PTY e retoma
+   seu ID nativo; conversa, permissões e perfis reais ainda exigem ensaio humano.
 3. Experiência integrada aos dois harnesses, histórico e exportação: pendente.
 4. Troca real entre agentes/contas com revisão e preservação da origem: pendente.
 5. Lançamento conjunto após todos os aceites, sem substituir o requisito por
@@ -51,6 +51,13 @@ pelas interfaces documentadas da CLI sem presumir que `-p`/Agent SDK autoriza o
 uso da assinatura em um produto de terceiros. A prova deve preservar permissões
 reais, interrupção, retomada e exportação. Se a interface estruturada Claude não
 atender a esse contrato, registrar a lacuna antes do lançamento conjunto.
+
+O mantenedor priorizou a implementação nativa **Claude primeiro**. O PTY com
+sessão nativa é a primeira entrega desse caminho, disponível como modo experimental;
+não altera o aceite do lançamento conjunto da experiência completa. O próximo
+recorte deve ligar histórico/exportação revisável e ações à sessão Claude, além
+de validar o fluxo real de conversa e permissões. O HTML ainda representa o plano
+visual anterior; este Markdown e o ADR 0018 prevalecem para a sequência.
 
 Aceite real: conversa, edição, execução, permitir/negar, interrupção e retomada
 com cada harness; isolamento de dois perfis; exportar após falha/limite; recuperar

@@ -1,6 +1,7 @@
 //! Terminal dashboard using the CLI core with explicit action previews.
 pub mod actions;
 pub mod app;
+pub mod claude_native;
 pub mod theme;
 pub mod ui;
 
