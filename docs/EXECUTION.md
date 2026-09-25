@@ -44,9 +44,11 @@
   ensaio humano permanece pendente no item 53 do [roteiro](MANUAL_TESTS.md).
 - `npx --yes pullfrog@latest config set prompts.review --file
   .github/pullfrog/review.md --repo lippdev/memory-bee` retornou `updated`; `get`
-  devolveu o texto completo. Validar o primeiro parecer no PR e a revisão
-  incremental em PR futuro; isso não altera o status das etapas do produto.
-  Autorrevisão documental; sem revisão independente registrada nesta entrega.
+  devolveu o texto completo. O primeiro parecer no PR #49 veio em português e
+  apontou ambiguidade na explicação da sincronização; o texto foi corrigido.
+  A revisão incremental e o ensaio do item 53 seguem pendentes; isso não altera
+  o status das etapas do produto. Autorrevisão documental; Pullfrog é revisor
+  automatizado, não revisão humana independente.
 
 ## Revisão de sequência — orientação do mantenedor
 

@@ -67,9 +67,9 @@ O corpo deve conter problema e resultado, escopo, validação, revisão e limita
 ### Revisão automática com Pullfrog
 
 O Pullfrog revisa PRs novos e novos commits. O texto versionado em
-[`.github/pullfrog/review.md`](.github/pullfrog/review.md) é a fonte das instruções
-de revisão configuradas em `prompts.review` no repositório do Pullfrog. Após
-alterá-lo e integrar o PR, sincronizar com:
+[`.github/pullfrog/review.md`](.github/pullfrog/review.md) é a cópia versionada das
+instruções de `prompts.review`. O workflow não lê esse arquivo automaticamente.
+Após alterá-lo e integrar o PR, sincronizar a configuração externa com:
 
 ```sh
 npx --yes pullfrog@latest config set prompts.review --file .github/pullfrog/review.md --repo lippdev/memory-bee
