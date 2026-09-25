@@ -8,7 +8,9 @@
 - CLI de inspeção, descoberta, seleção e exportação somente contexto implementadas; referência Git opcional implementada; código selecionado v2 implementado; verify/apply explícito implementados; inspeção/exportação Codex por arquivo e descoberta por projeto sob raiz explícita implementadas, experimentais; preparação de retomada Claude/Codex e lançamento confirmado por token implementados, experimentais; dashboard de terminal (ratatui) com lista, detalhe, exportação de contexto/exclusões, aplicação e prompt/lançamento confirmado implementados; workspace unificado disponível apenas com simulação explícita (ADR 0018); cena animada, exportação de código pela TUI e contas reais pendentes.
 - Nome decidido: **Memory Bee** (`memory-bee`), com mascote abelha e colmeia dos projetos, conforme o [ADR 0015](decisions/0015-memory-bee-identity.md); crate, binário, pacotes e documentos renomeados para `memory-bee` (registros anteriores mantêm o nome da época). Núcleo em Rust, primeiro alvo macOS arm64 e leitor Claude Code escolhidos. Licença pendente.
 - Cargo, toolchain Rust 1.98.1 e checks canônicos definidos no README; CI em macOS/Linux.
-- Remoto: [lippdev/memory-pier](https://github.com/lippdev/memory-pier), público, após autorização do mantenedor.
+- Remoto atual: [lippdev/memory-bee](https://github.com/lippdev/memory-bee), público.
+  Em 2026-09-25 o push confirmou redirecionamento da URL local antiga
+  `lippdev/memory-pier`; links históricos foram preservados.
 - Documentação inicial integrada na `main` pelo PR #1.
 
 ## Revisão de sequência — orientação do mantenedor
@@ -37,8 +39,9 @@ validação real. Não copiar credenciais globais, não substituir assinatura po
 paga e não lançar só um provedor. Ver ADR 0018 e contrato `specs/workspace.md`.
 Cena, exportação de código pela TUI e worktree na interface continuam pendentes.
 
-A renomeação no código está feita (seção "Renomeação — memory-bee"); resta o
-remoto GitHub, só com confirmação do mantenedor.
+A renomeação no código está feita (seção "Renomeação — memory-bee"). O GitHub
+já informa `lippdev/memory-bee`; a URL local antiga redireciona. Não foi feita
+renomeação remota nesta retomada.
 
 Compatibilidade real de Claude Code e ensaios de leitura/retomada do pacote estão
 pendentes com o mantenedor em [docs/MANUAL_TESTS.md](MANUAL_TESTS.md), sem bloquear
@@ -582,7 +585,8 @@ escopo da entrega atual nem a próxima tarefa aprovada.
   Python; PTYs do dashboard e workspace aprovados, incluindo schema do pacote
   demo e restauração do terminal. Links Markdown, JavaScript do roadmap,
   numeração 1–49/sintaxe shell do roteiro e `git diff --check` conferidos.
-  CI remota será registrada no PR; não houve validação com agentes reais.
+  CI remota e integração vinculadas ao [PR #19](https://github.com/lippdev/memory-bee/pull/19);
+  não houve validação com agentes reais.
 - Ensaios humanos 46–49 pendentes; não substituídos por testes automatizados.
 - Próximo passo: prova de integração descrita no topo. O plano completo permanece
   em andamento; integração Claude com assinatura depende de confirmação externa.
