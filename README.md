@@ -25,8 +25,8 @@ Code com descoberta por projeto e seleção explícita de ramo, testados com fix
 sintéticas. Etapa 03 implementada para exportação somente de contexto, com prévia,
 exclusões e manifesto v1. Validação manual e compatibilidade real pendentes. Etapa
 04 iniciada: `export --project <pasta>` registra referência Git local; `--include-path <arquivo>` inclui alterações textuais selecionadas em pacote v2. `verify` confere pacotes e `apply --check` / `--write` verifica ou aplica explicitamente em checkout limpo com base exata. Etapa 06 em andamento: `dashboard`
-somente leitura implementado (lista, detalhe e prévia de retomada); exportar e
-lançar pela TUI ficam para o próximo recorte.
+implementado com lista, detalhe, exportação de contexto, aplicação de pacotes e
+retomada confirmada; cena animada e ensaios humanos pendentes.
 
 ```sh
 cargo run --locked -- inspect testdata/claude/basic.jsonl
@@ -56,10 +56,10 @@ checkout; sem confirmação correspondente, nada é lançado. Lançamento experi
 não validado com os agentes reais.
 
 `dashboard --project <projeto> --claude-root <pasta> [--codex-root <pasta>] [--bundle <pacote>]`
-abre uma tela de terminal (ratatui) somente leitura com a mesma lista de sessões,
-o detalhe e a prévia de retomada/verificação; `--once` imprime um quadro em texto
-puro sem precisar de terminal real. Não exporta, aplica nem lança pela própria
-tela ainda. Veja o [contrato do dashboard](docs/specs/dashboard.md).
+abre uma tela de terminal (ratatui) com lista de sessões, detalhe, exportação de
+contexto (`e`), aplicação (`a`), gravação de prompt (`p`) e lançamento (`l`), com
+prévia e confirmação explícitas; `--once` imprime um quadro em texto
+puro sem precisar de terminal real e sem executar ações. Veja o [contrato do dashboard](docs/specs/dashboard.md).
 
 ## Desenvolvimento
 

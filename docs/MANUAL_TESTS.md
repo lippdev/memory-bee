@@ -679,9 +679,72 @@ ou o símbolo de estado — só o nome da sessão trunca com `…`. Repetir com
 terminal, como `q` (o modo bruto impede o sinal SIGINT normal; o app trata
 `Ctrl+C` como tecla).
 
-Esperado: nenhuma tecla executa exportação, apply ou lançamento — essas ações
-não têm atalho nesta versão. Anotar terminal e sistema operacional usados.
+Esperado: navegação e prévias não escrevem. As novas ações exigem confirmação
+e são ensaiadas nos itens 43–45. Anotar terminal e sistema operacional usados.
 
 | Item novo | Estado | Evidência manual |
 |---|---|---|
 | 42: dashboard em terminal real, teclas, redimensionamento e sinais | Pendente | — |
+
+
+## 43. Exportar contexto pela TUI (pendente)
+
+```sh
+cargo build --locked
+mb_tui_tmp=$(mktemp -d)
+printf '%s\n' "$mb_tui_tmp"
+target/debug/memory-bee dashboard --project /synthetic/project --claude-root testdata/claude-projects --codex-root testdata/codex-sessions --no-color
+```
+
+Selecionar `arbitrary/session.jsonl`, abrir detalhe, escolher ramo `2`, pressionar
+`e` e digitar o caminho absoluto da pasta temporária impresso acima seguido de
+`/pacote` (sem aspas nem variável). Enter, exclusões vazias, Enter. Revisar
+origem/ramo/destino e o conteúdo com PgDn/PgUp/Home. Enter sozinho não grava.
+Esc cancela; repetir e digitar `EXPORTAR` para gravar. Repetir com mesmo destino
+para conferir recusa de sobrescrita; conferir `verify` pela CLI. Exportar também
+uma sessão Codex; repetir com uma linha existente em `exclude_lines`, conferindo
+omissões e histórico. Uma linha inexistente ou zero deve gerar erro sem pacote.
+
+Esperado: somente contexto v1, pacote novo verificável, ramo escolhido preservado,
+origem intacta e pacote exportado disponível em `r`. Redimensionar para 40×12;
+prévia rolável e confirmação/cancelamento devem continuar acessíveis.
+
+## 44. Aplicar pacote pela TUI (pendente)
+
+Usar pacote v2 e checkout sintéticos separados preparados nos itens 17–22.
+
+```sh
+# Substituir os caminhos por aqueles do ensaio sintético.
+target/debug/memory-bee dashboard --project /caminho/checkout-limpo --claude-root testdata/claude-projects --bundle /caminho/pacote-v2
+```
+
+`r`, `a`: conferir checkout, manifesto e resumo. Esc deve cancelar sem alterar
+arquivos. Reabrir e digitar `APLICAR`. Esperado: mesmo resultado de `apply --write`,
+sem commit/push nem staging Git. Em checkout sujo/base divergente deve recusar.
+Alterar um arquivo em outro terminal depois da prévia e antes de confirmar:
+a escrita deve ser recusada, preservando essa alteração.
+
+## 45. Prompt e lançamento pela TUI (pendente)
+
+No checkout sintético do item anterior, `r`, `t` para escolher destino, `p` para
+arquivo novo fora do checkout/pacote; revisar e digitar `GRAVAR`. Conferir prompt
+0600 e recusa de sobrescrita. `l` pede outro arquivo e mostra comando, diretório,
+pontos de atenção e token; Enter vazio ou Esc não lançam. Alterar o checkout entre
+prévia/confirmação deve recusar antes de gravar. Apply pendente não pode ser pulado.
+
+Para ensaio automatizado com agente falso, sem credenciais nem modelos:
+
+```sh
+python3 scripts/check_dashboard_pty.py
+```
+
+Esperado: agente falso recebe TTY sem modo bruto, saída 7 aparece no dashboard,
+prompt é preservado, painel retorna e `q` restaura terminal. Esse teste automatizado
+não substitui o ensaio humano. Com agentes reais, seguir o controle sintético do
+item 40 e registrar versões, autenticação, aceitação do prompt e retorno à TUI.
+
+| Itens novos | Estado | Evidência manual |
+|---|---|---|
+| 43: exportação por teclado, ramo, exclusões e cancelamento | Pendente | — |
+| 44: aplicação confirmada e checkout alterado entre prévia/escrita | Pendente | — |
+| 45: prompt e lançamento, restauração e agentes reais | Pendente | — |

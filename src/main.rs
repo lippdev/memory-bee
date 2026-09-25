@@ -18,7 +18,7 @@ use std::{
     process::ExitCode,
 };
 
-const USAGE: &str = "Usage:\n  memory-bee export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee inspect-codex <rollout.jsonl>\n  memory-bee inspect <session.jsonl> [--leaf <uuid>]\n  memory-bee sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-bee sessions --root <projects-dir> --project <project-dir>\n  memory-bee export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee verify <bundle-dir>\n  memory-bee apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-bee prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file> [--launch <confirmation>])\n  memory-bee dashboard --project <project-dir> [--claude-root <dir>] [--codex-root <dir>] [--bundle <dir>] [--theme (dark|light)] [--no-color] [--once [--width <n>] [--height <n>]]\nOffline; no model calls.\nLaunches an agent only with --launch and a matching confirmation from --preview.\nThe dashboard is read-only: it never exports, applies or launches.\nExit: 0 success, 2 partial or attention needed, 3 possible secrets, 4 launched agent exited non-zero, 1 I/O or selection error, 64 usage error.";
+const USAGE: &str = "Usage:\n  memory-bee export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee inspect-codex <rollout.jsonl>\n  memory-bee inspect <session.jsonl> [--leaf <uuid>]\n  memory-bee sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-bee sessions --root <projects-dir> --project <project-dir>\n  memory-bee export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee verify <bundle-dir>\n  memory-bee apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-bee prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file> [--launch <confirmation>])\n  memory-bee dashboard --project <project-dir> [--claude-root <dir>] [--codex-root <dir>] [--bundle <dir>] [--theme (dark|light)] [--no-color] [--once [--width <n>] [--height <n>]]\nOffline; no model calls.\nCLI launch requires --launch and a matching confirmation from --preview.\nDashboard actions require a preview and explicit confirmation.\nExit: 0 success, 2 partial or attention needed, 3 possible secrets, 4 launched agent exited non-zero, 1 I/O or selection error, 64 usage error.";
 fn output(value: &impl Serialize) -> Result<(), (u8, String)> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -331,14 +331,18 @@ fn print_plain(buffer: &ratatui::buffer::Buffer) {
 
 /// Owns the terminal for the session: raw mode and the alternate screen are
 /// entered here and always left before returning, including on error or
-/// panic. Never calls `resume::launch` or anything that writes or executes.
+/// panic. Confirmed launches temporarily release the terminal to the agent.
 fn run_interactive(mut app: tui::app::App) -> Result<(), String> {
     crossterm::terminal::enable_raw_mode()
         .and_then(|()| crossterm::execute!(io::stdout(), crossterm::terminal::EnterAlternateScreen))
         .map_err(|e| e.to_string())?;
     std::panic::set_hook(Box::new(|info| {
         let _ = crossterm::terminal::disable_raw_mode();
-        let _ = crossterm::execute!(io::stdout(), crossterm::terminal::LeaveAlternateScreen);
+        let _ = crossterm::execute!(
+            io::stdout(),
+            crossterm::terminal::LeaveAlternateScreen,
+            crossterm::cursor::Show
+        );
         eprintln!("{info}");
     }));
     let result = (|| -> Result<(), String> {
@@ -368,11 +372,41 @@ fn run_interactive(mut app: tui::app::App) -> Result<(), String> {
                     return Ok(());
                 }
                 app.on_key(key.code);
+                if let Some(tui::actions::Pending::Prompt {
+                    request,
+                    output,
+                    token,
+                    launch: true,
+                }) = app.pending_launch.take()
+                {
+                    crossterm::terminal::disable_raw_mode().map_err(|e| e.to_string())?;
+                    crossterm::execute!(
+                        io::stdout(),
+                        crossterm::terminal::LeaveAlternateScreen,
+                        crossterm::cursor::Show
+                    )
+                    .map_err(|e| e.to_string())?;
+                    let outcome = tui::actions::execute_prompt(&request, &output, &token, true);
+                    crossterm::terminal::enable_raw_mode().map_err(|e| e.to_string())?;
+                    crossterm::execute!(io::stdout(), crossterm::terminal::EnterAlternateScreen)
+                        .map_err(|e| e.to_string())?;
+                    terminal.clear().map_err(|e| e.to_string())?;
+                    app.resume = None;
+                    app.verify = None;
+                    app.dialog = Some(tui::actions::Dialog::message(match outcome {
+                        Ok(message) => message,
+                        Err(error) => format!("Erro: {error}"),
+                    }));
+                }
             }
         }
     })();
     let _ = crossterm::terminal::disable_raw_mode();
-    let _ = crossterm::execute!(io::stdout(), crossterm::terminal::LeaveAlternateScreen);
+    let _ = crossterm::execute!(
+        io::stdout(),
+        crossterm::terminal::LeaveAlternateScreen,
+        crossterm::cursor::Show
+    );
     result
 }
 

@@ -1,6 +1,8 @@
-//! Terminal dashboard. Read-only in this cut: it lists Claude/Codex sessions
-//! under explicit roots, shows session detail and a resume preview, and can
-//! verify a bundle. It never exports, applies or launches an agent.
+//! Terminal dashboard using the CLI core with explicit action previews.
+pub mod actions;
 pub mod app;
 pub mod theme;
 pub mod ui;
+
+#[cfg(test)]
+mod action_tests;

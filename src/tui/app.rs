@@ -1,6 +1,5 @@
-//! Dashboard state and key handling. Loading functions call the same core
-//! used by the CLI (`discovery`, `codex_discovery`, `claude`, `codex`,
-//! `selection`, `resume`, `receive`) and never write or execute anything.
+//! Dashboard state, navigation, and explicit action confirmations.
+use super::actions::{self, Dialog, Form, Pending};
 use crate::tui::theme::{Mode, Palette};
 use crossterm::event::KeyCode;
 use memory_bee::{
@@ -176,6 +175,9 @@ pub struct App {
     pub resume: Option<Result<resume::Preparation, String>>,
     pub verify: Option<Result<receive::Report, String>>,
     pub quit: bool,
+    pub dialog: Option<Dialog>,
+    pub pending_launch: Option<Pending>,
+    pub scroll: u16,
 }
 
 impl App {
@@ -208,6 +210,9 @@ impl App {
             resume: None,
             verify: None,
             quit: false,
+            dialog: None,
+            pending_launch: None,
+            scroll: 0,
         })
     }
 
@@ -255,8 +260,152 @@ impl App {
         }
     }
 
-    pub fn on_key(&mut self, code: KeyCode) {
+    fn request(&self) -> Result<resume::Request, String> {
+        Ok(resume::Request {
+            bundle: self.bundle.clone().ok_or("Nenhum pacote selecionado")?,
+            target: self.resume_target,
+            project: self.project.clone(),
+            worktree: None,
+        })
+    }
+
+    fn submit_dialog(&mut self, mut dialog: Dialog) -> Result<Option<Dialog>, String> {
+        if let Some(form) = dialog.form.take() {
+            return match form {
+                Form::ExportPath => {
+                    if dialog.input.is_empty() {
+                        return Err("Informe um destino novo".into());
+                    }
+                    Ok(Some(Dialog::form(Form::ExportExclusions(
+                        dialog.input.into(),
+                    ))))
+                }
+                Form::ExportExclusions(output) => {
+                    let row = self.selected().ok_or("Nenhuma sessão selecionada")?;
+                    let leaf = if row.requires_branch_selection {
+                        Some(
+                            row.branch_tips
+                                .get(self.branch_pick)
+                                .ok_or("Escolha um ramo no detalhe")?
+                                .as_str(),
+                        )
+                    } else {
+                        None
+                    };
+                    Ok(Some(actions::export(row, leaf, output, &dialog.input)?))
+                }
+                Form::PromptPath { launch } => Ok(Some(actions::prompt(
+                    self.request()?,
+                    dialog.input.into(),
+                    launch,
+                )?)),
+            };
+        }
+        if dialog.pending.is_none() {
+            return Ok(None);
+        }
+        if dialog.input != dialog.expected {
+            return Ok(Some(dialog));
+        }
+        match dialog.pending.take().unwrap() {
+            Pending::Export { prepared, output } => {
+                prepared.write(&output).map_err(|e| e.to_string())?;
+                self.bundle = Some(output.clone());
+                self.resume = None;
+                self.verify = None;
+                Ok(Some(Dialog::message(format!(
+                    "Pacote gravado: {}\nUse r para preparar a retomada.",
+                    output.display()
+                ))))
+            }
+            Pending::Apply(plan) => {
+                let report = plan.write()?;
+                self.run_resume();
+                Ok(Some(Dialog::message(
+                    serde_json::to_string_pretty(&report).map_err(|e| e.to_string())?,
+                )))
+            }
+            pending @ Pending::Prompt { launch: true, .. } => {
+                self.pending_launch = Some(pending);
+                Ok(None)
+            }
+            Pending::Prompt {
+                request,
+                output,
+                token,
+                launch: false,
+            } => Ok(Some(Dialog::message(actions::execute_prompt(
+                &request, &output, &token, false,
+            )?))),
+        }
+    }
+
+    fn dialog_key(&mut self, code: KeyCode) {
+        let Some(mut dialog) = self.dialog.take() else {
+            return;
+        };
         match code {
+            KeyCode::Esc => return,
+            KeyCode::Enter => {
+                self.dialog = match self.submit_dialog(dialog) {
+                    Ok(next) => next,
+                    Err(e) => Some(Dialog::message(format!("Erro: {e}"))),
+                };
+                return;
+            }
+            KeyCode::PageDown => dialog.scroll = dialog.scroll.saturating_add(5),
+            KeyCode::PageUp => dialog.scroll = dialog.scroll.saturating_sub(5),
+            KeyCode::Home => dialog.scroll = 0,
+            KeyCode::Backspace => {
+                dialog.input.pop();
+            }
+            KeyCode::Char(c)
+                if !c.is_control() && (dialog.form.is_some() || dialog.pending.is_some()) =>
+            {
+                dialog.input.push(c)
+            }
+            _ => {}
+        }
+        self.dialog = Some(dialog);
+    }
+
+    pub fn on_key(&mut self, code: KeyCode) {
+        if self.dialog.is_some() {
+            self.dialog_key(code);
+            return;
+        }
+        match code {
+            KeyCode::PageDown => {
+                self.scroll = self.scroll.saturating_add(5);
+                return;
+            }
+            KeyCode::PageUp => {
+                self.scroll = self.scroll.saturating_sub(5);
+                return;
+            }
+            KeyCode::Home => {
+                self.scroll = 0;
+                return;
+            }
+            _ => self.scroll = 0,
+        }
+
+        match code {
+            KeyCode::Char('e') if self.view == View::Sessions && self.selected().is_some() => {
+                self.open_detail();
+                self.dialog = Some(Dialog::form(Form::ExportPath));
+            }
+            KeyCode::Char('a') if self.view == View::Resume && self.bundle.is_some() => {
+                self.dialog = Some(
+                    match actions::apply(self.bundle.as_ref().unwrap(), &self.project) {
+                        Ok(dialog) => dialog,
+                        Err(e) => Dialog::message(format!("Erro: {e}")),
+                    },
+                );
+            }
+            KeyCode::Char(c @ ('p' | 'l')) if self.view == View::Resume => {
+                self.dialog = Some(Dialog::form(Form::PromptPath { launch: c == 'l' }));
+            }
             KeyCode::Char('q') | KeyCode::Char('Q') => self.quit = true,
             KeyCode::Char('?') => self.view = View::Help,
             KeyCode::Char('s') | KeyCode::Char('S') => {
@@ -283,7 +432,8 @@ impl App {
                 self.move_selection(1)
             }
             KeyCode::Char(c @ '1'..='9')
-                if self.focus == Focus::Detail
+                if self.view == View::Sessions
+                    && self.focus == Focus::Detail
                     && self.selected().is_some_and(|r| r.requires_branch_selection) =>
             {
                 let index = (c as usize) - ('1' as usize);
@@ -292,7 +442,7 @@ impl App {
                     self.open_detail();
                 }
             }
-            KeyCode::Tab => {
+            KeyCode::Tab if self.view == View::Sessions => {
                 self.focus = match self.focus {
                     Focus::List => {
                         self.open_detail();
