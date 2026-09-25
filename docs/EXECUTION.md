@@ -13,6 +13,27 @@
   `lippdev/memory-pier`; links históricos foram preservados.
 - Documentação inicial integrada na `main` pelo PR #1.
 
+## Auditoria e rastreamento de issues — 2026-09-25
+
+- Inventário do roadmap, contratos, roteiro manual, código e CI convertido em
+  [23 issues #25–#47](https://github.com/lippdev/memory-bee/issues?q=is%3Aissue+is%3Aopen):
+  2 P0, 17 P1 e 4 P2. Não havia issues preexistentes. Labels de prioridade,
+  área e validação separam implementação de prova humana.
+- [#25](https://github.com/lippdev/memory-bee/issues/25) e
+  [#26](https://github.com/lippdev/memory-bee/issues/26) rastreiam a prova real
+  do leitor Claude e do M1. A sequência Claude primeiro está em
+  [#29](https://github.com/lippdev/memory-bee/issues/29) (prompts ocultos),
+  [#30](https://github.com/lippdev/memory-bee/issues/30) (permissões reais) e
+  [#31](https://github.com/lippdev/memory-bee/issues/31) (histórico/exportação).
+  [#47](https://github.com/lippdev/memory-bee/issues/47) reúne o aceite do
+  lançamento conjunto Claude/Codex e liga as dependências principais.
+- A [CI da `main` no commit `c7f432b`](https://github.com/lippdev/memory-bee/actions/runs/36177917324)
+  passou em macOS e Linux. A auditoria não executou ensaios humanos nem validou
+  agentes reais adicionais; criar issues não altera o status das etapas abaixo.
+  Autorrevisão do inventário; sem revisão independente.
+- Próximo recorte de implementação: #29, seguido da prova de permissões #30;
+  os ensaios P0 #25–#26 podem avançar em paralelo quando o mantenedor os fizer.
+
 ## Revisão de sequência — orientação do mantenedor
 
 Em 2026-09-24, o mantenedor pediu continuidade das implementações e deixou os
