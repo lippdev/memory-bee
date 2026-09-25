@@ -655,3 +655,33 @@ navegador e o que destoar; o visual só é aprovado com esse registro.
 | Itens novos | Estado | Evidência manual |
 |---|---|---|
 | 41: protótipo da colmeia, teclas, tamanhos e modos | Pendente | — |
+
+## 42. Dashboard de terminal em terminal real (pendente)
+
+Testes automatizados cobrem `--once` e a lógica de teclas sem terminal real
+(`tests/dashboard.rs`, testes unitários em `src/tui/app.rs`). Falta o ensaio
+num terminal de verdade:
+
+```sh
+cargo build --locked
+target/debug/memory-bee dashboard --project /synthetic/project --claude-root testdata/claude-projects --codex-root testdata/codex-sessions --bundle examples/bundle-v1
+```
+
+Conferir: `↑`/`↓` move a seleção; `tab`/`enter` abre o detalhe e `esc` volta;
+na sessão `arbitrary/session.jsonl`, `1` e `2` trocam a ponta do ramo e o
+detalhe atualiza; `r` mostra a prévia de retomada e `v` o resultado de
+`verify`; `t` troca o destino entre `claude` e `codex`; `?` mostra os atalhos;
+`q` sai e devolve o terminal ao estado normal (sem tela alternada nem modo
+bruto grudados). Redimensionar a janela do terminal abaixo de 80 colunas deve
+trocar para um painel por vez sem cortar a contagem de eventos, diagnósticos
+ou o símbolo de estado — só o nome da sessão trunca com `…`. Repetir com
+`--no-color` e com `--theme light`. `Ctrl+C` também deve sair e restaurar o
+terminal, como `q` (o modo bruto impede o sinal SIGINT normal; o app trata
+`Ctrl+C` como tecla).
+
+Esperado: nenhuma tecla executa exportação, apply ou lançamento — essas ações
+não têm atalho nesta versão. Anotar terminal e sistema operacional usados.
+
+| Item novo | Estado | Evidência manual |
+|---|---|---|
+| 42: dashboard em terminal real, teclas, redimensionamento e sinais | Pendente | — |

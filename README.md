@@ -23,8 +23,10 @@ A exportação básica funciona sem chamadas a modelos. Sínteses semânticas de
 Etapa 01 concluída. Etapa 02 em andamento: projeto Cargo e primeiro leitor Claude
 Code com descoberta por projeto e seleção explícita de ramo, testados com fixtures
 sintéticas. Etapa 03 implementada para exportação somente de contexto, com prévia,
-exclusões e manifesto v1. Validação manual e compatibilidade real pendentes; TUI
-continua no roadmap. Etapa 04 iniciada: `export --project <pasta>` registra referência Git local; `--include-path <arquivo>` inclui alterações textuais selecionadas em pacote v2. `verify` confere pacotes e `apply --check` / `--write` verifica ou aplica explicitamente em checkout limpo com base exata.
+exclusões e manifesto v1. Validação manual e compatibilidade real pendentes. Etapa
+04 iniciada: `export --project <pasta>` registra referência Git local; `--include-path <arquivo>` inclui alterações textuais selecionadas em pacote v2. `verify` confere pacotes e `apply --check` / `--write` verifica ou aplica explicitamente em checkout limpo com base exata. Etapa 06 em andamento: `dashboard`
+somente leitura implementado (lista, detalhe e prévia de retomada); exportar e
+lançar pela TUI ficam para o próximo recorte.
 
 ```sh
 cargo run --locked -- inspect testdata/claude/basic.jsonl
@@ -52,6 +54,12 @@ passos manuais, no mesmo checkout ou em nova worktree (`--worktree`). Veja a
 `--launch <confirmação>` obtida na prévia, o comando inicia o agente no mesmo
 checkout; sem confirmação correspondente, nada é lançado. Lançamento experimental,
 não validado com os agentes reais.
+
+`dashboard --project <projeto> --claude-root <pasta> [--codex-root <pasta>] [--bundle <pacote>]`
+abre uma tela de terminal (ratatui) somente leitura com a mesma lista de sessões,
+o detalhe e a prévia de retomada/verificação; `--once` imprime um quadro em texto
+puro sem precisar de terminal real. Não exporta, aplica nem lança pela própria
+tela ainda. Veja o [contrato do dashboard](docs/specs/dashboard.md).
 
 ## Desenvolvimento
 

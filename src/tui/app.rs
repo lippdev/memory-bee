@@ -12,6 +12,7 @@ use memory_bee::{
 use ratatui::widgets::ListState;
 use std::path::{Path, PathBuf};
 
+#[derive(Debug)]
 pub struct SessionRow {
     pub agent: &'static str,
     pub path: PathBuf,
@@ -114,8 +115,7 @@ impl Detail {
 /// session that requires one; ignored for Codex, which has no branches.
 pub fn load_detail(row: &SessionRow, leaf: Option<&str>) -> Result<Detail, String> {
     if row.agent == "codex" {
-        let report =
-            codex::inspect(&row.path, Limits::default()).map_err(|e| e.to_string())?;
+        let report = codex::inspect(&row.path, Limits::default()).map_err(|e| e.to_string())?;
         Ok(Detail::Codex(report))
     } else {
         let mut report =
@@ -148,14 +148,14 @@ pub fn load_verify(bundle: &Path) -> Result<receive::Report, String> {
     Ok(verified.report())
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum View {
     Sessions,
     Resume,
     Help,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Focus {
     List,
     Detail,
@@ -284,15 +284,10 @@ impl App {
             }
             KeyCode::Char(c @ '1'..='9')
                 if self.focus == Focus::Detail
-                    && self
-                        .selected()
-                        .is_some_and(|r| r.requires_branch_selection) =>
+                    && self.selected().is_some_and(|r| r.requires_branch_selection) =>
             {
                 let index = (c as usize) - ('1' as usize);
-                if self
-                    .selected()
-                    .is_some_and(|r| index < r.branch_tips.len())
-                {
+                if self.selected().is_some_and(|r| index < r.branch_tips.len()) {
                     self.branch_pick = index;
                     self.open_detail();
                 }
@@ -315,5 +310,203 @@ impl App {
             }
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    fn fixtures() -> (PathBuf, PathBuf, PathBuf) {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        (
+            PathBuf::from("/synthetic/project"),
+            root.join("testdata/claude-projects"),
+            root.join("testdata/codex-sessions"),
+        )
+    }
+
+    #[test]
+    fn load_sessions_unifies_and_sorts_claude_and_codex() {
+        let (project, claude_root, codex_root) = fixtures();
+        let (rows, _partial) =
+            load_sessions(&project, Some(&claude_root), Some(&codex_root)).unwrap();
+        assert!(rows.iter().any(|r| r.agent == "claude-code"));
+        assert!(rows.iter().any(|r| r.agent == "codex"));
+        // Sorted by path: consecutive rows never go backwards.
+        assert!(rows.windows(2).all(|w| w[0].path <= w[1].path));
+        // arbitrary/session.jsonl (the root session, not its subagent) requires
+        // a branch pick between a1 and a2.
+        let root_session = rows
+            .iter()
+            .find(|r| r.path.file_name().and_then(|n| n.to_str()) == Some("session.jsonl"))
+            .expect("the root fixture session is discovered");
+        assert!(root_session.requires_branch_selection);
+        assert_eq!(
+            root_session.branch_tips,
+            vec!["a1".to_string(), "a2".to_string()]
+        );
+    }
+
+    #[test]
+    fn load_sessions_rejects_a_missing_root() {
+        let (project, _, _) = fixtures();
+        let err = load_sessions(&project, Some(Path::new("/does/not/exist")), None)
+            .expect_err("a missing root is a hard error, not a partial result");
+        assert!(err.contains("Cannot discover sessions"));
+    }
+
+    #[test]
+    fn app_new_selects_the_first_row_and_loads_no_detail_yet() {
+        let (project, claude_root, codex_root) = fixtures();
+        let app = App::new(
+            project,
+            Some(claude_root),
+            Some(codex_root),
+            None,
+            Mode::Dark,
+            false,
+        )
+        .unwrap();
+        assert_eq!(app.list_state.selected(), Some(0));
+        assert!(app.detail.is_none());
+        assert!(app.bundle.is_none());
+    }
+
+    fn test_app() -> App {
+        let (project, claude_root, codex_root) = fixtures();
+        App::new(
+            project,
+            Some(claude_root),
+            Some(codex_root),
+            None,
+            Mode::Dark,
+            true,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn arrow_keys_wrap_the_selection_and_clear_stale_detail() {
+        let mut app = test_app();
+        let len = app.sessions.len();
+        app.on_key(KeyCode::Tab); // opens detail for row 0
+        assert!(app.detail.is_some());
+        for _ in 0..len {
+            app.on_key(KeyCode::Up);
+        }
+        // len steps back from 0 wraps exactly once around.
+        assert_eq!(app.list_state.selected(), Some(0));
+        assert!(
+            app.detail.is_none(),
+            "moving the selection must drop stale detail"
+        );
+        app.on_key(KeyCode::Down);
+        assert_eq!(app.list_state.selected(), Some(1 % len));
+    }
+
+    #[test]
+    fn tab_opens_detail_and_reports_a_real_report() {
+        let mut app = test_app();
+        // Pick a non-ambiguous row so detail loads without a branch choice.
+        let index = app
+            .sessions
+            .iter()
+            .position(|r| !r.requires_branch_selection)
+            .unwrap();
+        app.list_state.select(Some(index));
+        app.on_key(KeyCode::Tab);
+        assert_eq!(app.focus, Focus::Detail);
+        match app.detail.as_ref().unwrap() {
+            Ok(_) => {}
+            Err(e) => panic!("expected a readable session, got {e}"),
+        }
+        app.on_key(KeyCode::Tab);
+        assert_eq!(app.focus, Focus::List);
+    }
+
+    #[test]
+    fn number_keys_pick_a_branch_tip_for_an_ambiguous_session() {
+        let mut app = test_app();
+        // The root session (2 tips), not its subagent (1 tip): only it can
+        // exercise picking the second tip.
+        let index = app
+            .sessions
+            .iter()
+            .position(|r| r.path.file_name().and_then(|n| n.to_str()) == Some("session.jsonl"))
+            .unwrap();
+        app.list_state.select(Some(index));
+        app.on_key(KeyCode::Tab);
+        assert_eq!(app.branch_pick, 0);
+        app.on_key(KeyCode::Char('2'));
+        assert_eq!(app.branch_pick, 1);
+        let Some(Ok(Detail::Claude(report))) = &app.detail else {
+            panic!("expected a resolved Claude report after picking a branch");
+        };
+        assert_eq!(report.selection.as_ref().unwrap().leaf_uuid, "a2");
+        // Out-of-range picks are ignored, not clamped or panicking.
+        app.on_key(KeyCode::Char('9'));
+        assert_eq!(app.branch_pick, 1);
+    }
+
+    #[test]
+    fn esc_returns_to_the_session_list_from_any_view() {
+        let mut app = test_app();
+        app.view = View::Help;
+        app.on_key(KeyCode::Esc);
+        assert_eq!(app.view, View::Sessions);
+        assert_eq!(app.focus, Focus::List);
+    }
+
+    #[test]
+    fn q_sets_quit_without_touching_anything_else() {
+        let mut app = test_app();
+        app.on_key(KeyCode::Char('q'));
+        assert!(app.quit);
+    }
+
+    #[test]
+    fn resume_and_verify_keys_are_inert_without_a_bundle() {
+        let mut app = test_app();
+        app.on_key(KeyCode::Char('r'));
+        assert_eq!(app.view, View::Sessions, "no --bundle means no resume view");
+        assert!(app.resume.is_none());
+    }
+
+    #[test]
+    fn resume_preview_and_verify_use_the_example_bundle_read_only() {
+        let (_, claude_root, codex_root) = fixtures();
+        // Unlike discovery's `project`, `resume::prepare` inspects the real
+        // filesystem (git state), so it needs a directory that actually
+        // exists, not the fixtures' synthetic `/synthetic/project`.
+        let real_project = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let bundle = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/bundle-v1");
+        let mut app = App::new(
+            real_project,
+            Some(claude_root),
+            Some(codex_root),
+            Some(bundle.clone()),
+            Mode::Dark,
+            true,
+        )
+        .unwrap();
+        app.on_key(KeyCode::Char('r'));
+        assert_eq!(app.view, View::Resume);
+        let prep = app
+            .resume
+            .as_ref()
+            .unwrap()
+            .as_ref()
+            .expect("the example bundle prepares a read-only preview");
+        assert!(!prep.launched, "the dashboard must never launch an agent");
+        app.on_key(KeyCode::Char('v'));
+        let verified = app.verify.as_ref().unwrap().as_ref().unwrap();
+        assert!(verified.valid);
+        // The example bundle is still on disk, unmodified by any of this.
+        assert!(bundle.join("manifest.json").is_file());
+
+        app.on_key(KeyCode::Char('t'));
+        assert_eq!(app.resume_target, resume::Target::Codex);
     }
 }
