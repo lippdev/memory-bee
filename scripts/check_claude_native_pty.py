@@ -17,7 +17,7 @@ def one_run(binary, project, state, env, resume=False):
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 20, 80, 0, 0))
     before = termios.tcgetattr(slave)
-    argv = [str(binary), 'workspace', '--claude', '--project', str(project), '--state', str(state), '--no-color']
+    argv = [str(binary), 'workspace', '--claude', '--claude-terminal', '--project', str(project), '--state', str(state), '--no-color']
     if resume:
         argv.append('--resume')
     proc = subprocess.Popen(argv, stdin=slave, stdout=slave, stderr=slave, env=env)

@@ -18,7 +18,7 @@ use std::{
     process::ExitCode,
 };
 
-const USAGE: &str = "Usage:\n  memory-bee workspace --demo --project <dir> (--state <private-dir> | --once [--width <n>] [--height <n>]) [--agent claude|codex] [--theme dark|light] [--no-color]\n  memory-bee workspace --claude --project <dir> --state <private-dir> [--resume] [--theme dark|light] [--no-color]\n  memory-bee export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee inspect-codex <rollout.jsonl>\n  memory-bee inspect <session.jsonl> [--leaf <uuid>]\n  memory-bee sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-bee sessions --root <projects-dir> --project <project-dir>\n  memory-bee export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee verify <bundle-dir>\n  memory-bee apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-bee prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file> [--launch <confirmation>])\n  memory-bee dashboard --project <project-dir> [--claude-root <dir>] [--codex-root <dir>] [--bundle <dir>] [--theme (dark|light)] [--no-color] [--once [--width <n>] [--height <n>]]\nInspection and export are offline. workspace --claude starts the installed Claude Code CLI.\nCLI launch requires --launch and a matching confirmation from --preview.\nDashboard actions require a preview and explicit confirmation.\nExit: 0 success, 2 partial or attention needed, 3 possible secrets, 4 launched agent exited non-zero, 1 I/O or selection error, 64 usage error.";
+const USAGE: &str = "Usage:\n  memory-bee workspace --demo --project <dir> (--state <private-dir> | --once [--width <n>] [--height <n>]) [--agent claude|codex] [--theme dark|light] [--no-color]\n  memory-bee workspace --claude [--claude-terminal] --project <dir> --state <private-dir> [--resume] [--theme dark|light] [--no-color]\n  memory-bee export-codex <rollout.jsonl> (--preview | --output <new-dir>) [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee inspect-codex <rollout.jsonl>\n  memory-bee inspect <session.jsonl> [--leaf <uuid>]\n  memory-bee sessions-codex --root <sessions-dir> --project <project-dir>\n  memory-bee sessions --root <projects-dir> --project <project-dir>\n  memory-bee export <session.jsonl> (--preview | --output <new-dir>) [--leaf <uuid>] [--exclude-line <n>]... [--project <project-dir>] [--include-path <relative-file>]...\n  memory-bee verify <bundle-dir>\n  memory-bee apply <bundle-dir> --project <checkout> (--check | --write)\n  memory-bee prepare-resume <bundle-dir> --target (claude | codex) --project <project-dir> [--worktree <new-dir>] (--preview | --output <new-prompt-file> [--launch <confirmation>])\n  memory-bee dashboard --project <project-dir> [--claude-root <dir>] [--codex-root <dir>] [--bundle <dir>] [--theme (dark|light)] [--no-color] [--once [--width <n>] [--height <n>]]\nInspection and export are offline. workspace --claude starts the installed Claude Code CLI.\nCLI launch requires --launch and a matching confirmation from --preview.\nDashboard actions require a preview and explicit confirmation.\nExit: 0 success, 2 partial or attention needed, 3 possible secrets, 4 launched agent exited non-zero, 1 I/O or selection error, 64 usage error.";
 fn output(value: &impl Serialize) -> Result<(), (u8, String)> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
@@ -115,6 +115,10 @@ fn run() -> Result<u8, (u8, String)> {
     }
     if args.first().is_some_and(|arg| arg == "workspace") {
         return workspace(&args[1..]);
+    }
+    #[cfg(unix)]
+    if args.len() == 1 && args[0] == "__claude-hook" {
+        return Ok(tui::claude_native::hook_main());
     }
     if args.first().is_some_and(|arg| arg == "dashboard") {
         return dashboard(&args[1..]);
@@ -529,6 +533,7 @@ fn workspace(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
     let mut state: Option<PathBuf> = None;
     let mut demo = false;
     let mut claude_live = false;
+    let mut claude_terminal = false;
     let mut resume = false;
     let mut once = false;
     let mut agent = Agent::Claude;
@@ -545,6 +550,7 @@ fn workspace(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
         match flag {
             "--demo" => demo = true,
             "--claude" => claude_live = true,
+            "--claude-terminal" => claude_terminal = true,
             "--resume" => resume = true,
             "--once" => once = true,
             "--no-color" => no_color = true,
@@ -584,7 +590,7 @@ fn workspace(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
         }
         i += 1;
     }
-    if (demo && claude_live) || (resume && !claude_live) {
+    if (demo && claude_live) || (resume && !claude_live) || (claude_terminal && !claude_live) {
         return Err((64, USAGE.into()));
     }
     if !demo && !claude_live {
@@ -616,9 +622,25 @@ fn workspace(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
         }
         let state_path =
             state.ok_or((64, "workspace --claude exige --state <private-dir>".into()))?;
-        let (id, code) =
+        let (id, code) = if claude_terminal {
             tui::claude_native::run(Path::new(&project), &state_path, resume, mode, no_color)
-                .map_err(|e| (1, e))?;
+        } else {
+            #[cfg(unix)]
+            {
+                tui::claude_native::run_hidden(
+                    Path::new(&project),
+                    &state_path,
+                    resume,
+                    mode,
+                    no_color,
+                )
+            }
+            #[cfg(not(unix))]
+            {
+                Err("Interface Claude oculta exige macOS ou Linux".into())
+            }
+        }
+        .map_err(|e| (1, e))?;
         println!("Claude Code encerrou. Sessão nativa: {id}");
         return Ok(if code == 0 { 0 } else { 4 });
     }

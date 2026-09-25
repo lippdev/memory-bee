@@ -157,3 +157,24 @@ de produto pretendido. Não prometer essa combinação como suportada nem coleta
 tokens. Confirmar a fronteira antes de lançar a TUI própria com assinatura; se
 não for permitida, apresentar a limitação ao mantenedor sem substituir
 silenciosamente a assinatura por cobrança de API.
+
+## Resolução de transporte — Claude interativo oculto com hooks
+
+O primeiro recorte da interface Bee foi implementado mantendo **o binário
+interativo original**, autenticado pelo próprio usuário. O Claude recebe um PTY
+oculto para manter a sessão e o fluxo nativo; a Bee não desenha os bytes dessa
+tela. Hooks de sessão, texto, ferramentas e permissões entregam eventos por
+socket Unix privado à TUI. `PermissionRequest` aguarda decisão `y`/`n`; erro,
+timeout ou segunda solicitação simultânea recebem `deny`. `Ctrl+C` é enviado ao
+processo original. O modo anterior com terminal visível fica em
+`--claude-terminal` apenas para diagnóstico.
+
+Esta escolha evita `-p`/Agent SDK e mantém a condição de hospedar o CLI original
+com login feito nele. A [referência de hooks](https://code.claude.com/docs/en/hooks)
+documenta `MessageDisplay` e `PermissionRequest` também na sessão interativa.
+Um ensaio real de mensagem curta confirmou texto na Bee sem exibir a tela nativa;
+aprovação/negação e retomada passaram com CLI falsa. Não inferir dessa prova que
+todos os prompts nativos, ferramentas, contas e exportação estejam cobertos.
+Prompts de login ou confiança que não emitam hook podem ficar invisíveis; o
+usuário deve completar essa preparação no Claude original. Até existir tratamento
+fiel desses casos e ensaio real de permissões, o modo continua experimental.
