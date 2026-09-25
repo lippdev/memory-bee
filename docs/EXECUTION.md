@@ -535,6 +535,7 @@ Ao começar, registrar a entrega ativa e seus critérios. Ao encerrar, atualizar
   prévia JSON extensa exige rolagem. Cena animada e ensaios humanos pendentes.
   Itens 43–45 do roteiro manual adicionados, sem marcá-los executados.
 - Próximo passo: cena da colmeia/revisão de experiência, conforme tarefa acima.
+- Publicação e verificações remotas vinculadas ao [PR #18](https://github.com/lippdev/memory-pier/pull/18).
 
 
 ### Proposta em discussão — trabalhar dentro da TUI
