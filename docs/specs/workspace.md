@@ -4,6 +4,13 @@ Contrato do primeiro recorte do [ADR 0018](../decisions/0018-unified-workspace.m
 Não é programação real. Claude/Codex, ferramentas, mudanças e permissões são
 simulados, sem processos de provedores, rede ou edição do projeto.
 
+Para a versão real, a TUI deverá hospedar os CLIs oficiais como processos locais.
+O usuário autentica cada um pelo seu próprio fluxo. A Memory Bee não lê nem
+armazena tokens; associa sessões, eventos e exportações ao processo e ao perfil
+selecionado. App Server é o transporte candidato para Codex; para Claude, testar
+o binário original em PTY e verificar se a CLI permite uma conversa própria com
+permissões fiéis. O transporte Claude ainda não está decidido nem implementado.
+
 ```sh
 cargo run --locked -- workspace --demo --project . --state /tmp/bee-demo-state
 cargo run --locked -- workspace --demo --project . --agent codex --once --width 60 --height 20 --no-color

@@ -14,7 +14,8 @@ uma CLI com TUI, sem exigir IDE, editor, servidor remoto ou API paga separada.
 Manter Rust/ratatui e preservar o dashboard existente. Entregar primeiro
 `workspace --demo`, sempre identificado como simulação, com adaptador determinístico
 para cada agente. O comando sem `--demo` recusa antes de criar estado. Não integrar
-um terminal nativo nem ativar apenas Codex como substituto silencioso do requisito.
+um terminal nativo como única experiência nem ativar apenas Codex como substituto
+silencioso do requisito.
 
 ## Separação e armazenamento
 
@@ -53,7 +54,7 @@ Fontes consultadas em 2026-09-25:
   em aplicação própria. Essa distinção não comprova a viabilidade da nossa TUI.
   Apenas versão local `Claude Code 2.1.282` conferida, sem login ou inferência.
 
-Não há evidência de aprovação/integração Claude com assinatura para este produto.
+Não há evidência de integração Claude com assinatura para este produto.
 Nenhuma credencial foi copiada e nenhuma chamada a modelo foi feita. Não escolher
 API com cobrança separada como alternativa, pois contradiz a escolha do mantenedor.
 
@@ -82,3 +83,32 @@ campo. A mascote representa cada ação por animação, símbolo e texto; não s
 permissões ou evidência de execução. O [plano visual](../specs/workspace-visual.md)
 separa protótipo, renderizador Rust e integração real. Essa frente pode avançar
 com eventos simulados sem certificar nem desbloquear lançamento real.
+
+## Esclarecimento da arquitetura de login — 2026-09-25
+
+O mantenedor esclareceu que o usuário faz login nos CLIs oficiais antes de usar
+a Memory Bee. A TUI inicia e acompanha os processos locais de Claude Code e
+Codex; não oferece login próprio, lê arquivos de token nem intermedeia credenciais.
+O controle de autenticação e renovação permanece com cada fornecedor. O objetivo
+é renderizar conversa, ações e memória na TUI da Memory Bee sobre esses processos.
+
+A [documentação da Anthropic](https://code.claude.com/docs/en/legal-and-compliance)
+permite ao usuário entrar no binário Claude Code original com a própria assinatura,
+inclusive quando hospedado por outro produto, sob as condições ali descritas.
+Isso corrige a leitura anterior de que a aprovação para login de terceiros seria
+necessária para simplesmente hospedar o binário intacto. A mesma documentação
+restringe oferecer login claude.ai próprio ou encaminhar requisições com tokens
+da assinatura; essa distinção continua relevante para `-p`/Agent SDK. A
+[CLI Claude](https://code.claude.com/docs/en/cli-reference) documenta sessão
+interativa, retomada e saída estruturada no modo print, mas não comprova aqui
+aprovações interativas e paridade total em uma TUI própria. Testar os limites
+antes de escolher o transporte do adaptador Claude.
+
+O [Codex App Server](https://learn.chatgpt.com/docs/app-server) é a interface
+documentada para clientes próprios, com eventos, aprovações e estado de conta.
+Iniciar esse processo a partir da instalação local deve permitir usar o login
+que o Codex gerencia, sujeito à prova no ambiente do usuário. Não criar fluxo
+de tokens externos na Memory Bee. Um terminal incorporado pode ser um transporte
+ou um escape para interações nativas, mas não substitui sozinho o aceite da
+conversa unificada e da exportação. Nenhum login ou modelo foi acionado nesta
+revisão documental.

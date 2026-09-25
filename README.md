@@ -73,8 +73,9 @@ cargo run --locked -- workspace --demo --project . --once --no-color
 ```
 
 Contrato e teclas em [workspace](docs/specs/workspace.md). A direção aprovada usa
-assinaturas existentes e lançamento real conjunto de Claude e Codex; integração
-real e isolamento continuam pendentes ([ADR 0018](docs/decisions/0018-unified-workspace.md)).
+os logins dos CLIs oficiais como processos locais, com lançamento real conjunto
+de Claude e Codex; integração real e isolamento continuam pendentes
+([ADR 0018](docs/decisions/0018-unified-workspace.md)).
 O dashboard anterior permanece disponível.
 
 ## Desenvolvimento
