@@ -952,3 +952,21 @@ impresso. Não versionar pacotes com dados reais.
 | Item novo | Estado | Evidência manual |
 |---|---|---|
 | 54: reidratação na retomada, exportação com exclusões, segredos e verify | Pendente | — |
+
+## 55. Editor e navegação do Claude oculto (pendente)
+
+Em terminais reais (Terminal.app, iTerm2 e um Linux), abrir `workspace --claude`
+num projeto descartável já confiado. Digitar uma mensagem, usar `Alt+Enter` (e
+`Ctrl+J`, se `Alt+Enter` não chegar) para quebrar linha, mover com setas e
+Home/End e corrigir com Backspace/Delete. Colar um texto de várias linhas:
+nada deve ser enviado antes de Enter. Enviar e conferir no Claude original
+(`Ctrl+O`) que a mensagem chegou inteira, com as quebras. Gerar uma resposta
+longa, rolar com `PgUp`/`PgDn`, conferir o título "lendo anteriores"/"novas
+abaixo" e voltar com `Esc`. Com rascunho digitado, provocar um pedido de
+permissão e redimensionar a janela: o rascunho deve continuar. Repetir com
+`--no-color` e em 40×12, conferindo todos os atalhos visíveis. Sair com `Ctrl+Q`
+e após um erro do Claude, verificando a restauração do terminal.
+
+| Item novo | Estado | Evidência manual |
+|---|---|---|
+| 55: editor multilinha, colagem, rolagem, sem cor e 40×12 em terminais reais | Pendente | — |
