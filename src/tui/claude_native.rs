@@ -615,8 +615,10 @@ fn handle_hook_connection(mut stream: UnixStream, tx: mpsc::Sender<BridgeEvent>)
         };
         let _ = stream.write_all(decision.as_bytes());
         let _ = stream.write_all(b"\n");
-    } else {
-        let _ = tx.send(BridgeEvent { value, reply: None });
+    } else if tx.send(BridgeEvent { value, reply: None }).is_ok() {
+        // Acknowledge only once queued, so events from a hook that ran just
+        // before Claude exits are still shown.
+        let _ = stream.write_all(b"\n");
     }
 }
 
@@ -641,13 +643,17 @@ pub fn hook_main() -> u8 {
         .and_then(|path| UnixStream::connect(path).ok())
         .and_then(|mut stream| {
             stream
-                .set_read_timeout(Some(Duration::from_secs(95)))
+                .set_read_timeout(Some(if permission {
+                    PERMISSION_TIMEOUT + Duration::from_secs(5)
+                } else {
+                    Duration::from_secs(5)
+                }))
                 .ok()?;
             stream.write_all(&bytes).ok()?;
             stream.write_all(b"\n").ok()?;
+            let mut reply = String::new();
+            io::BufReader::new(stream).read_line(&mut reply).ok()?;
             if permission {
-                let mut reply = String::new();
-                io::BufReader::new(stream).read_line(&mut reply).ok()?;
                 serde_json::from_str::<serde_json::Value>(&reply).ok()?;
                 Some(reply)
             } else {
@@ -1243,6 +1249,13 @@ pub fn run_hidden(
             status = Some(exit.exit_code());
         }
         if status.is_some() {
+            // Hooks are acknowledged once queued; show the last ones.
+            while let Ok(event) = bridge.events.try_recv() {
+                view.receive(event, id, Instant::now());
+            }
+            terminal
+                .draw(|f| draw_hidden(f, &view, mode, no_color))
+                .map_err(|e| e.to_string())?;
             break;
         }
         if event::poll(Duration::from_millis(40)).map_err(|e| e.to_string())? {

@@ -806,5 +806,11 @@ escopo da entrega atual nem a próxima tarefa aprovada.
   scripts PTY e `check_bundle.py` passaram localmente (Linux). Autorrevisão.
 - Limitação: a presença de `tool_use_id` no `PermissionRequest` real não foi
   confirmada; sem ele a associação usa nome e entrada exatos.
+- CI macOS do PR #51 expôs duas falhas, corrigidas: o script PTY parava de ler
+  a saída ao aguardar a saída da Bee (buffer pequeno do macOS bloqueava o
+  redesenho final); e hooks sem permissão não esperavam confirmação, então
+  eventos emitidos logo antes de o Claude sair podiam se perder. Agora o hook
+  aguarda até 5 s a confirmação de enfileiramento e a Bee drena os eventos e
+  redesenha antes de encerrar.
 - Próximo: ensaio humano do item 52 para fechar #29/#30 e, em código, #31
   (histórico e exportação da sessão Claude).
