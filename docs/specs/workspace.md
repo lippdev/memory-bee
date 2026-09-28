@@ -29,7 +29,8 @@ O Claude continua controlando login, sessão e execução. Um socket Unix em pas
 temporária 0700 recebe eventos; o subprocesso de hook devolve decisão `allow` ou
 `deny` ao Claude. Falha de ponte e timeout negam permissões. A tela nativa fica
 oculta; a Bee mostra mensagens, nomes de ações e decisão `y`/`n`, com negação
-inicial. Enter envia prompt, `Ctrl+C` interrompe e `Ctrl+Q` encerra. O terminal
+inicial. Enter envia prompt, `Ctrl+C` interrompe e `Ctrl+Q` encerra (editor e
+rolagem descritos abaixo). O terminal
 volta ao estado anterior na saída. `--claude-terminal` reabre o modo anterior com
 a TUI nativa visível para diagnóstico. Se houver permissão pendente, `Ctrl+C` e
 `Ctrl+Q` negam antes de interromper ou sair; outras teclas além de `y`, `n` e
@@ -75,6 +76,20 @@ sessões, 64 KiB), sem transcrição. A pasta é 0700 e arquivos são 0600 em Un
 processo ativo antes de remover a trava antiga. `--resume` usa o último ID desta
 pasta; não reenvia prompt. A sessão nativa pode não existir quando se sai antes
 de enviar uma mensagem. Isolamento de perfis e integração Codex estão pendentes.
+
+**Editor e navegação (#32).** O rascunho tem várias linhas: `Alt+Enter` (ou
+`Ctrl+J`) quebra linha; setas, Home/End, Backspace e Delete editam; a colagem
+entra no rascunho com as quebras preservadas e nunca é enviada sem Enter. O
+rascunho continua ao abrir permissões, exportação, a tela original ou ao
+redimensionar, e pode ser escrito antes de o Claude ficar pronto. Ao enviar,
+mensagens com várias linhas vão ao Claude como uma única colagem delimitada
+quando o terminal dele a ativou; sem isso, as quebras viram espaços para não
+enviar pedaços. A conversa quebra linhas pela largura de exibição; `PgUp`/`PgDn`
+(ou ↑/↓ fora do rascunho) leem mensagens anteriores, o título indica novas
+mensagens abaixo e `Esc` ou enviar volta ao fim. A caixa de mensagem mostra até
+cinco linhas sem esconder a conversa. Sem cor, a tela usa as cores padrão do
+terminal. O tamanho mínimo é 40×12; os atalhos ocupam até quatro linhas para
+continuarem legíveis nessa largura.
 
 **Histórico e exportação (#31).** A transcrição vem do campo `transcript_path`
 dos hooks oficiais; a Bee aceita só arquivo comum, sem symlink, chamado

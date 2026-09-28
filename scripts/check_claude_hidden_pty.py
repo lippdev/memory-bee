@@ -80,6 +80,68 @@ for line in sys.stdin:
         sys.exit(0)
 '''
 
+# Editor checks: records exactly what Claude would receive on its input.
+FAKE_EDITOR = r'''#!/usr/bin/env python3
+import json, os, signal, subprocess, sys
+signal.signal(signal.SIGINT, signal.SIG_IGN)  # Real Claude reads Ctrl+C as a key.
+args = sys.argv[1:]
+session_id = args[args.index('--session-id') + 1]
+if os.environ.get('BEE_BRACKETED'):
+    sys.stdout.write('\x1b[?2004h')
+    sys.stdout.flush()
+def hook(name, **fields):
+    payload = json.dumps(dict(hook_event_name=name, session_id=session_id, **fields))
+    subprocess.run([os.environ['BEE_BINARY'], '__claude-hook'], input=payload, text=True, capture_output=True, check=True)
+hook('SessionStart')
+hook('MessageDisplay', delta='\n'.join(f'linha-{i:02d}' for i in range(60)), final=True, index=0)
+for line in sys.stdin:
+    line = line.rstrip('\n')
+    with open(os.environ['BEE_FAKE_STDIN'], 'a') as f:
+        f.write(repr(line) + '\n')
+    if line == '/exit':
+        sys.exit(0)
+    if not line.startswith('\x1b[200~') and not (os.environ.get('BEE_BRACKETED') and '\x1b[201~' not in line):
+        hook('Stop')  # The turn ends once the whole message arrived.
+'''
+
+
+def editor(binary, project, state, env, size, bracketed):
+    rows, cols = size
+    master, slave, before, proc, output, until = spawn(binary, project, state, env, size=size)
+    log = Path(env['BEE_FAKE_STDIN'])
+    try:
+        until(b'linha-59')
+        os.write(master, b'\x1b[5~')  # PgUp reads older messages.
+        until(b'anteriores')
+        os.write(master, b'\x1b')  # Esc follows the end again.
+        time.sleep(0.3)
+        os.write(master, b'\x1b[200~linha um\nlinha dois\x1b[201~')
+        time.sleep(0.5)
+        assert not log.exists(), 'paste must not be sent before Enter'
+        os.write(master, b'\x1b[H>')  # Home, then edit the second line.
+        os.write(master, b'\x1b[F\x1b\r')  # End, then Alt+Enter adds a line.
+        os.write(master, 'três'.encode())
+        os.write(master, b'\r')
+        until(b'Turno')  # Stop arrived: Ctrl+Q may type /exit at the idle prompt.
+        os.write(master, b'\x11')
+        code = drain_until_exit(master, proc, output, 10)
+        assert code == 0, (code, log.exists() and log.read_text())
+        assert termios.tcgetattr(slave) == before
+        assert b'Ctrl+Q' in output, 'shortcuts stay visible at this width'
+        received = [eval(line) for line in log.read_text().splitlines()]
+        if bracketed:
+            expected = ['\x1b[200~linha um', '>linha dois', 'três\x1b[201~', '/exit']
+        else:
+            expected = ['linha um >linha dois três', '/exit']
+        assert received == expected, received
+        log.unlink()
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+        os.close(master)
+        os.close(slave)
+
 
 def history_and_export(binary, project, state, env, resume):
     master, slave, before, proc, output, until = spawn(binary, project, state, env, resume)
@@ -118,9 +180,9 @@ def drain_until_exit(master, proc, output, seconds):
     return proc.returncode
 
 
-def spawn(binary, project, state, env, resume=False):
+def spawn(binary, project, state, env, resume=False, size=(24, 80)):
     master, slave = pty.openpty()
-    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 24, 80, 0, 0))
+    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', size[0], size[1], 0, 0))
     before = termios.tcgetattr(slave)
     argv = [str(binary), 'workspace', '--claude', '--project', str(project), '--state', str(state), '--no-color']
     if resume:
@@ -203,7 +265,7 @@ def run(binary, project, state, env, resume, decision):
     try:
         until(b'pronto.')
         os.write(master, b'hello\r')
-        until(b'Permitir esta')
+        until(b'Permitir')
         os.write(master, decision.encode())
         until(b'sintetica')
         until(b'regras')  # Read ran without a request: Claude's rules, not the Bee.
@@ -291,7 +353,19 @@ def main():
         history_and_export(binary, project, state, env, True)
         # History is shown from the transcript, never typed back into Claude.
         assert stdin_log.read_text().splitlines() == ['/exit', '/exit']
-    print('PASS: Bee-only UI, hidden original output, hooks, deny/allow, Ctrl+Q denial, resume, blocked native setup via Ctrl+O, safe Ctrl+Q, history rehydration, verified export and terminal restoration')
+    with tempfile.TemporaryDirectory(prefix='bee-editor-') as temp:
+        root = Path(temp)
+        fake_dir = root / 'bin'
+        fake_dir.mkdir()
+        fake = fake_dir / 'claude'
+        fake.write_text(FAKE_EDITOR)
+        fake.chmod(0o700)
+        project = root / 'project'
+        project.mkdir()
+        env = dict(os.environ, PATH=f'{fake_dir}:/usr/bin:/bin', BEE_BINARY=str(binary), BEE_FAKE_STDIN=str(root / 'stdin'))
+        editor(binary, project, root / 'state-a', dict(env, BEE_BRACKETED='1'), (24, 80), True)
+        editor(binary, project, root / 'state-b', env, (12, 40), False)  # Documented minimum width.
+    print('PASS: Bee-only UI, hidden original output, hooks, deny/allow, Ctrl+Q denial, resume, blocked native setup via Ctrl+O, safe Ctrl+Q, history rehydration, verified export, multiline editor, scrolling, 40-column controls and terminal restoration')
 
 
 if __name__ == '__main__':

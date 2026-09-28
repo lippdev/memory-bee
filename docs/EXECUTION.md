@@ -81,7 +81,7 @@ Próximo: ensaio humano de ferramentas/permissões reais
 ([#30](https://github.com/lippdev/memory-bee/issues/30)) e histórico/exportação
 revisável ([#31](https://github.com/lippdev/memory-bee/issues/31)).
 O estado ainda guarda só IDs; histórico e exportação vêm da transcrição nativa
-(#31, PR em andamento). Perfis reais e Codex integrado seguem pendentes.
+(#31) e a conversa tem editor multilinha e rolagem (#32). Perfis reais e Codex integrado seguem pendentes.
 O lançamento da experiência completa ainda exige os dois agentes (ADR 0018).
 
 **Refinamento visual.** Referência HTML e [plano visual](specs/workspace-visual.md)
@@ -845,3 +845,32 @@ escopo da entrega atual nem a próxima tarefa aprovada.
   Exportação após o Claude encerrar é feita pela CLI `export`, não pela TUI.
   Código selecionado (v2) não é oferecido na TUI.
 - Próximo: ensaios humanos 52 e 54; depois Codex real no workspace (ADR 0018).
+
+## Claude oculto — editor e navegação da conversa (#32, código)
+
+- Data: 2026-09-28. PR #52 (#31) integrado por squash em `1871931`; branch da
+  sessão recomeçado da `main`.
+- Novo `src/tui/draft.rs`: rascunho multilinha com cursor por caractere,
+  colagem que preserva quebras e descarta controles, e quebra por largura de
+  exibição (inclui caracteres largos). `workspace --claude` passa a usar esse
+  editor (`Alt+Enter`/`Ctrl+J`, setas, Home/End, Delete), mantém o rascunho em
+  permissões, exportação, tela original e resize, e envia mensagens de várias
+  linhas como colagem delimitada quando o Claude a ativou (sem ela, quebras viram
+  espaços). A conversa quebra linhas longas (antes cortadas), rola com
+  `PgUp`/`PgDn` e ↑/↓ nas bordas do rascunho, avisa novas mensagens abaixo e
+  volta ao fim com `Esc` ou ao enviar. Sem cor usa o fundo padrão do terminal.
+  Atalhos se distribuem em até quatro linhas; mínimo passou de 40×10 para 40×12
+  para mantê-los todos visíveis.
+- Evidências: testes unitários do editor (colunas entre linhas, colagem,
+  quebra com caracteres largos e posição do cursor); `check_claude_hidden_pty.py`
+  com CLI falsa que registra a entrada recebida: rolagem com `PgUp` e `Esc`,
+  colagem não enviada antes de Enter, edição com Home/End/`Alt+Enter`, envio
+  delimitado exato e envio em uma linha sem colagem delimitada, em 80×24 e 40×12.
+  Telas conferidas em emulador (`pyte`), o que revelou e corrigiu o cursor fora da
+  caixa em 40×12. Checks canônicos, scripts PTY e `check_bundle.py` passaram
+  localmente (Linux). Autorrevisão.
+- Limitações: `Alt+Enter` depende do terminal; `Ctrl+J` é a alternativa. Ensaio
+  em terminais reais pendente (item 55). A rolagem é por mensagem, não por linha
+  quebrada.
+- Próximo: #33 (Codex App Server autenticado), que também exige ensaio com conta
+  real, ou #41 (recuperação do estado após falha).

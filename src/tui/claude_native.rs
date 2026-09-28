@@ -1,5 +1,8 @@
 //! Memory Bee frame around the unmodified, interactive Claude Code CLI.
-use super::theme::{Mode, Palette};
+use super::{
+    draft::{Draft, wrap},
+    theme::{Mode, Palette},
+};
 use crossterm::{
     cursor::Show,
     event::{
@@ -959,7 +962,11 @@ fn private_parent(destination: &Path) -> Result<(), String> {
 #[cfg(unix)]
 struct HiddenView {
     lines: Vec<String>,
-    input: String,
+    draft: Draft,
+    /// Last visible line while reading older messages; `None` follows the end.
+    anchor: Option<usize>,
+    /// Lines that arrived while reading older messages.
+    unread: usize,
     pending: Option<Pending>,
     /// Transcript reported by Claude's hooks; source of history and export.
     transcript: Option<PathBuf>,
@@ -988,7 +995,9 @@ impl HiddenView {
     fn new(now: Instant) -> Self {
         Self {
             lines: vec!["Iniciando Claude Code em segundo plano…".into()],
-            input: String::new(),
+            draft: Draft::default(),
+            anchor: None,
+            unread: 0,
             pending: None,
             transcript: None,
             resume: false,
@@ -1008,9 +1017,28 @@ impl HiddenView {
     }
     fn push(&mut self, line: impl Into<String>) {
         self.lines.push(line.into());
+        if self.anchor.is_some() {
+            self.unread += 1;
+        }
         if self.lines.len() > 2000 {
             self.lines.drain(..1000);
+            self.anchor = self.anchor.map(|a| a.saturating_sub(1000));
         }
+    }
+    /// Moves the view by whole lines; reaching the end follows it again.
+    fn scroll(&mut self, lines: isize) {
+        let last = self.lines.len().saturating_sub(1);
+        let current = self.anchor.unwrap_or(last) as isize;
+        let target = (current + lines).clamp(0, last as isize) as usize;
+        if target >= last {
+            self.follow();
+        } else {
+            self.anchor = Some(target);
+        }
+    }
+    fn follow(&mut self) {
+        self.anchor = None;
+        self.unread = 0;
     }
     /// Detects missing progress. Returns true when the view changed.
     fn check_stall(&mut self, now: Instant, screen: impl FnOnce() -> String) -> bool {
@@ -1327,22 +1355,72 @@ fn approval_fits(request: &str, width: u16, height: u16) -> bool {
         <= text_rows
 }
 
+/// Shortcuts packed into as many rows as the width needs; four rows keep
+/// every control readable at the 40×12 minimum.
+#[cfg(unix)]
+fn footer_rows(width: u16, view: &HiddenView) -> Vec<String> {
+    let items: &[&str] = if view.export.is_some() {
+        &["Esc fecha a exportação"]
+    } else {
+        &[
+            "Enter envia",
+            "Alt+Enter nova linha",
+            "PgUp/PgDn rolam",
+            "Ctrl+E exporta",
+            "Ctrl+C interrompe",
+            "Ctrl+O original",
+            "Ctrl+Q sai",
+        ]
+    };
+    let mut rows = vec![String::new()];
+    for item in items {
+        let row = rows.last_mut().expect("one row");
+        if row.is_empty() {
+            row.push_str(item);
+        } else if UnicodeWidthStr::width(row.as_str()) + 3 + UnicodeWidthStr::width(*item)
+            > width as usize
+        {
+            rows.push((*item).into());
+        } else {
+            row.push_str(" · ");
+            row.push_str(item);
+        }
+    }
+    rows
+}
+
 #[cfg(unix)]
 fn draw_hidden(frame: &mut Frame, view: &HiddenView, mode: Mode, no_color: bool) {
     let area = frame.area();
     let palette = Palette::new(mode, no_color);
-    let bg = if mode == Mode::Dark {
+    let bg = if no_color {
+        Color::Reset
+    } else if mode == Mode::Dark {
         Color::Black
     } else {
         Color::White
     };
     frame.render_widget(ratatui::widgets::Clear, area);
     frame.render_widget(Block::default().style(Style::default().bg(bg)), area);
+    let inner_width = area.width.saturating_sub(2);
+    let (draft_rows, draft_cursor) = view.draft.layout(inner_width.saturating_sub(2));
+    let footer = footer_rows(area.width, view);
+    // Up to five draft rows, never squeezing the conversation below one line.
+    let room = area
+        .height
+        .saturating_sub(footer.len() as u16 + 1 + 3 + 2)
+        .max(1) as usize;
+    let draft_height = draft_rows.len().clamp(1, 5).min(room);
+    let input_height = if view.pending.is_none() && view.blocked.is_none() && !view.quitting {
+        draft_height as u16 + 2
+    } else {
+        3
+    };
     let rows = Layout::vertical([
         Constraint::Length(1),
         Constraint::Min(3),
-        Constraint::Length(3),
-        Constraint::Length(1),
+        Constraint::Length(input_height),
+        Constraint::Length(footer.len() as u16),
     ])
     .split(area);
     frame.render_widget(
@@ -1354,33 +1432,75 @@ fn draw_hidden(frame: &mut Frame, view: &HiddenView, mode: Mode, no_color: bool)
         ),
         rows[0],
     );
+    // Wrapped by display width so long messages are never cut at the edge.
     let visible = rows[1].height.saturating_sub(2) as usize;
-    let start = view.lines.len().saturating_sub(visible);
+    let last = view
+        .anchor
+        .unwrap_or(usize::MAX)
+        .min(view.lines.len().saturating_sub(1));
+    let mut shown: Vec<String> = Vec::new();
+    for line in view.lines[..=last].iter().rev() {
+        let mut wrapped = wrap(line, inner_width);
+        wrapped.extend(shown);
+        shown = wrapped;
+        if shown.len() >= visible {
+            break;
+        }
+    }
+    let skip = shown.len().saturating_sub(visible);
+    let title = match (view.anchor, view.unread) {
+        (None, _) => " Conversa ".to_string(),
+        (Some(_), 0) => " Conversa · lendo anteriores · Esc volta ao fim ".into(),
+        (Some(_), n) => format!(" Conversa · {n} novas abaixo · Esc volta ao fim "),
+    };
     frame.render_widget(
-        Paragraph::new(view.lines[start..].join("\n"))
+        Paragraph::new(shown[skip..].join("\n"))
             .block(
                 Block::default()
-                    .title(" Conversa ")
+                    .title(title)
                     .borders(Borders::ALL)
                     .border_style(Style::default().fg(palette.accent)),
             )
             .style(Style::default().bg(bg)),
         rows[1],
     );
-    let prompt = if view.pending.is_some() {
-        "Permissão pendente · veja o painel de revisão".into()
+    let (prompt, cursor) = if view.pending.is_some() {
+        ("Permissão pendente · rascunho preservado".to_string(), None)
     } else if let Some(hint) = view.blocked {
-        format!("Claude aguarda {hint} · Ctrl+O concluir no original · Ctrl+Q sair")
-    } else if !view.ready {
-        "Aguardando Claude iniciar…".into()
+        (
+            format!("Claude aguarda {hint} · Ctrl+O concluir no original · Ctrl+Q sair"),
+            None,
+        )
+    } else if view.quitting {
+        ("Encerrando…".to_string(), None)
+    } else if view.draft.text().is_empty() && !view.ready {
+        (
+            "> (Claude iniciando; nada é enviado antes do Enter)".to_string(),
+            None,
+        )
     } else {
-        format!("> {}", view.input)
+        // Keep the cursor row visible within the rows the layout allows.
+        let height = draft_height;
+        let first = draft_cursor
+            .0
+            .saturating_sub(height - 1)
+            .min(draft_rows.len() - height);
+        let text = draft_rows[first..first + height]
+            .iter()
+            .enumerate()
+            .map(|(i, row)| {
+                let marker = if first + i == 0 { "> " } else { "  " };
+                format!("{marker}{row}")
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        (text, Some((draft_cursor.0 - first, draft_cursor.1)))
     };
     frame.render_widget(
         Paragraph::new(prompt)
             .block(
                 Block::default()
-                    .title(" Mensagem / decisão ")
+                    .title(" Mensagem ")
                     .borders(Borders::ALL)
                     .border_style(Style::default().fg(palette.accent)),
             )
@@ -1388,12 +1508,12 @@ fn draw_hidden(frame: &mut Frame, view: &HiddenView, mode: Mode, no_color: bool)
         rows[2],
     );
     frame.render_widget(
-        Paragraph::new(
-            "Enter envia · Ctrl+E exporta · Ctrl+C interrompe · Ctrl+O original · Ctrl+Q sai",
-        )
-        .style(Style::default().bg(bg)),
+        Paragraph::new(footer.join("\n")).style(Style::default().bg(bg)),
         rows[3],
     );
+    if let (Some((row, col)), None) = (cursor, &view.export) {
+        frame.set_cursor_position((rows[2].x + 3 + col, rows[2].y + 1 + row as u16));
+    }
     if let (None, Some(export)) = (&view.pending, &view.export) {
         let modal = Rect::new(
             2,
@@ -1527,6 +1647,21 @@ fn draw_native_setup(
     frame.render_widget(Paragraph::new(footer), rows[2]);
 }
 
+/// Types the prompt into Claude. Line breaks go as one bracketed paste so
+/// Claude keeps them inside the message instead of submitting early.
+#[cfg(unix)]
+fn send_prompt(pty: &mut Pty, screen: &vt100::Screen, prompt: &str) -> Result<(), String> {
+    if prompt.contains('\n') && screen.bracketed_paste() {
+        pty.write(b"\x1b[200~")?;
+        pty.write(prompt.as_bytes())?;
+        pty.write(b"\x1b[201~")?;
+    } else {
+        // Without bracketed paste a newline would submit; keep one message.
+        pty.write(prompt.replace('\n', " ").as_bytes())?;
+    }
+    pty.write(b"\r")
+}
+
 /// First native Bee conversation surface. Claude's own terminal stays private.
 #[cfg(unix)]
 pub fn run_hidden(
@@ -1551,8 +1686,8 @@ pub fn run_hidden(
     let mut terminal =
         Terminal::new(CrosstermBackend::new(io::stdout())).map_err(|e| e.to_string())?;
     let size = terminal.size().map_err(|e| e.to_string())?;
-    if size.width < 40 || size.height < 10 {
-        return Err("Terminal exige pelo menos 40×10".into());
+    if size.width < 40 || size.height < 12 {
+        return Err("Terminal exige pelo menos 40×12".into());
     }
     // Claude draws its original screen inside the frame opened by Ctrl+O.
     let (rows, cols) = viewport(size.into());
@@ -1741,18 +1876,44 @@ pub fn run_hidden(
                             .as_ref()
                             .is_some_and(|p| approval_fits(&p.request, size.width, size.height));
                         view.decide(key.code == KeyCode::Char('y') && fits, false);
-                    } else if view.pending.is_none() && view.ready && !view.quitting {
+                    } else if view.pending.is_none() && !view.quitting {
+                        let alt = key.modifiers.contains(KeyModifiers::ALT);
+                        let page = (terminal.size().map_or(24, |s| s.height) / 2).max(1) as isize;
                         match key.code {
-                            KeyCode::Char(c) if !control => view.input.push(c),
-                            KeyCode::Backspace => {
-                                view.input.pop();
+                            KeyCode::Enter if alt => view.draft.insert('\n'),
+                            KeyCode::Char('j') if control => view.draft.insert('\n'),
+                            KeyCode::Char(c) if !control && !alt => view.draft.insert(c),
+                            KeyCode::Backspace => view.draft.backspace(),
+                            KeyCode::Delete => view.draft.delete(),
+                            KeyCode::Left => view.draft.left(),
+                            KeyCode::Right => view.draft.right(),
+                            KeyCode::Home => view.draft.home(),
+                            KeyCode::End => view.draft.end(),
+                            KeyCode::Up => {
+                                if !view.draft.up() {
+                                    view.scroll(-1);
+                                }
                             }
-                            KeyCode::Enter if !view.input.trim().is_empty() => {
-                                let prompt = std::mem::take(&mut view.input);
-                                pty.write(prompt.as_bytes())?;
-                                pty.write(b"\r")?;
+                            KeyCode::Down => {
+                                if !view.draft.down() {
+                                    view.scroll(1);
+                                }
+                            }
+                            KeyCode::PageUp => view.scroll(-page),
+                            KeyCode::PageDown => view.scroll(page),
+                            KeyCode::Esc => view.follow(),
+                            KeyCode::Enter if view.ready && !view.draft.is_blank() => {
+                                let prompt = view.draft.take();
+                                send_prompt(&mut pty, parser.screen(), &prompt)?;
                                 view.submitted(Instant::now());
-                                view.push(format!("Você: {prompt}"));
+                                view.follow();
+                                for (i, line) in prompt.lines().enumerate() {
+                                    view.push(if i == 0 {
+                                        format!("Você: {line}")
+                                    } else {
+                                        format!("      {line}")
+                                    });
+                                }
                             }
                             _ => {}
                         }
@@ -1768,8 +1929,11 @@ pub fn run_hidden(
                         pty.write(b"\x1b[201~")?;
                     }
                 }
-                Event::Paste(paste) if view.ready && view.pending.is_none() => {
-                    view.input.push_str(&paste.replace(['\r', '\n'], " "));
+                // Pasted text is only inserted in the draft; Enter sends it.
+                Event::Paste(paste)
+                    if view.pending.is_none() && view.export.is_none() && !view.quitting =>
+                {
+                    view.draft.paste(&paste);
                     dirty = true;
                 }
                 Event::Resize(width, height) => {

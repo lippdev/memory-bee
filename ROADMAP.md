@@ -39,7 +39,8 @@ por trás, assinaturas existentes e lançamento conjunto. Isso amplia as etapas
    usa hooks para conversa e permissões na Bee e retoma o ID nativo. Mensagem real
    curta comprovada; prompts nativos sem hook são sinalizados e concluídos por
    `Ctrl+O` (#29); a origem das ações é explícita (#30); histórico e exportação
-   vêm da transcrição nativa (#31). Ferramentas/perfis reais exigem ensaio humano.
+   vêm da transcrição nativa (#31); editor multilinha e rolagem (#32).
+   Ferramentas/perfis reais exigem ensaio humano.
 3. Experiência integrada aos dois harnesses, histórico e exportação: pendente.
 4. Troca real entre agentes/contas com revisão e preservação da origem: pendente.
 5. Lançamento conjunto após todos os aceites, sem substituir o requisito por

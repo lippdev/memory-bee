@@ -2,6 +2,7 @@
 pub mod actions;
 pub mod app;
 pub mod claude_native;
+pub mod draft;
 pub mod theme;
 pub mod ui;
 
