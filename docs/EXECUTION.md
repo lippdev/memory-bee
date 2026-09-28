@@ -80,7 +80,8 @@ e a Bee distingue ações aprovadas por ela das liberadas pelo próprio Claude.
 Próximo: ensaio humano de ferramentas/permissões reais
 ([#30](https://github.com/lippdev/memory-bee/issues/30)) e histórico/exportação
 revisável ([#31](https://github.com/lippdev/memory-bee/issues/31)).
-O modo ainda guarda só IDs; perfis reais e Codex integrado seguem pendentes.
+O estado ainda guarda só IDs; histórico e exportação vêm da transcrição nativa
+(#31, PR em andamento). Perfis reais e Codex integrado seguem pendentes.
 O lançamento da experiência completa ainda exige os dois agentes (ADR 0018).
 
 **Refinamento visual.** Referência HTML e [plano visual](specs/workspace-visual.md)
@@ -816,3 +817,31 @@ escopo da entrega atual nem a próxima tarefa aprovada.
   redesenha antes de encerrar.
 - Próximo: ensaio humano do item 52 para fechar #29/#30 e, em código, #31
   (histórico e exportação da sessão Claude).
+
+## Claude oculto — histórico e exportação da sessão nativa (#31, código)
+
+- Data: 2026-09-28. PR #51 (#29/#30) integrado por squash em `6b7fe2b`; este
+  recorte recomeçou o branch da sessão a partir da `main`.
+- A transcrição é a informada pelo próprio Claude em `transcript_path` dos
+  hooks, validada como `<id>.jsonl` regular sem symlink; o estado continua sem
+  caminho nem conteúdo. Na retomada, a Bee relê o ramo único pelo leitor Claude
+  existente e mostra até 200 linhas marcadas `↺`, com omissões, leitura parcial
+  ou ramos múltiplos informados; nada é reenviado. `Ctrl+E` prepara um pacote
+  v1 somente contexto com referência Git do projeto, prévia com linhas da
+  transcrição, avisos, omissões e segredos possíveis (texto oculto), exclusões
+  por linha, rolagem, e `Ctrl+S` grava em `<estado>/exports/` (0700) e roda
+  `verify`. Ao sair, a CLI imprime o comando de exportação posterior.
+- Evidências: testes de biblioteca (validação do caminho, histórico básico,
+  limite com omissão, transcrição truncada, ramos, exportação verificável,
+  destino não reutilizado, exclusão); teste unitário da TUI bloqueando possível
+  segredo até a exclusão da linha e sem vazar o token na prévia (o teste pegou um
+  vazamento na primeira versão da lista de registros, corrigido); teste PTY com
+  CLI falsa reportando `transcript_path`: exportação por `Ctrl+E`/`Ctrl+S`,
+  `memory-bee verify` do pacote, retomada com histórico e nenhum texto reenviado
+  ao Claude. Telas conferidas em emulador (`pyte`). Checks canônicos, scripts PTY
+  e `check_bundle.py` passaram localmente (Linux). Autorrevisão.
+- Limitações: sem Claude autenticado neste ambiente, a reidratação e a exportação
+  não foram ensaiadas com transcrição real (item 54; depende também de #25).
+  Exportação após o Claude encerrar é feita pela CLI `export`, não pela TUI.
+  Código selecionado (v2) não é oferecido na TUI.
+- Próximo: ensaios humanos 52 e 54; depois Codex real no workspace (ADR 0018).

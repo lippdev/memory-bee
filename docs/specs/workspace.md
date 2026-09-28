@@ -74,8 +74,23 @@ sessões, 64 KiB), sem transcrição. A pasta é 0700 e arquivos são 0600 em Un
 `claude-native.lock` impede segundo escritor. Após crash, verificar que não há
 processo ativo antes de remover a trava antiga. `--resume` usa o último ID desta
 pasta; não reenvia prompt. A sessão nativa pode não existir quando se sai antes
-de enviar uma mensagem. Exportação/revisão de memória, isolamento de perfis e
-integração Codex estão pendentes. O modo não comprova
+de enviar uma mensagem. Isolamento de perfis e integração Codex estão pendentes.
+
+**Histórico e exportação (#31).** A transcrição vem do campo `transcript_path`
+dos hooks oficiais; a Bee aceita só arquivo comum, sem symlink, chamado
+`<id-da-sessão>.jsonl`, e não guarda o caminho no estado. Na retomada, ao receber
+`SessionStart`, o leitor Claude existente relê o ramo único da transcrição e
+mostra até 200 linhas marcadas com `↺` (mensagens, nomes de ações e resumos de
+compactação), informando quantas ficaram só na transcrição, leitura parcial ou
+ramos múltiplos; nada é reenviado nem inventado. `Ctrl+E` abre a prévia da
+exportação somente contexto (pacote v1 com referência Git do projeto): destino
+novo em `<estado>/exports/` (0700), registros com a linha da transcrição, avisos,
+omissões e possíveis segredos, cujo texto fica oculto na prévia. O campo de
+exclusões aceita linhas separadas por vírgula (`Enter` aplica, setas/PgUp/PgDn
+rolam); `Ctrl+S` grava o pacote preparado e executa `verify`, recusando gravar
+enquanto houver possível segredo. Funciona durante a sessão, inclusive após
+erro, interrupção ou limite; ao sair, a CLI imprime o comando `memory-bee export
+<transcrição> --preview` para exportar depois. O modo não comprova
 conversa/permissões reais por si só; ver [roteiro manual](../MANUAL_TESTS.md).
 
 **Direção atual:** o mantenedor não quer ver a TUI original do Claude. O modo

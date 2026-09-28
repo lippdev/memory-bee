@@ -404,3 +404,81 @@ fn transport_uses_explicit_profile_and_bounds_invalid_frames() {
     fs::set_permissions(&home, fs::Permissions::from_mode(0o755)).unwrap();
     assert!(Transport::spawn(&fake, &home, &temp.0).is_err());
 }
+
+mod claude_transcript {
+    use super::Temp;
+    use memory_bee::{receive, workspace::claude_native as native};
+    use std::{collections::BTreeSet, fs, path::Path};
+    use uuid::Uuid;
+
+    fn copy(temp: &Temp, fixture: &str, id: Uuid) -> String {
+        let path = temp.0.join(format!("{id}.jsonl"));
+        fs::copy(
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("testdata/claude")
+                .join(fixture),
+            &path,
+        )
+        .unwrap();
+        path.to_str().unwrap().to_owned()
+    }
+
+    #[test]
+    fn only_the_reported_session_transcript_is_accepted() {
+        let temp = Temp::new();
+        let id = Uuid::new_v4();
+        let path = copy(&temp, "basic.jsonl", id);
+        assert!(native::transcript_path(&path, id).is_ok());
+        assert!(native::transcript_path(&path, Uuid::new_v4()).is_err());
+        assert!(native::transcript_path(&format!("{id}.jsonl"), id).is_err());
+        #[cfg(unix)]
+        {
+            let other = Uuid::new_v4();
+            let link = temp.0.join(format!("{other}.jsonl"));
+            std::os::unix::fs::symlink(&path, &link).unwrap();
+            assert!(native::transcript_path(link.to_str().unwrap(), other).is_err());
+        }
+    }
+
+    #[test]
+    fn history_is_read_back_without_inventing_or_hiding_losses() {
+        let temp = Temp::new();
+        let id = Uuid::new_v4();
+        let basic = copy(&temp, "basic.jsonl", id);
+        let history = native::history(Path::new(&basic), 200);
+        assert_eq!(history.lines.len(), 2);
+        assert!(history.lines[0].starts_with("Você: Adicione ordenação"));
+        assert!(history.lines[1].starts_with("Claude: "));
+        assert!(!history.partial && history.note.is_none() && history.omitted == 0);
+        let newest = native::history(Path::new(&basic), 1);
+        assert_eq!((newest.lines.len(), newest.omitted), (1, 1));
+        assert!(newest.lines[0].starts_with("Claude: "));
+
+        let truncated = copy(&temp, "truncated.jsonl", Uuid::new_v4());
+        let history = native::history(Path::new(&truncated), 200);
+        assert!(history.partial && history.note.is_some());
+
+        let branches = copy(&temp, "branches.jsonl", Uuid::new_v4());
+        let history = native::history(Path::new(&branches), 200);
+        assert!(history.lines.is_empty());
+        assert!(history.note.unwrap().contains("ramo"));
+    }
+
+    #[test]
+    fn native_session_exports_a_verifiable_context_bundle() {
+        let temp = Temp::new();
+        let transcript = copy(&temp, "tools.jsonl", Uuid::new_v4());
+        let prepared =
+            native::prepare_export(Path::new(&transcript), Some(&temp.0), BTreeSet::new()).unwrap();
+        assert!(prepared.findings().is_empty());
+        // Outside Git the reference is partial and says so; nothing is invented.
+        assert!(prepared.is_partial());
+        let out = temp.0.join("bundle");
+        prepared.write(&out).unwrap();
+        receive::verify(&out).unwrap();
+        assert!(prepared.write(&out).is_err(), "never reuses a destination");
+        let excluded =
+            native::prepare_export(Path::new(&transcript), None, BTreeSet::from([1])).unwrap();
+        assert!(excluded.history().lines().count() < prepared.history().lines().count());
+    }
+}

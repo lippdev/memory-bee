@@ -63,6 +63,45 @@ for line in sys.stdin:
         sys.exit(0)
 '''
 
+# Resumable session: reports its transcript through the official hook field.
+FAKE_HISTORY = r'''#!/usr/bin/env python3
+import json, os, shutil, subprocess, sys
+args = sys.argv[1:]
+resume = '--resume' in args
+session_id = args[args.index('--resume') + 1] if resume else args[args.index('--session-id') + 1]
+transcript = os.path.join(os.environ['BEE_TRANSCRIPTS'], session_id + '.jsonl')
+shutil.copy(os.environ['BEE_FIXTURE'], transcript)
+payload = json.dumps(dict(hook_event_name='SessionStart', session_id=session_id, transcript_path=transcript, source='resume' if resume else 'startup'))
+subprocess.run([os.environ['BEE_BINARY'], '__claude-hook'], input=payload, text=True, capture_output=True, check=True)
+for line in sys.stdin:
+    with open(os.environ['BEE_FAKE_STDIN'], 'a') as f:
+        f.write(line.strip() + '\n')
+    if line.strip() == '/exit':
+        sys.exit(0)
+'''
+
+
+def history_and_export(binary, project, state, env, resume):
+    master, slave, before, proc, output, until = spawn(binary, project, state, env, resume)
+    try:
+        if resume:
+            until(b'decrescente')  # Previous user message read back from the transcript.
+        else:
+            until(b'pronto')
+            os.write(master, b'\x05')  # Ctrl+E opens the export preview.
+            until(b'Destino')
+            os.write(master, b'\x13')  # Ctrl+S writes and verifies.
+            until(b'verificado')
+        os.write(master, b'\x11')
+        assert drain_until_exit(master, proc, output, 10) == 0
+        assert termios.tcgetattr(slave) == before
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+        os.close(master)
+        os.close(slave)
+
 
 def drain_until_exit(master, proc, output, seconds):
     """Keep reading while waiting: a full PTY buffer (small on macOS) would
@@ -79,11 +118,13 @@ def drain_until_exit(master, proc, output, seconds):
     return proc.returncode
 
 
-def spawn(binary, project, state, env):
+def spawn(binary, project, state, env, resume=False):
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 24, 80, 0, 0))
     before = termios.tcgetattr(slave)
     argv = [str(binary), 'workspace', '--claude', '--project', str(project), '--state', str(state), '--no-color']
+    if resume:
+        argv.append('--resume')
     proc = subprocess.Popen(argv, stdin=slave, stdout=slave, stderr=slave, env=env)
     output = bytearray()
 
@@ -227,7 +268,30 @@ def main():
         assert not stdin_log.exists(), 'Ctrl+Q typed into the native dialog'
         untrusted(binary, project, root / 'state-setup', env, False)
         assert stdin_log.read_text().splitlines() == ['1', '/exit']
-    print('PASS: Bee-only UI, hidden original output, hooks, deny/allow, Ctrl+Q denial, resume, blocked native setup via Ctrl+O, safe Ctrl+Q and terminal restoration')
+    with tempfile.TemporaryDirectory(prefix='bee-history-') as temp:
+        root = Path(temp)
+        fake_dir = root / 'bin'
+        fake_dir.mkdir()
+        fake = fake_dir / 'claude'
+        fake.write_text(FAKE_HISTORY)
+        fake.chmod(0o700)
+        project = root / 'project'
+        project.mkdir()
+        transcripts = root / 'transcripts'
+        transcripts.mkdir()
+        state = root / 'state'
+        stdin_log = root / 'stdin'
+        fixture = Path(__file__).resolve().parent.parent / 'testdata/claude/basic.jsonl'
+        env = dict(os.environ, PATH=f'{fake_dir}:/usr/bin:/bin', BEE_BINARY=str(binary), BEE_FAKE_STDIN=str(stdin_log), BEE_TRANSCRIPTS=str(transcripts), BEE_FIXTURE=str(fixture))
+        history_and_export(binary, project, state, env, False)
+        bundles = list((state / 'exports').iterdir())
+        assert len(bundles) == 1, bundles
+        verified = subprocess.run([str(binary), 'verify', str(bundles[0])], capture_output=True, text=True)
+        assert verified.returncode == 0, verified.stdout + verified.stderr
+        history_and_export(binary, project, state, env, True)
+        # History is shown from the transcript, never typed back into Claude.
+        assert stdin_log.read_text().splitlines() == ['/exit', '/exit']
+    print('PASS: Bee-only UI, hidden original output, hooks, deny/allow, Ctrl+Q denial, resume, blocked native setup via Ctrl+O, safe Ctrl+Q, history rehydration, verified export and terminal restoration')
 
 
 if __name__ == '__main__':
