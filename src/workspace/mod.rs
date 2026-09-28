@@ -2,6 +2,7 @@
 pub mod adapter;
 pub mod claude_native;
 pub mod codex;
+pub mod private;
 pub mod store;
 
 use serde::{Deserialize, Serialize};

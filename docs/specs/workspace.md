@@ -72,8 +72,8 @@ Em todos os casos, se o CLI não sair em cinco segundos, o processo é encerrado
 
 `claude-native.json` guarda projeto canônico, IDs e códigos de saída (até 128
 sessões, 64 KiB), sem transcrição. A pasta é 0700 e arquivos são 0600 em Unix;
-`claude-native.lock` impede segundo escritor. Após crash, verificar que não há
-processo ativo antes de remover a trava antiga. `--resume` usa o último ID desta
+`claude-native.lock` impede segundo escritor com trava do sistema, liberada até
+em `kill -9`; não há limpeza manual ([ADR 0019](../decisions/0019-state-lock-and-recovery.md)). `--resume` usa o último ID desta
 pasta; não reenvia prompt. A sessão nativa pode não existir quando se sai antes
 de enviar uma mensagem. Isolamento de perfis e integração Codex estão pendentes.
 
@@ -181,9 +181,12 @@ e eventos. Limites: 16 MiB, 128 sessões, 32 perfis, 100 mil eventos por sessão
 memória continua exportável. A sessão carregada como ativa é marcada interrompida,
 sem reexecutar/reencaminhar mensagens. Tema e rascunho não são persistidos.
 
-`workspace.lock` recusa segundo escritor. Após kill/crash, confirmar que não existe
-outro processo usando a pasta antes de remover manualmente a trava. `workspace.new`
-remanescente também exige inspeção manual; não apagar automaticamente. JSON inválido,
+`workspace.lock` recusa segundo escritor com trava do sistema, liberada quando o
+processo termina, inclusive por kill; o arquivo fica no disco e não exige remoção.
+Um `workspace.new` remanescente (escrita interrompida) é preservado como
+`workspace.new.recovered-<n>`, não é carregado, e a sessão registra o aviso; o
+último snapshot completo é o carregado. Gravações sincronizam arquivo e diretório
+([ADR 0019](../decisions/0019-state-lock-and-recovery.md)). JSON inválido,
 projeto diferente, versão desconhecida e symlink de estado são recusados sem
 substituir o arquivo original. Não é armazenamento cifrado nem trava de checkout.
 

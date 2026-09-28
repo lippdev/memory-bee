@@ -1707,6 +1707,12 @@ pub fn run_hidden(
     }
     let mut view = HiddenView::new(Instant::now());
     view.resume = resume;
+    if let Some(kept) = &store.recovered {
+        view.push(format!(
+            "Gravação anterior interrompida; estado completo carregado e parcial preservado em {}.",
+            kept.display()
+        ));
+    }
     let mut status = None;
     let mut quit_at = None;
     let mut dirty = true;

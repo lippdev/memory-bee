@@ -97,7 +97,9 @@ fn store_refuses_foreign_project_and_preserves_malformed_data() {
     let (store, _) = Store::open(&path, "/one", Agent::Claude).unwrap();
     drop(store);
     assert!(Store::open(&path, "/two", Agent::Codex).is_err());
-    assert!(!path.join("workspace.lock").exists());
+    // The lock file stays, but closing the store released it.
+    assert!(path.join("workspace.lock").exists());
+    drop(Store::open(&path, "/one", Agent::Claude).unwrap());
     fs::write(path.join("workspace.json"), "bad data").unwrap();
     assert!(Store::open(&path, "/one", Agent::Codex).is_err());
     assert_eq!(
@@ -481,4 +483,34 @@ mod claude_transcript {
             native::prepare_export(Path::new(&transcript), None, BTreeSet::from([1])).unwrap();
         assert!(excluded.history().lines().count() < prepared.history().lines().count());
     }
+}
+
+#[test]
+fn store_recovers_after_a_killed_writer_without_losing_data() {
+    let temp = Temp::new();
+    let path = temp.0.join("state");
+    let (store, state) = Store::open(&path, "/one", Agent::Claude).unwrap();
+    let busy = Store::open(&path, "/one", Agent::Claude).err().unwrap();
+    assert!(busy.contains("em uso"), "{busy}");
+    drop(store);
+    // A kill between writing the temporary file and renaming it.
+    fs::write(path.join("workspace.new"), "partial").unwrap();
+    let before = fs::read(path.join("workspace.json")).unwrap();
+    let (_store, reopened) = Store::open(&path, "/one", Agent::Claude).unwrap();
+    assert_eq!(reopened.sessions.len(), state.sessions.len());
+    let kept: Vec<_> = fs::read_dir(&path)
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            e.file_name()
+                .to_string_lossy()
+                .starts_with("workspace.new.recovered-")
+        })
+        .collect();
+    assert_eq!(kept.len(), 1);
+    assert_eq!(fs::read_to_string(kept[0].path()).unwrap(), "partial");
+    assert!(!path.join("workspace.new").exists());
+    let notice = serde_json::to_string(&reopened.current().events).unwrap();
+    assert!(notice.contains("arquivo parcial preservado"), "{notice}");
+    assert_ne!(fs::read(path.join("workspace.json")).unwrap(), before);
 }

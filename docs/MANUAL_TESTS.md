@@ -777,10 +777,10 @@ permitir consultar a origem intacta. Perfil não autentica nem modifica conta re
 
 Sair e executar o mesmo comando: histórico reaparece sem reenviar mensagens.
 Segundo processo com mesma pasta deve recusar. Para simular crash, usar apenas
-estado descartável e encerrar seu processo abruptamente: conferir que não resta
-processo, inspecionar/remover manualmente `workspace.lock`, reabrir e verificar
-interrupção registrada. `workspace.new` remanescente também requer inspeção;
-não remover arquivos de outra sessão. Corrupção de JSON e projeto diferente devem
+estado descartável e encerrar seu processo com `kill -9`: reabrir sem remover
+nada e verificar a interrupção registrada. Criar um `workspace.new` qualquer na
+pasta antes de reabrir: ele deve virar `workspace.new.recovered-<n>` e a sessão
+mostrar o aviso, com o último estado completo carregado. Corrupção de JSON e projeto diferente devem
 recusar preservando os bytes originais. Rascunho/tema não são restaurados.
 
 ## 48. Exportar a simulação e revisar origem (pendente)

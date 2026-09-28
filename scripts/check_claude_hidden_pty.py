@@ -12,6 +12,13 @@ import tempfile
 import termios
 import time
 
+def assert_unlocked(path):
+    """The lock file stays on disk; the process must have released it."""
+    with open(path) as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fcntl.flock(handle, fcntl.LOCK_UN)
+
+
 
 FAKE = r'''#!/usr/bin/env python3
 import json, os, signal, subprocess, sys
@@ -229,7 +236,7 @@ def untrusted(binary, project, state, env, quit_while_blocked):
             drain_until_exit(master, proc, output, 10)
             assert proc.returncode == 0, proc.returncode
         assert termios.tcgetattr(slave) == before
-        assert not (state / 'claude-native.lock').exists()
+        assert_unlocked(state / 'claude-native.lock')
     finally:
         if proc.poll() is None:
             proc.kill()
@@ -278,7 +285,7 @@ def run(binary, project, state, env, resume, decision):
         assert proc.returncode == 0, proc.returncode
         assert b'CLAUDE ORIGINAL SHOULD STAY HIDDEN' not in output
         assert termios.tcgetattr(slave) == before
-        assert not (state / 'claude-native.lock').exists()
+        assert_unlocked(state / 'claude-native.lock')
     finally:
         if proc.poll() is None:
             proc.kill()
@@ -353,6 +360,21 @@ def main():
         history_and_export(binary, project, state, env, True)
         # History is shown from the transcript, never typed back into Claude.
         assert stdin_log.read_text().splitlines() == ['/exit', '/exit']
+        # A killed Bee leaves its lock file and a partial write behind; the
+        # next start needs no manual cleanup and keeps the partial file aside.
+        master, slave, _, proc, output, until = spawn(binary, project, state, env, True)
+        try:
+            until(b'decrescente')
+            proc.kill()
+            proc.wait()
+        finally:
+            os.close(master)
+            os.close(slave)
+        (state / 'claude-native.new').write_text('partial')
+        history_and_export(binary, project, state, env, True)
+        kept = [p for p in state.iterdir() if p.name.startswith('claude-native.new.recovered-')]
+        assert len(kept) == 1 and kept[0].read_text() == 'partial'
+        assert json.loads((state / 'claude-native.json').read_text())['sessions']
     with tempfile.TemporaryDirectory(prefix='bee-editor-') as temp:
         root = Path(temp)
         fake_dir = root / 'bin'
@@ -365,7 +387,7 @@ def main():
         env = dict(os.environ, PATH=f'{fake_dir}:/usr/bin:/bin', BEE_BINARY=str(binary), BEE_FAKE_STDIN=str(root / 'stdin'))
         editor(binary, project, root / 'state-a', dict(env, BEE_BRACKETED='1'), (24, 80), True)
         editor(binary, project, root / 'state-b', env, (12, 40), False)  # Documented minimum width.
-    print('PASS: Bee-only UI, hidden original output, hooks, deny/allow, Ctrl+Q denial, resume, blocked native setup via Ctrl+O, safe Ctrl+Q, history rehydration, verified export, multiline editor, scrolling, 40-column controls and terminal restoration')
+    print('PASS: Bee-only UI, hidden original output, hooks, deny/allow, Ctrl+Q denial, resume, blocked native setup via Ctrl+O, safe Ctrl+Q, history rehydration, verified export, multiline editor, scrolling, 40-column controls, recovery after kill and terminal restoration')
 
 
 if __name__ == '__main__':

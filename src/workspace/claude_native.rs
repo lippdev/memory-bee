@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeSet,
-    fs::{self, File, OpenOptions},
-    io::{Read, Write},
+    fs::{self, File},
+    io::Read,
     path::{Path, PathBuf},
 };
 use uuid::Uuid;
@@ -45,47 +45,22 @@ impl ClaudeState {
 
 pub struct ClaudeStore {
     root: PathBuf,
-}
-
-fn private_new(path: &Path) -> Result<File, String> {
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    options.open(path).map_err(|e| e.to_string())
+    _lock: super::private::Lock,
+    /// Interrupted write found on open, kept aside and not loaded.
+    pub recovered: Option<PathBuf>,
 }
 
 impl ClaudeStore {
     pub fn open(root: &Path, project: &Path) -> Result<(Self, ClaudeState), String> {
-        if !root.exists() {
-            let mut builder = fs::DirBuilder::new();
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::DirBuilderExt;
-                builder.mode(0o700);
-            }
-            builder.create(root).map_err(|e| e.to_string())?;
-        }
-        let metadata = fs::symlink_metadata(root).map_err(|e| e.to_string())?;
-        if !metadata.is_dir() || metadata.file_type().is_symlink() {
-            return Err("Estado exige pasta real, sem symlink".into());
-        }
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            if metadata.permissions().mode() & 0o077 != 0 {
-                return Err("Pasta de estado deve ter permissão 0700".into());
-            }
-        }
-        let root = root.canonicalize().map_err(|e| e.to_string())?;
+        let root = super::private::directory(root)?;
         let project = project.to_str().ok_or("Projeto deve ser UTF-8")?;
-        let store = Self { root };
-        let mut lock = private_new(&store.root.join("claude-native.lock"))
-            .map_err(|_| "Estado Claude em uso ou trava antiga presente. Confirme que não há processo ativo antes de remover claude-native.lock.")?;
-        writeln!(lock, "{}", std::process::id()).map_err(|e| e.to_string())?;
+        let lock = super::private::Lock::acquire(&root, "claude-native.lock")?;
+        let recovered = super::private::recover(&root, "claude-native.new")?;
+        let store = Self {
+            root,
+            _lock: lock,
+            recovered,
+        };
         let path = store.root.join("claude-native.json");
         let state = match fs::symlink_metadata(&path) {
             Ok(meta) => {
@@ -152,26 +127,14 @@ impl ClaudeStore {
         if bytes.len() as u64 > MAX_BYTES {
             return Err("Estado Claude excede 64 KiB".into());
         }
-        let temp = self.root.join("claude-native.new");
-        let mut file =
-            private_new(&temp).map_err(|_| "claude-native.new já existe; original preservado")?;
-        let result = file
-            .write_all(&bytes)
-            .and_then(|()| file.sync_all())
-            .and_then(|()| fs::rename(&temp, self.root.join("claude-native.json")));
-        if let Err(e) = result {
-            let _ = fs::remove_file(&temp);
-            return Err(e.to_string());
-        }
-        Ok(())
+        super::private::write_atomic(
+            &self.root,
+            "claude-native.new",
+            "claude-native.json",
+            &bytes,
+        )
     }
 }
-impl Drop for ClaudeStore {
-    fn drop(&mut self) {
-        let _ = fs::remove_file(self.root.join("claude-native.lock"));
-    }
-}
-
 /// Transcript reported by Claude's own `SessionStart` hook. Only a regular,
 /// non-symlink `<session-id>.jsonl` is accepted; nothing is guessed.
 pub fn transcript_path(reported: &str, id: Uuid) -> Result<PathBuf, String> {
