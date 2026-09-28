@@ -26,7 +26,9 @@ sintéticas. Etapa 03 implementada para exportação somente de contexto, com pr
 exclusões e manifesto v1. Validação manual e compatibilidade real pendentes. Etapa
 04 iniciada: `export --project <pasta>` registra referência Git local; `--include-path <arquivo>` inclui alterações textuais selecionadas em pacote v2. `verify` confere pacotes e `apply --check` / `--write` verifica ou aplica explicitamente em checkout limpo com base exata. Etapa 06 em andamento: `dashboard`
 implementado com lista, detalhe, exportação de contexto, aplicação de pacotes e
-retomada confirmada; cena animada e ensaios humanos pendentes.
+retomada confirmada; a TUI unificada tem demo e um modo Claude real experimental
+(abaixo). Cena animada, Codex real no workspace e ensaios humanos pendentes;
+situação detalhada em [docs/EXECUTION.md](docs/EXECUTION.md).
 
 ```sh
 cargo run --locked -- inspect testdata/claude/basic.jsonl
@@ -83,13 +85,18 @@ cargo run --locked -- workspace --claude --project . --state /tmp/bee-claude-sta
 cargo run --locked -- workspace --claude --project . --state /tmp/bee-claude-state --resume
 ```
 
-Enter envia mensagem, `Ctrl+C` interrompe e `Ctrl+Q` sai. Quando Claude pedir
-permissão, `y` permite uma vez e `n` nega; sem resposta a ponte nega.
-A pasta privada guarda apenas IDs de sessão e códigos de saída, enquanto o Claude
-mantém a conversa nativa. A interface antiga dentro da moldura continua disponível
-para diagnóstico com `--claude-terminal`. A nova tela Bee é funcional, mas ainda
-experimental: exportação integrada, perfis isolados, histórico completo na tela
-e refinamento visual continuam pendentes. Contrato e teclas em
+Enter envia; `Alt+Enter` (ou `Ctrl+J`) quebra linha e a colagem nunca é enviada
+sozinha. `PgUp`/`PgDn` rolam a conversa, `Esc` volta ao fim, `Ctrl+C` interrompe e
+`Ctrl+Q` sai sem digitar em diálogos nativos. Quando Claude pedir permissão, `y`
+permite uma vez e `n` nega; sem resposta em 85 s a ponte nega. Cada ação mostra se
+foi aprovada na Bee ou liberada pelas regras do próprio Claude. Telas nativas sem
+evento (confiança, login) são sinalizadas e concluídas com `Ctrl+O`. Na retomada,
+o histórico é relido da transcrição do Claude sem reenviar nada; `Ctrl+E` prevê e
+exporta a sessão como pacote verificável. A pasta privada guarda apenas IDs e
+códigos de saída, com trava liberada até em `kill -9`. A interface antiga dentro
+da moldura continua disponível para diagnóstico com `--claude-terminal`. Tudo isso
+é experimental e só foi provado com CLI falsa: ensaio com conta real, perfis
+isolados e refinamento visual continuam pendentes. Contrato e teclas em
 [workspace](docs/specs/workspace.md). O lançamento da experiência completa com
 Claude e Codex segue condicionado aos aceites do [ADR 0018](docs/decisions/0018-unified-workspace.md).
 O dashboard anterior permanece disponível.
