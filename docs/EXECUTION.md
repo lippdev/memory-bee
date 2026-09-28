@@ -75,8 +75,9 @@ rejeitou a exibição da tela nativa do Claude. `workspace --claude` agora hospe
 a CLI interativa em PTY oculto e usa hooks para mostrar texto, ações e permissões
 na Bee. Uma resposta real curta foi recebida na UI; negação/aprovação e retomada
 foram testadas com CLI falsa. Prompts nativos sem hook agora são detectados e
-concluídos por `Ctrl+O` ([#29](https://github.com/lippdev/memory-bee/issues/29)).
-Próximo: prova de ferramentas/permissões reais
+concluídos por `Ctrl+O` ([#29](https://github.com/lippdev/memory-bee/issues/29)),
+e a Bee distingue ações aprovadas por ela das liberadas pelo próprio Claude.
+Próximo: ensaio humano de ferramentas/permissões reais
 ([#30](https://github.com/lippdev/memory-bee/issues/30)) e histórico/exportação
 revisável ([#31](https://github.com/lippdev/memory-bee/issues/31)).
 O modo ainda guarda só IDs; perfis reais e Codex integrado seguem pendentes.
@@ -783,4 +784,27 @@ escopo da entrega atual nem a próxima tarefa aprovada.
   sem revisão independente.
 - Próximo: [#30](https://github.com/lippdev/memory-bee/issues/30) (ferramentas e
   permissões reais) e [#31](https://github.com/lippdev/memory-bee/issues/31)
+  (histórico e exportação da sessão Claude).
+
+## Claude oculto — origem das ações e expiração (#30, parcial)
+
+- Data: 2026-09-28, mesmo branch e PR #51. Parte de código da issue #30.
+- Não houve ensaio real de ferramentas: o Claude Code deste ambiente não está
+  autenticado e a Memory Bee não usa credenciais que não sejam do login próprio
+  do CLI. O ensaio real (leitura, edição, Bash, permitir/negar, interrupção e
+  retomada) continua no item 52 do roteiro, para o mantenedor.
+- Lacunas corrigidas: (1) o resultado de cada ferramenta diz se foi aprovado na
+  Bee ou liberado pelas regras/modo do próprio Claude, sem afirmar aprovação que
+  o CLI não pediu; associação por `tool_use_id` ou nome+entrada, com número de
+  sequência estável. (2) Um pedido sem resposta ficava aberto após o hook negar
+  em 90 s, e um `y` tardio mostrava "concedida"; agora o painel fecha em 85 s
+  com registro de negação, e resposta não entregue é informada como não
+  aprovada. Pedido concorrente é negado com registro.
+- Evidências: testes unitários de origem, pedido antigo concluindo durante a
+  revisão, expiração, pedido concorrente e aprovação tardia; teste PTY com CLI
+  falsa emitindo leitura sem pedido e Bash com pedido. Checks canônicos, quatro
+  scripts PTY e `check_bundle.py` passaram localmente (Linux). Autorrevisão.
+- Limitação: a presença de `tool_use_id` no `PermissionRequest` real não foi
+  confirmada; sem ele a associação usa nome e entrada exatos.
+- Próximo: ensaio humano do item 52 para fechar #29/#30 e, em código, #31
   (histórico e exportação da sessão Claude).

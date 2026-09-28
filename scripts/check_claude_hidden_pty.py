@@ -32,9 +32,16 @@ hook('SessionStart')
 prompt = sys.stdin.readline().strip()
 hook('UserPromptSubmit', prompt=prompt)
 hook('MessageDisplay', delta='resposta sintetica', final=True, index=0)
+# Read allowed by Claude's own rules: no PermissionRequest.
+hook('PreToolUse', tool_name='Read', tool_use_id='r1', tool_input={'file_path':'README.md'})
+hook('PostToolUse', tool_name='Read', tool_use_id='r1', tool_input={'file_path':'README.md'})
+hook('PreToolUse', tool_name='Bash', tool_use_id='b1', tool_input={'command':'echo synthetic'})
 decision = json.loads(hook('PermissionRequest', tool_name='Bash', tool_input={'command':'echo synthetic'}))
+behavior = decision['hookSpecificOutput']['decision']['behavior']
 with open(os.environ['BEE_DECISIONS'], 'a') as f:
-    f.write(decision['hookSpecificOutput']['decision']['behavior'] + '\n')
+    f.write(behavior + '\n')
+if behavior == 'allow':
+    hook('PostToolUse', tool_name='Bash', tool_use_id='b1', tool_input={'command':'echo synthetic'})
 hook('Stop')
 '''
 
@@ -143,6 +150,9 @@ def run(binary, project, state, env, resume, decision):
         until(b'Permitir esta')
         os.write(master, decision.encode())
         until(b'sintetica')
+        until(b'regras')  # Read ran without a request: Claude's rules, not the Bee.
+        if decision == 'y':
+            until(b'aprovada')
         try:
             proc.wait(timeout=20)
         except subprocess.TimeoutExpired as exc:

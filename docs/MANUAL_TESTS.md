@@ -889,6 +889,11 @@ solicitação, verificar que `n` nega e `y` permite somente a ação exibida.
 Testar `Ctrl+C`, colagem, resize, `Ctrl+Q`, retomada e restauração do terminal.
 Com permissão pendente, conferir que outra tecla não decide e que `Ctrl+C` ou
 `Ctrl+Q` negam antes de interromper ou sair.
+Para cada ação, conferir a origem mostrada no resultado: ações que o Claude já
+permite (por exemplo, leitura) devem aparecer "sem pedido de permissão"; somente
+ações aprovadas com `y` aparecem como "aprovada por você na Bee". Deixar um
+pedido sem resposta por 85 s e conferir "Pedido expirou sem resposta e foi
+negado" e que a ação não ocorreu.
 Confirmar que a sessão continua acessível no Claude original. Registrar versão
 e resultados, sem copiar dados reais da conversa para o repositório.
 
@@ -910,6 +915,7 @@ ensaio humano. Exportação integrada e perfis reais ainda pendentes.
 | Item novo | Estado | Evidência manual |
 |---|---|---|
 | 52: UI Bee sobre Claude real oculto, ferramentas, permissões e retomada | Pendente | — |
+| 52: origem das ações (regra do Claude × aprovação Bee) e expiração negada | Pendente | — |
 | 52: prompts nativos sem hook — confiança/login via `Ctrl+O` e `Ctrl+Q` seguro | Pendente | Agente observou só a configuração inicial de um Claude sem login (2026-09-28); não é ensaio humano |
 
 ## 53. Revisão do Pullfrog em PR (pendente)

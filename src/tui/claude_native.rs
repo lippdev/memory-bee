@@ -508,6 +508,14 @@ pub fn run(
     Ok((id, code))
 }
 
+/// The hook denies a request left unanswered this long.
+#[cfg(unix)]
+const PERMISSION_TIMEOUT: Duration = Duration::from_secs(90);
+/// The Bee closes the review a little earlier, so a late `y` never reaches
+/// a hook that has already denied.
+#[cfg(unix)]
+const PERMISSION_REVIEW: Duration = Duration::from_secs(85);
+
 #[cfg(unix)]
 struct BridgeEvent {
     value: serde_json::Value,
@@ -599,9 +607,7 @@ fn handle_hook_connection(mut stream: UnixStream, tx: mpsc::Sender<BridgeEvent>)
         {
             return;
         }
-        let allowed = reply_rx
-            .recv_timeout(Duration::from_secs(90))
-            .unwrap_or(false);
+        let allowed = reply_rx.recv_timeout(PERMISSION_TIMEOUT).unwrap_or(false);
         let decision = if allowed {
             serde_json::json!({"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}).to_string()
         } else {
@@ -700,10 +706,62 @@ fn native_hint(screen: &str) -> &'static str {
 }
 
 #[cfg(unix)]
+struct Pending {
+    request: String,
+    reply: mpsc::Sender<bool>,
+    /// `ToolCall::seq`, stable while older calls are dropped.
+    tool: Option<u64>,
+    since: Instant,
+}
+
+#[cfg(unix)]
+struct ToolCall {
+    seq: u64,
+    id: Option<String>,
+    name: String,
+    input: serde_json::Value,
+    /// `None`: Claude never asked; `Some(false)`: asked and not approved.
+    approved: Option<bool>,
+}
+
+/// One-line hint of what a tool touches; the review panel shows everything.
+#[cfg(unix)]
+fn tool_summary(input: &serde_json::Value) -> String {
+    let value = [
+        "command",
+        "file_path",
+        "path",
+        "pattern",
+        "url",
+        "description",
+    ]
+    .iter()
+    .find_map(|key| input[*key].as_str())
+    .unwrap_or("");
+    let line: String = value
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .chars()
+        .take(72)
+        .collect();
+    if line.is_empty() {
+        String::new()
+    } else if value.chars().count() > 72 {
+        format!(" · {line}…")
+    } else {
+        format!(" · {line}")
+    }
+}
+
+#[cfg(unix)]
 struct HiddenView {
     lines: Vec<String>,
     input: String,
-    pending: Option<(String, mpsc::Sender<bool>)>,
+    pending: Option<Pending>,
+    /// Recent tool calls, to tell Bee approvals from Claude's own rules.
+    tools: Vec<ToolCall>,
+    next_tool: u64,
     ready: bool,
     quitting: bool,
     /// Explicitly opened original screen, only to finish setup or diagnose.
@@ -724,6 +782,8 @@ impl HiddenView {
             lines: vec!["Iniciando Claude Code em segundo plano…".into()],
             input: String::new(),
             pending: None,
+            tools: Vec::new(),
+            next_tool: 0,
             ready: false,
             quitting: false,
             native: false,
@@ -742,6 +802,14 @@ impl HiddenView {
     }
     /// Detects missing progress. Returns true when the view changed.
     fn check_stall(&mut self, now: Instant, screen: impl FnOnce() -> String) -> bool {
+        if self
+            .pending
+            .as_ref()
+            .is_some_and(|p| now.duration_since(p.since) >= PERMISSION_REVIEW)
+        {
+            self.decide(false, true);
+            return true;
+        }
         if !self.ready && !self.quitting && now.duration_since(self.started) >= SETUP_STALL {
             let hint = native_hint(&screen());
             if self.blocked == Some(hint) {
@@ -776,6 +844,37 @@ impl HiddenView {
         self.turn = Some(now);
         self.turn_hinted = false;
     }
+    /// Matches a hook to its `PreToolUse` by ID, else by name and input.
+    fn find_tool(&self, value: &serde_json::Value) -> Option<usize> {
+        if let Some(id) = value["tool_use_id"].as_str()
+            && let Some(i) = self.tools.iter().rposition(|t| t.id.as_deref() == Some(id))
+        {
+            return Some(i);
+        }
+        let name = value["tool_name"].as_str()?;
+        self.tools
+            .iter()
+            .rposition(|t| t.name == name && t.input == value["tool_input"])
+    }
+    /// Answers the pending request. The message states only what the hook
+    /// actually received: an expired request was denied, never approved.
+    fn decide(&mut self, allow: bool, expired: bool) {
+        let Some(pending) = self.pending.take() else {
+            return;
+        };
+        let delivered = !expired && pending.reply.send(allow).is_ok();
+        let approved = allow && delivered;
+        if let Some(call) = self.tools.iter_mut().find(|t| Some(t.seq) == pending.tool) {
+            call.approved = Some(approved);
+        }
+        self.push(if !delivered {
+            "Pedido expirou sem resposta e foi negado; nada foi aprovado."
+        } else if approved {
+            "Você permitiu esta ação uma vez."
+        } else {
+            "Você negou esta ação."
+        });
+    }
     fn receive(&mut self, event: BridgeEvent, id: Uuid, now: Instant) {
         if event.value["session_id"].as_str() != Some(&id.to_string()) {
             if let Some(reply) = event.reply {
@@ -802,31 +901,70 @@ impl HiddenView {
                     }
                 }
             }
-            "PreToolUse" => self.push(format!(
-                "Ação: {}",
-                event.value["tool_name"].as_str().unwrap_or("desconhecida")
-            )),
-            "PostToolUse" => self.push(format!(
-                "Concluído: {}",
-                event.value["tool_name"].as_str().unwrap_or("ação")
-            )),
-            "PostToolUseFailure" => self.push(format!(
-                "Falhou: {}",
-                event.value["tool_name"].as_str().unwrap_or("ação")
-            )),
+            "PreToolUse" => {
+                let name = event.value["tool_name"].as_str().unwrap_or("desconhecida");
+                self.push(format!(
+                    "Ação: {name}{}",
+                    tool_summary(&event.value["tool_input"])
+                ));
+                if self.tools.len() >= 64 {
+                    self.tools.remove(0);
+                }
+                self.next_tool += 1;
+                self.tools.push(ToolCall {
+                    seq: self.next_tool,
+                    id: event.value["tool_use_id"].as_str().map(String::from),
+                    name: name.into(),
+                    input: event.value["tool_input"].clone(),
+                    approved: None,
+                });
+            }
+            name @ ("PostToolUse" | "PostToolUseFailure") => {
+                let tool = event.value["tool_name"].as_str().unwrap_or("ação");
+                let origin = match self.find_tool(&event.value).map(|i| self.tools.remove(i)) {
+                    Some(ToolCall {
+                        approved: Some(true),
+                        ..
+                    }) => "aprovada por você na Bee, uma vez",
+                    Some(ToolCall {
+                        approved: Some(false),
+                        ..
+                    }) => "atenção: o pedido não foi aprovado na Bee",
+                    _ => "sem pedido de permissão; liberada pelas regras ou modo do próprio Claude",
+                };
+                let verb = if name == "PostToolUse" {
+                    "Concluído"
+                } else {
+                    "Falhou"
+                };
+                self.push(format!("{verb}: {tool} ({origin})"));
+            }
             "PermissionRequest" => {
                 let name = event.value["tool_name"].as_str().unwrap_or("ação");
                 let details = serde_json::to_string_pretty(&event.value["tool_input"])
                     .unwrap_or_else(|_| "<entrada inválida>".into());
                 let request = format!("Ferramenta: {name}\nEntrada completa:\n{details}");
-                self.push(format!("Permissão solicitada: {name}"));
+                self.push(format!("Claude pediu permissão: {name}"));
+                let tool = self.find_tool(&event.value);
+                let seq = tool.map(|i| self.tools[i].seq);
                 if let Some(reply) = event.reply {
                     if self.pending.is_some() {
                         let _ = reply.send(false);
+                        self.push(format!(
+                            "Negado: {name} (outro pedido já aguardava revisão)"
+                        ));
+                        if let Some(i) = tool {
+                            self.tools[i].approved = Some(false);
+                        }
                     } else {
                         // Decisions are always reviewed in the Bee panel.
                         self.native = false;
-                        self.pending = Some((request, reply));
+                        self.pending = Some(Pending {
+                            request,
+                            reply,
+                            tool: seq,
+                            since: now,
+                        });
                     }
                 }
             }
@@ -929,7 +1067,7 @@ fn draw_hidden(frame: &mut Frame, view: &HiddenView, mode: Mode, no_color: bool)
             .style(Style::default().bg(bg)),
         rows[3],
     );
-    if let Some((request, _)) = &view.pending {
+    if let Some(Pending { request, .. }) = &view.pending {
         let modal = Rect::new(
             2,
             2,
@@ -1114,9 +1252,9 @@ pub fn run_hidden(
                 {
                     let control = key.modifiers.contains(KeyModifiers::CONTROL);
                     if control && key.code == KeyCode::Char('q') {
-                        if let Some((_, reply)) = view.pending.take() {
-                            let _ = reply.send(false);
-                            view.push("Permissão negada ao sair.");
+                        if view.pending.is_some() {
+                            view.decide(false, false);
+                            view.push("Negada ao sair.");
                         }
                         if view.quitting {
                             // Already leaving; the 5 s fallback still applies.
@@ -1148,9 +1286,9 @@ pub fn run_hidden(
                             pty.write(&bytes)?;
                         }
                     } else if control && key.code == KeyCode::Char('c') {
-                        if let Some((_, reply)) = view.pending.take() {
-                            let _ = reply.send(false);
-                            view.push("Permissão negada ao interromper.");
+                        if view.pending.is_some() {
+                            view.decide(false, false);
+                            view.push("Negada ao interromper.");
                         }
                         pty.write(&[3])?;
                         view.push("Interrupção enviada ao Claude.");
@@ -1160,16 +1298,12 @@ pub fn run_hidden(
                             .modifiers
                             .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT)
                     {
-                        let (request, reply) = view.pending.take().expect("checked pending");
                         let size = terminal.size().map_err(|e| e.to_string())?;
-                        let allow = key.code == KeyCode::Char('y')
-                            && approval_fits(&request, size.width, size.height);
-                        let _ = reply.send(allow);
-                        view.push(if allow {
-                            "Permissão concedida uma vez."
-                        } else {
-                            "Permissão negada."
-                        });
+                        let fits = view
+                            .pending
+                            .as_ref()
+                            .is_some_and(|p| approval_fits(&p.request, size.width, size.height));
+                        view.decide(key.code == KeyCode::Char('y') && fits, false);
                     } else if view.pending.is_none() && view.ready && !view.quitting {
                         match key.code {
                             KeyCode::Char(c) if !control => view.input.push(c),
@@ -1212,9 +1346,7 @@ pub fn run_hidden(
             }
         }
     }
-    if let Some((_, reply)) = view.pending.take() {
-        let _ = reply.send(false);
-    }
+    view.decide(false, false);
     let code = status.unwrap_or(1);
     store.finish(&mut state, id, code)?;
     Ok((id, code))
@@ -1303,6 +1435,67 @@ mod tests {
         assert!(!view.check_stall(start + Duration::from_secs(60), String::new));
         view.receive(hook("Stop"), id, start + Duration::from_secs(61));
         assert!(view.turn.is_none() && view.exit_by_command());
+    }
+    #[cfg(unix)]
+    #[test]
+    fn tool_results_state_who_allowed_them() {
+        let start = Instant::now();
+        let id = Uuid::new_v4();
+        let mut view = HiddenView::new(start);
+        let event = |fields: serde_json::Value| {
+            let mut value = fields;
+            value["session_id"] = id.to_string().into();
+            BridgeEvent { value, reply: None }
+        };
+        let bash = serde_json::json!({"command": "touch ok"});
+        view.receive(event(serde_json::json!({"hook_event_name": "PreToolUse", "tool_name": "Read", "tool_use_id": "r1", "tool_input": {"file_path": "a.txt"}})), id, start);
+        view.receive(event(serde_json::json!({"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_use_id": "b1", "tool_input": bash})), id, start);
+        let (tx, rx) = mpsc::channel();
+        let mut request = event(
+            serde_json::json!({"hook_event_name": "PermissionRequest", "tool_name": "Bash", "tool_input": bash}),
+        );
+        request.reply = Some(tx);
+        view.receive(request, id, start);
+        // An older call finishing must not disturb the pending review.
+        view.receive(event(serde_json::json!({"hook_event_name": "PostToolUse", "tool_name": "Read", "tool_use_id": "r1"})), id, start);
+        assert!(
+            view.lines
+                .last()
+                .unwrap()
+                .contains("sem pedido de permissão")
+        );
+        view.decide(true, false);
+        assert!(rx.recv().unwrap());
+        view.receive(event(serde_json::json!({"hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_use_id": "b1"})), id, start);
+        assert!(view.lines.last().unwrap().contains("aprovada por você"));
+        assert!(view.lines.iter().any(|l| l == "Ação: Bash · touch ok"));
+    }
+    #[cfg(unix)]
+    #[test]
+    fn expired_or_orphaned_requests_are_reported_as_denied() {
+        let start = Instant::now();
+        let id = Uuid::new_v4();
+        let mut view = HiddenView::new(start);
+        let request = |reply| BridgeEvent {
+            value: serde_json::json!({"hook_event_name": "PermissionRequest", "session_id": id.to_string(), "tool_name": "Bash", "tool_input": {"command": "rm x"}}),
+            reply: Some(reply),
+        };
+        let (tx, rx) = mpsc::channel();
+        view.receive(request(tx), id, start);
+        let (second, denied) = mpsc::channel();
+        view.receive(request(second), id, start);
+        assert!(!denied.recv().unwrap());
+        assert!(view.check_stall(start + PERMISSION_REVIEW, String::new));
+        assert!(view.pending.is_none());
+        assert!(view.lines.last().unwrap().contains("expirou"));
+        drop(rx);
+        // The hook already gave up: a late approval is reported as denied.
+        let (tx, rx) = mpsc::channel();
+        view.receive(request(tx), id, start);
+        drop(rx);
+        view.decide(true, false);
+        assert!(view.lines.last().unwrap().contains("nada foi aprovado"));
+        assert!(PERMISSION_REVIEW < PERMISSION_TIMEOUT);
     }
     #[cfg(unix)]
     #[test]

@@ -37,6 +37,15 @@ Esc não decidem a permissão.
 O painel mostra o `tool_input` completo; quando não cabe para revisão, `y` também
 nega.
 
+Cada ação aparece com um resumo (`Ação: Bash · <comando>`). O resultado informa a
+origem: "aprovada por você na Bee, uma vez" somente quando houve
+`PermissionRequest` e o hook recebeu `allow`; ações sem pedido aparecem como
+"sem pedido de permissão; liberada pelas regras ou modo do próprio Claude". A
+associação usa `tool_use_id` e, na falta dele, nome e entrada da ferramenta. O
+painel fecha em 85 s, antes do limite de 90 s do hook, e registra que o pedido
+expirou negado; um segundo pedido enquanto outro aguarda é negado e registrado.
+Se a resposta não chegar ao hook, a Bee informa que nada foi aprovado.
+
 Telas nativas sem hook (login, confiança do projeto, configuração inicial ou
 outro diálogo) são detectadas pela ausência de progresso: sem `SessionStart` em
 5 s, a Bee informa que o Claude aguarda uma ação no terminal original e nomeia o
