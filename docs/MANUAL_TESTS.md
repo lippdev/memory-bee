@@ -932,3 +932,23 @@ não contar esta seção como executada pelo resultado de CI deste ajuste.
 | Item novo | Estado | Evidência manual |
 |---|---|---|
 | 53: revisão inicial, incremental e rascunho | Pendente | — |
+
+## 54. Histórico e exportação do Claude oculto (pendente)
+
+Em um projeto descartável já confiado, com Git, conversar com
+`workspace --claude` (inclua uma leitura e uma execução), sair com `Ctrl+Q` e
+retomar com `--resume`. Esperado: bloco "Histórico da transcrição do Claude (não
+reenviado)" com as mensagens e ações anteriores marcadas com `↺`, sem nova
+resposta do Claude nem prompt reenviado. Pressionar `Ctrl+E`: conferir destino
+em `<estado>/exports/`, registros com linha, avisos e omissões; digitar uma linha
+em "Excluir linhas", `Enter`, e conferir que ela sai da lista; `Ctrl+S` deve
+informar "Pacote salvo e verificado". Rodar `memory-bee verify <pacote>` e ler
+`HANDOFF.md`/`history.jsonl` sem a Memory Bee. Repetir após interromper um turno
+com `Ctrl+C` e após um erro. Colar um token falso no formato `sk-` seguido de 24
+letras numa mensagem: a prévia deve ocultar o texto daquela linha e `Ctrl+S`
+recusar até a linha ser excluída. Ao sair, conferir o comando de exportação
+impresso. Não versionar pacotes com dados reais.
+
+| Item novo | Estado | Evidência manual |
+|---|---|---|
+| 54: reidratação na retomada, exportação com exclusões, segredos e verify | Pendente | — |

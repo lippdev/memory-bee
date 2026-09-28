@@ -622,7 +622,7 @@ fn workspace(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
         }
         let state_path =
             state.ok_or((64, "workspace --claude exige --state <private-dir>".into()))?;
-        let (id, code) = if claude_terminal {
+        let (id, code, transcript) = if claude_terminal {
             tui::claude_native::run(Path::new(&project), &state_path, resume, mode, no_color)
         } else {
             #[cfg(unix)]
@@ -642,6 +642,12 @@ fn workspace(args: &[std::ffi::OsString]) -> Result<u8, (u8, String)> {
         }
         .map_err(|e| (1, e))?;
         println!("Claude Code encerrou. Sessão nativa: {id}");
+        if let Some(transcript) = transcript {
+            println!(
+                "Para exportar depois: memory-bee export {} --preview",
+                transcript.display()
+            );
+        }
         return Ok(if code == 0 { 0 } else { 4 });
     }
     if once {

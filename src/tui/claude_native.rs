@@ -8,7 +8,7 @@ use crossterm::{
     },
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use memory_bee::workspace::claude_native::ClaudeStore;
+use memory_bee::workspace::claude_native::{self as native, ClaudeStore};
 use portable_pty::{CommandBuilder, MasterPty, NativePtySystem, PtySize, PtySystem};
 use ratatui::{
     Frame, Terminal,
@@ -20,7 +20,7 @@ use ratatui::{
 use std::{
     ffi::OsStr,
     io::{self, BufRead, Read, Write},
-    path::Path,
+    path::{Path, PathBuf},
     sync::mpsc::{self, Receiver},
     thread,
     time::{Duration, Instant},
@@ -400,7 +400,7 @@ pub fn run(
     resume: bool,
     mode: Mode,
     no_color: bool,
-) -> Result<(Uuid, u32), String> {
+) -> Result<(Uuid, u32, Option<PathBuf>), String> {
     let (store, mut state) = ClaudeStore::open(root, project)?;
     let id = if resume {
         state
@@ -505,7 +505,7 @@ pub fn run(
     }
     let code = status.unwrap_or(1);
     store.finish(&mut state, id, code)?;
-    Ok((id, code))
+    Ok((id, code, None))
 }
 
 /// The hook denies a request left unanswered this long.
@@ -767,11 +767,206 @@ fn tool_summary(input: &serde_json::Value) -> String {
     }
 }
 
+/// Newest history lines shown after a resume; older ones stay in the transcript.
+#[cfg(unix)]
+const HISTORY_LINES: usize = 200;
+
+/// Export review: the preview and the write use the same prepared bytes.
+#[cfg(unix)]
+struct Export {
+    destination: PathBuf,
+    exclusions: String,
+    prepared: Result<memory_bee::bundle::Prepared, String>,
+    result: Option<String>,
+    scroll: u16,
+}
+
+#[cfg(unix)]
+fn parse_exclusions(text: &str) -> Result<std::collections::BTreeSet<usize>, String> {
+    text.split(',')
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .map(|part| match part.parse::<usize>() {
+            Ok(line) if line > 0 => Ok(line),
+            _ => Err(format!("Linha inválida: {part}")),
+        })
+        .collect()
+}
+
+#[cfg(unix)]
+impl Export {
+    fn open(transcript: &Path, project: &Path, destination: PathBuf) -> Self {
+        let mut export = Self {
+            destination,
+            exclusions: String::new(),
+            prepared: Err(String::new()),
+            result: None,
+            scroll: 0,
+        };
+        export.prepare(transcript, project);
+        export
+    }
+    fn prepare(&mut self, transcript: &Path, project: &Path) {
+        self.result = None;
+        self.prepared = parse_exclusions(&self.exclusions)
+            .and_then(|lines| native::prepare_export(transcript, Some(project), lines));
+    }
+    fn summary(&self) -> String {
+        let prepared = match &self.prepared {
+            Ok(prepared) => prepared,
+            Err(e) => return format!("Não foi possível preparar: {e}"),
+        };
+        let manifest = serde_json::to_value(prepared.manifest()).unwrap_or_default();
+        let list = |key: &str| -> Vec<String> {
+            manifest[key]
+                .as_array()
+                .map(|items| {
+                    items
+                        .iter()
+                        .filter_map(|v| v.as_str().map(|s| format!("  · {s}")))
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+        let mut text = vec![
+            format!("Destino novo: {}", self.destination.display()),
+            format!(
+                "Eventos no histórico: {}{}",
+                prepared.history().lines().count(),
+                if prepared.is_partial() {
+                    " · pacote parcial"
+                } else {
+                    ""
+                }
+            ),
+            "Somente contexto; código não é incluído. Sem chamadas a modelos.".into(),
+            "Registros (linha da transcrição · papel · início do texto):".into(),
+        ];
+        let flagged: std::collections::BTreeSet<usize> =
+            prepared.findings().iter().filter_map(|f| f.line).collect();
+        for line in prepared.history().lines() {
+            let event: serde_json::Value = serde_json::from_str(line).unwrap_or_default();
+            let number = event["source"]["line"].as_u64().unwrap_or(0);
+            if flagged.contains(&(number as usize)) {
+                text.push(format!(
+                    "  {number:>4} · {} · [texto oculto: possível segredo]",
+                    event["role"].as_str().unwrap_or("?")
+                ));
+                continue;
+            }
+            let start: String = event["text"]
+                .as_str()
+                .unwrap_or("")
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ")
+                .chars()
+                .take(60)
+                .collect();
+            text.push(format!(
+                "  {number:>4} · {} · {start}",
+                event["role"].as_str().unwrap_or("?"),
+            ));
+        }
+        if !prepared.findings().is_empty() {
+            text.push("Possíveis segredos (exclua as linhas para exportar):".into());
+            for finding in prepared.findings() {
+                text.push(format!(
+                    "  · linha {} · {} · {}",
+                    finding
+                        .line
+                        .map_or_else(|| "?".into(), |line| line.to_string()),
+                    finding.field,
+                    finding.code
+                ));
+            }
+        }
+        // A finding outside the records (e.g. a branch ID) may appear in the
+        // warnings verbatim, so they are withheld instead of shown.
+        let unlocated: Vec<&str> = prepared
+            .findings()
+            .iter()
+            .filter(|f| f.line.is_none())
+            .map(|f| f.field)
+            .collect();
+        let warnings = list("warnings");
+        if !unlocated.is_empty() {
+            text.push(format!(
+                "Avisos ocultos na prévia: possível segredo fora dos registros ({})",
+                unlocated.join(", ")
+            ));
+        } else if !warnings.is_empty() {
+            text.push("Avisos:".into());
+            text.extend(warnings);
+        }
+        let omissions = list("omissions");
+        if !omissions.is_empty() {
+            text.push("Omissões:".into());
+            text.extend(omissions);
+        }
+        text.join("\n")
+    }
+    /// Writes a new directory, then verifies it like `memory-bee verify`.
+    fn write(&mut self) {
+        let result = match &self.prepared {
+            Err(e) => Err(format!("Nada exportado: {e}")),
+            Ok(prepared) if !prepared.findings().is_empty() => {
+                Err("Nada exportado: exclua as linhas com possíveis segredos".into())
+            }
+            Ok(prepared) => private_parent(&self.destination)
+                .and_then(|()| {
+                    prepared
+                        .write(&self.destination)
+                        .map_err(|e| format!("Falha ao gravar: {e}"))
+                })
+                .and_then(|()| {
+                    memory_bee::receive::verify(&self.destination)
+                        .map(|_| ())
+                        .map_err(|e| format!("Gravado, mas verify falhou: {e}"))
+                })
+                .map(|()| {
+                    format!(
+                        "Pacote salvo e verificado em {}",
+                        self.destination.display()
+                    )
+                }),
+        };
+        self.result = Some(result.unwrap_or_else(|e| e));
+    }
+}
+
+/// The default export folder lives in the private state directory.
+#[cfg(unix)]
+fn private_parent(destination: &Path) -> Result<(), String> {
+    let Some(parent) = destination.parent() else {
+        return Ok(());
+    };
+    if parent.exists() {
+        let meta = std::fs::symlink_metadata(parent).map_err(|e| e.to_string())?;
+        return if meta.is_dir() && !meta.file_type().is_symlink() {
+            Ok(())
+        } else {
+            Err("Pasta de exportação deve ser pasta real, sem symlink".into())
+        };
+    }
+    use std::os::unix::fs::DirBuilderExt;
+    std::fs::DirBuilder::new()
+        .mode(0o700)
+        .create(parent)
+        .map_err(|e| e.to_string())
+}
+
 #[cfg(unix)]
 struct HiddenView {
     lines: Vec<String>,
     input: String,
     pending: Option<Pending>,
+    /// Transcript reported by Claude's hooks; source of history and export.
+    transcript: Option<PathBuf>,
+    /// Resumed session whose history is read back once from the transcript.
+    resume: bool,
+    rehydrated: bool,
+    export: Option<Export>,
     /// Recent tool calls, to tell Bee approvals from Claude's own rules.
     tools: Vec<ToolCall>,
     next_tool: u64,
@@ -795,6 +990,10 @@ impl HiddenView {
             lines: vec!["Iniciando Claude Code em segundo plano…".into()],
             input: String::new(),
             pending: None,
+            transcript: None,
+            resume: false,
+            rehydrated: false,
+            export: None,
             tools: Vec::new(),
             next_tool: 0,
             ready: false,
@@ -852,6 +1051,33 @@ impl HiddenView {
             return true;
         }
         false
+    }
+    /// Shows the previous conversation from the native transcript. Nothing
+    /// is resent to Claude and nothing absent from the transcript is shown.
+    fn rehydrate(&mut self) {
+        let Some(path) = self.transcript.clone() else {
+            self.push("Histórico anterior indisponível: o Claude não informou a transcrição.");
+            return;
+        };
+        let history = native::history(&path, HISTORY_LINES);
+        if history.lines.is_empty() && history.note.is_none() {
+            self.push("Sessão retomada sem mensagens anteriores na transcrição.");
+            return;
+        }
+        self.push("── Histórico da transcrição do Claude (não reenviado) ──");
+        if history.omitted > 0 {
+            self.push(format!(
+                "↺ {} registros anteriores ficam só na transcrição",
+                history.omitted
+            ));
+        }
+        for line in history.lines {
+            self.push(format!("↺ {line}"));
+        }
+        if let Some(note) = history.note {
+            self.push(format!("↺ {note}"));
+        }
+        self.push("── Fim do histórico; novos eventos abaixo ──");
     }
     fn submitted(&mut self, now: Instant) {
         self.turn = Some(now);
@@ -954,11 +1180,23 @@ impl HiddenView {
             self.turn = Some(now);
             self.turn_hinted = false;
         }
+        if self.transcript.is_none()
+            && let Some(reported) = event.value["transcript_path"].as_str()
+        {
+            match native::transcript_path(reported, id) {
+                Ok(path) => self.transcript = Some(path),
+                Err(e) => self.push(format!("Histórico/exportação indisponíveis: {e}")),
+            }
+        }
         match event.value["hook_event_name"].as_str().unwrap_or("") {
             "SessionStart" => {
                 self.ready = true;
                 if self.blocked.take().is_some() {
                     self.push("Preparação nativa concluída. Ctrl+O volta à Bee se necessário.");
+                }
+                if self.resume && !self.rehydrated {
+                    self.rehydrated = true;
+                    self.rehydrate();
                 }
                 self.push("Claude pronto. Digite sua mensagem abaixo.");
             }
@@ -1151,11 +1389,57 @@ fn draw_hidden(frame: &mut Frame, view: &HiddenView, mode: Mode, no_color: bool)
     );
     frame.render_widget(
         Paragraph::new(
-            "Enter envia · Ctrl+C interrompe · Ctrl+O Claude original · Ctrl+Q sai · sem aprovação Bee, negar",
+            "Enter envia · Ctrl+E exporta · Ctrl+C interrompe · Ctrl+O original · Ctrl+Q sai",
         )
-            .style(Style::default().bg(bg)),
+        .style(Style::default().bg(bg)),
         rows[3],
     );
+    if let (None, Some(export)) = (&view.pending, &view.export) {
+        let modal = Rect::new(
+            2,
+            1,
+            area.width.saturating_sub(4),
+            area.height.saturating_sub(2),
+        );
+        frame.render_widget(ratatui::widgets::Clear, modal);
+        frame.render_widget(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Exportar sessão Claude · prévia ")
+                .style(Style::default().bg(bg))
+                .border_style(Style::default().fg(palette.accent)),
+            modal,
+        );
+        let mut body = export.summary();
+        if let Some(result) = &export.result {
+            body = format!("{result}\n\n{body}");
+        }
+        frame.render_widget(
+            Paragraph::new(body)
+                .wrap(ratatui::widgets::Wrap { trim: false })
+                .scroll((export.scroll, 0))
+                .style(Style::default().bg(bg)),
+            Rect::new(
+                modal.x + 2,
+                modal.y + 1,
+                modal.width.saturating_sub(4),
+                modal.height.saturating_sub(5),
+            ),
+        );
+        frame.render_widget(
+            Paragraph::new(format!(
+                "Excluir linhas: {}\nEnter aplica · ↑↓ PgUp PgDn rolam · Ctrl+S exporta · Esc fecha",
+                export.exclusions
+            ))
+            .style(Style::default().bg(bg)),
+            Rect::new(
+                modal.x + 2,
+                modal.bottom().saturating_sub(3),
+                modal.width.saturating_sub(4),
+                2,
+            ),
+        );
+    }
     if let Some(Pending { request, .. }) = &view.pending {
         let modal = Rect::new(
             2,
@@ -1251,7 +1535,7 @@ pub fn run_hidden(
     resume: bool,
     mode: Mode,
     no_color: bool,
-) -> Result<(Uuid, u32), String> {
+) -> Result<(Uuid, u32, Option<PathBuf>), String> {
     let (store, mut state) = ClaudeStore::open(root, project)?;
     let id = if resume {
         state
@@ -1287,6 +1571,7 @@ pub fn run_hidden(
         store.start(&mut state, id)?;
     }
     let mut view = HiddenView::new(Instant::now());
+    view.resume = resume;
     let mut status = None;
     let mut quit_at = None;
     let mut dirty = true;
@@ -1377,6 +1662,62 @@ pub fn run_hidden(
                         view.native = false;
                     } else if control && key.code == KeyCode::Char('o') && view.pending.is_none() {
                         view.native = !view.native;
+                    } else if control
+                        && key.code == KeyCode::Char('e')
+                        && view.pending.is_none()
+                        && !view.native
+                    {
+                        if view.export.take().is_none() {
+                            match &view.transcript {
+                                Some(transcript) => {
+                                    let stamp = std::time::SystemTime::now()
+                                        .duration_since(std::time::UNIX_EPOCH)
+                                        .map_or(0, |d| d.as_secs());
+                                    let destination =
+                                        root.join("exports").join(format!("claude-{id}-{stamp}"));
+                                    view.export =
+                                        Some(Export::open(transcript, project, destination));
+                                }
+                                None => view.push(
+                                    "Exportação indisponível: o Claude ainda não informou a transcrição.",
+                                ),
+                            }
+                        }
+                    } else if view.export.is_some()
+                        && view.pending.is_none()
+                        && !view.native
+                        && !(control && key.code == KeyCode::Char('c'))
+                    {
+                        let export = view.export.as_mut().expect("checked export");
+                        match key.code {
+                            KeyCode::Esc => view.export = None,
+                            KeyCode::Char('s') if control => {
+                                export.write();
+                                let result = export.result.clone().unwrap_or_default();
+                                view.push(result);
+                            }
+                            KeyCode::Char(c)
+                                if !control && (c.is_ascii_digit() || c == ',' || c == ' ') =>
+                            {
+                                export.exclusions.push(c)
+                            }
+                            KeyCode::Backspace => {
+                                export.exclusions.pop();
+                            }
+                            KeyCode::Up => export.scroll = export.scroll.saturating_sub(1),
+                            KeyCode::Down => export.scroll = export.scroll.saturating_add(1),
+                            KeyCode::PageUp => export.scroll = export.scroll.saturating_sub(10),
+                            KeyCode::PageDown => export.scroll = export.scroll.saturating_add(10),
+                            KeyCode::Enter => {
+                                if let Some(transcript) = view.transcript.clone() {
+                                    view.export
+                                        .as_mut()
+                                        .expect("checked export")
+                                        .prepare(&transcript, project);
+                                }
+                            }
+                            _ => {}
+                        }
                     } else if view.native {
                         if let Some(bytes) = key_bytes(key, parser.screen().application_cursor()) {
                             pty.write(&bytes)?;
@@ -1445,7 +1786,7 @@ pub fn run_hidden(
     view.decide(false, false);
     let code = status.unwrap_or(1);
     store.finish(&mut state, id, code)?;
-    Ok((id, code))
+    Ok((id, code, view.transcript))
 }
 
 #[cfg(test)]
@@ -1667,6 +2008,68 @@ mod tests {
         view.decide(true, false);
         assert!(view.lines.last().unwrap().contains("nada foi aprovado"));
         assert!(PERMISSION_REVIEW < PERMISSION_TIMEOUT);
+    }
+    #[cfg(unix)]
+    #[test]
+    fn export_blocks_possible_secrets_until_their_lines_are_excluded() {
+        let root = std::env::temp_dir().join(format!("bee-export-{}", Uuid::new_v4()));
+        std::fs::create_dir(&root).unwrap();
+        let transcript = root.join("session.jsonl");
+        // Synthetic, non-working token shape.
+        let token = format!("sk-{}", "x".repeat(24));
+        std::fs::write(
+            &transcript,
+            format!(
+                "{}\n{}\n",
+                serde_json::json!({"type": "user", "uuid": "u1", "parentUuid": null, "sessionId": "s", "message": {"role": "user", "content": "Olá"}}),
+                serde_json::json!({"type": "assistant", "uuid": "a1", "parentUuid": "u1", "sessionId": "s", "message": {"role": "assistant", "content": [{"type": "text", "text": token}]}}),
+            ),
+        )
+        .unwrap();
+        let destination = root.join("exports").join("bundle");
+        let mut export = Export::open(&transcript, &root, destination.clone());
+        assert!(export.summary().contains("linha 2"));
+        assert!(
+            !export.summary().contains(&token),
+            "preview lists findings, not the secret"
+        );
+        export.write();
+        assert!(
+            export
+                .result
+                .as_deref()
+                .unwrap()
+                .starts_with("Nada exportado")
+        );
+        assert!(!destination.exists());
+        export.exclusions = "2".into();
+        export.prepare(&transcript, &root);
+        export.write();
+        assert!(
+            export.result.as_deref().unwrap().contains("verificado"),
+            "{:?}",
+            export.result
+        );
+        let written = std::fs::read_to_string(destination.join("history.jsonl")).unwrap();
+        assert!(!written.contains(&token));
+        export.exclusions = "0".into();
+        export.prepare(&transcript, &root);
+        assert!(export.summary().contains("Linha inválida"));
+        // A secret-shaped branch ID has no line: warnings are withheld.
+        let branch = root.join("branch.jsonl");
+        std::fs::write(
+            &branch,
+            format!(
+                "{}\n",
+                serde_json::json!({"type": "user", "uuid": token, "parentUuid": null, "sessionId": "s", "message": {"role": "user", "content": "Olá"}}),
+            ),
+        )
+        .unwrap();
+        let export = Export::open(&branch, &root, root.join("exports").join("other"));
+        let summary = export.summary();
+        assert!(summary.contains("Avisos ocultos"), "{summary}");
+        assert!(!summary.contains(&token), "{summary}");
+        std::fs::remove_dir_all(root).unwrap();
     }
     #[cfg(unix)]
     #[test]

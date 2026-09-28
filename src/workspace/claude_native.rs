@@ -172,6 +172,106 @@ impl Drop for ClaudeStore {
     }
 }
 
+/// Transcript reported by Claude's own `SessionStart` hook. Only a regular,
+/// non-symlink `<session-id>.jsonl` is accepted; nothing is guessed.
+pub fn transcript_path(reported: &str, id: Uuid) -> Result<PathBuf, String> {
+    let path = PathBuf::from(reported);
+    if !path.is_absolute() || path.file_name() != Some(format!("{id}.jsonl").as_ref()) {
+        return Err("Transcrição informada pelo Claude não corresponde à sessão".into());
+    }
+    let meta = fs::symlink_metadata(&path).map_err(|_| "Transcrição Claude indisponível")?;
+    if !meta.is_file() || meta.file_type().is_symlink() {
+        return Err("Transcrição Claude deve ser arquivo comum, sem symlink".into());
+    }
+    Ok(path)
+}
+
+/// Previous conversation read back from the native transcript, never resent.
+#[derive(Debug, Default)]
+pub struct History {
+    pub lines: Vec<String>,
+    /// Older entries not shown on screen; they stay in the transcript.
+    pub omitted: usize,
+    pub partial: bool,
+    /// Why nothing (or not everything) could be shown.
+    pub note: Option<String>,
+}
+
+fn one_line(text: &str, max: usize) -> String {
+    let line: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if line.chars().count() > max {
+        format!("{}…", line.chars().take(max).collect::<String>())
+    } else {
+        line
+    }
+}
+
+fn selected(path: &Path) -> Result<crate::claude::Report, String> {
+    let report = crate::claude::inspect(path, crate::claude::Limits::default())
+        .map_err(|e| format!("Transcrição Claude ilegível: {e}"))?;
+    if report.events.is_empty() {
+        return Ok(report);
+    }
+    if report.requires_branch_selection || report.branch_tips.len() != 1 {
+        return Err("Transcrição com mais de um ramo; use memory-bee export --leaf".into());
+    }
+    let leaf = report.branch_tips[0].clone();
+    crate::selection::select(report, &leaf).map_err(str::to_owned)
+}
+
+/// Extracted user/assistant text and tool names of the selected branch. The
+/// newest `max` lines are kept; the rest is counted, not dropped silently.
+pub fn history(path: &Path, max: usize) -> History {
+    let report = match selected(path) {
+        Ok(report) => report,
+        Err(note) => {
+            return History {
+                note: Some(note),
+                ..History::default()
+            };
+        }
+    };
+    let partial = report.state == crate::claude::ReadState::Partial;
+    let mut lines: Vec<String> = report
+        .events
+        .iter()
+        .filter_map(|event| match (event.role, event.kind) {
+            ("user", "text") => Some(format!("Você: {}", one_line(&event.text, 400))),
+            ("assistant", "text") => Some(format!("Claude: {}", one_line(&event.text, 400))),
+            (_, "tool_call") => Some(format!(
+                "Ação: {}",
+                event.tool_name.as_deref().unwrap_or("desconhecida")
+            )),
+            (_, "checkpoint") => Some("Resumo de compactação do Claude".into()),
+            _ => None,
+        })
+        .collect();
+    let omitted = lines.len().saturating_sub(max);
+    lines.drain(..omitted);
+    History {
+        lines,
+        omitted,
+        partial,
+        note: partial.then(|| "Transcrição parcial; registros ilegíveis foram omitidos".into()),
+    }
+}
+
+/// Context-only bundle of the native session, prepared from the same bytes
+/// the preview shows. Git reference is included when `project` is given.
+pub fn prepare_export(
+    path: &Path,
+    project: Option<&Path>,
+    exclude_lines: std::collections::BTreeSet<usize>,
+) -> Result<crate::bundle::Prepared, String> {
+    let report = selected(path)?;
+    let options = crate::bundle::Options {
+        project: project.map(Path::to_path_buf),
+        exclude_lines,
+        ..crate::bundle::Options::default()
+    };
+    crate::bundle::prepare(report, &options)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
