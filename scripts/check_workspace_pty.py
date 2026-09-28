@@ -12,6 +12,13 @@ import tempfile
 import termios
 import time
 
+def assert_unlocked(path):
+    """The lock file stays on disk; the process must have released it."""
+    with open(path) as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fcntl.flock(handle, fcntl.LOCK_UN)
+
+
 
 def main():
     repo = Path(__file__).resolve().parent.parent
@@ -96,7 +103,7 @@ def main():
             proc.wait(timeout=5)
             assert proc.returncode == 0
             assert termios.tcgetattr(slave) == before, 'Terminal was not restored'
-            assert not (state / 'workspace.lock').exists()
+            assert_unlocked(state / 'workspace.lock')
             assert list(project.iterdir()) == [], 'Demo modified project'
             print('PASS: paste, approval denial, confirmed export/schema/verify, resize, interruption, private state and terminal restoration')
         finally:

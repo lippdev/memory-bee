@@ -874,3 +874,24 @@ escopo da entrega atual nem a próxima tarefa aprovada.
   quebrada.
 - Próximo: #33 (Codex App Server autenticado), que também exige ensaio com conta
   real, ou #41 (recuperação do estado após falha).
+
+## Workspace — recuperação do estado após falha (#41)
+
+- Data: 2026-09-28. Decisão no [ADR 0019](decisions/0019-state-lock-and-recovery.md).
+- `src/workspace/private.rs` concentra pasta privada, trava do sistema
+  (`File::try_lock`/`flock`, liberada até em `kill -9`, arquivo mantido com PID),
+  recuperação de `*.new` remanescente (preservado como `*.new.recovered-<n>`,
+  nunca carregado nem apagado) e escrita atômica com fsync do arquivo e do
+  diretório. `ClaudeStore` e o `Store` da demo usam o módulo; ambos informam a
+  recuperação (aviso na sessão da demo e linha na conversa do Claude oculto).
+- Evidências: testes do módulo (processo vivo recusado com PID, trava obsoleta
+  não bloqueia, symlink recusado, temporário remanescente bloqueia escrita até
+  ser recuperado, permissões 0600); teste da demo simulando writer morto entre
+  temporário e rename; scripts PTY verificam que a trava foi liberada via `flock`
+  não bloqueante; `check_claude_hidden_pty.py` faz `kill -9` da Bee, deixa um
+  `claude-native.new` parcial e reabre com `--resume` sem limpeza manual.
+  Latência medida está no ADR (máx. 130,6 ms para 16 MiB neste ambiente).
+  Checks canônicos, scripts PTY e `check_bundle.py` passaram localmente (Linux).
+  Autorrevisão.
+- Limitações: sistemas de arquivos de rede não suportados; versões antigas não
+  respeitam a trava nova; persistência continua síncrona.

@@ -2,8 +2,8 @@
 use super::{Agent, Event, Session};
 use serde::{Deserialize, Serialize};
 use std::{
-    fs::{self, OpenOptions},
-    io::{Read, Write},
+    fs,
+    io::Read,
     path::{Path, PathBuf},
 };
 const MAX_BYTES: u64 = 16 * 1024 * 1024;
@@ -96,43 +96,14 @@ impl State {
 
 pub struct Store {
     root: PathBuf,
-}
-fn private_file(path: &Path) -> Result<fs::File, String> {
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    options.open(path).map_err(|e| e.to_string())
+    _lock: super::private::Lock,
 }
 impl Store {
     pub fn open(root: &Path, project: &str, agent: Agent) -> Result<(Self, State), String> {
-        if !root.exists() {
-            let mut builder = fs::DirBuilder::new();
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::DirBuilderExt;
-                builder.mode(0o700);
-            }
-            builder.create(root).map_err(|e| e.to_string())?;
-        }
-        let meta = fs::symlink_metadata(root).map_err(|e| e.to_string())?;
-        if !meta.is_dir() || meta.file_type().is_symlink() {
-            return Err("Estado exige pasta real, sem symlink".into());
-        }
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            if meta.permissions().mode() & 0o077 != 0 {
-                return Err("Pasta de estado deve ter permissão 0700".into());
-            }
-        }
-        let root = root.canonicalize().map_err(|e| e.to_string())?;
-        let mut lock = private_file(&root.join("workspace.lock")).map_err(|_| "Estado em uso ou trava anterior presente. Após confirmar que não existe outro processo, remova workspace.lock manualmente.")?;
-        let store = Self { root };
-        writeln!(lock, "{}", std::process::id()).map_err(|e| e.to_string())?;
+        let root = super::private::directory(root)?;
+        let lock = super::private::Lock::acquire(&root, "workspace.lock")?;
+        let recovered = super::private::recover(&root, "workspace.new")?;
+        let store = Self { root, _lock: lock };
         let path = store.root.join("workspace.json");
         let metadata = match fs::symlink_metadata(&path) {
             Ok(meta) => Some(meta),
@@ -158,6 +129,14 @@ impl Store {
             State::new(project.into(), agent)
         };
         state.validate(project)?;
+        if let Some(kept) = recovered {
+            state.current_mut().record(Event::Notice {
+                message: format!(
+                    "Gravação anterior interrompida; último estado completo carregado e o arquivo parcial preservado em {}.",
+                    kept.display()
+                ),
+            });
+        }
         for session in &mut state.sessions {
             if session.running {
                 session.record(Event::Interrupted);
@@ -175,25 +154,6 @@ impl Store {
         if bytes.len() as u64 > MAX_BYTES {
             return Err("Estado acima de 16 MiB; exporte o histórico antes de continuar".into());
         }
-        let temp = self.root.join("workspace.new");
-        let mut file = private_file(&temp).map_err(
-            |_| "Arquivo workspace.new já existe ou está indisponível; original preservado",
-        )?;
-        let result = (|| {
-            file.write_all(&bytes)
-                .and_then(|()| file.sync_all())
-                .map_err(|e| e.to_string())?;
-            fs::rename(&temp, self.root.join("workspace.json")).map_err(|e| e.to_string())?;
-            Ok(())
-        })();
-        if result.is_err() {
-            let _ = fs::remove_file(&temp);
-        }
-        result
-    }
-}
-impl Drop for Store {
-    fn drop(&mut self) {
-        let _ = fs::remove_file(self.root.join("workspace.lock"));
+        super::private::write_atomic(&self.root, "workspace.new", "workspace.json", &bytes)
     }
 }

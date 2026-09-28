@@ -12,6 +12,13 @@ import tempfile
 import termios
 import time
 
+def assert_unlocked(path):
+    """The lock file stays on disk; the process must have released it."""
+    with open(path) as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fcntl.flock(handle, fcntl.LOCK_UN)
+
+
 
 def one_run(binary, project, state, env, resume=False):
     master, slave = pty.openpty()
@@ -45,7 +52,7 @@ def one_run(binary, project, state, env, resume=False):
         proc.wait(timeout=5)
         assert proc.returncode == 0
         assert termios.tcgetattr(slave) == before, 'terminal state not restored'
-        assert not (state / 'claude-native.lock').exists()
+        assert_unlocked(state / 'claude-native.lock')
         return json.loads((state / 'claude-native.json').read_text())
     finally:
         if proc.poll() is None:

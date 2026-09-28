@@ -67,9 +67,9 @@ API com cobrança separada como alternativa, pois contradiz a escolha do mantene
 3. Validar troca entre agente/perfil com contexto revisado e origem preservada.
 4. Lançamento conjunto somente com essas evidências. A demo não satisfaz esse aceite.
 
-Snapshot é substituído por rename após sync do arquivo, mas não promete durabilidade
-contra perda de energia (sem fsync de diretório), proteção de ancestrais contra
-escritores hostis ou recuperação automática de trava após encerramento abrupto.
+Snapshot é substituído por rename após sync do arquivo; trava, recuperação após
+encerramento abrupto e fsync de diretório foram revistos no [ADR 0019](0019-state-lock-and-recovery.md).
+Não há proteção de ancestrais contra escritores hostis.
 I/O de persistência/exportação é síncrono; a demo não certifica responsividade
 sob disco lento. Uma sessão ativa por pasta de estado, não trava global de checkout
 para um futuro motor real. Colmeia estática, projeto explícito e tema não persistido.
