@@ -71,7 +71,8 @@ def main():
             paste('synthetic task\nsecond line')
             assert not snapshot()['sessions'][0]['events'], 'Paste submitted a message'
             send('\r')
-            wait_for(lambda: snapshot()['sessions'][0]['events'][-1]['kind'] == 'approval')
+            # Saving is asynchronous to the keystroke; wait instead of indexing an empty list.
+            wait_for(lambda: snapshot()['sessions'][0]['events'][-1:] and snapshot()['sessions'][0]['events'][-1]['kind'] == 'approval')
             send('\t')
             send('\r')  # Default deny.
             wait_for(lambda: not snapshot()['sessions'][0]['running'])
