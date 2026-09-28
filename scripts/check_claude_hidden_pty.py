@@ -64,6 +64,21 @@ for line in sys.stdin:
 '''
 
 
+def drain_until_exit(master, proc, output, seconds):
+    """Keep reading while waiting: a full PTY buffer (small on macOS) would
+    block the Bee's final redraw and look like a hang."""
+    deadline = time.monotonic() + seconds
+    while proc.poll() is None:
+        if time.monotonic() > deadline:
+            raise subprocess.TimeoutExpired(proc.args, seconds)
+        if select.select([master], [], [], 0.05)[0]:
+            try:
+                output.extend(os.read(master, 65536))
+            except OSError:
+                pass
+    return proc.returncode
+
+
 def spawn(binary, project, state, env):
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 24, 80, 0, 0))
@@ -97,7 +112,7 @@ def untrusted(binary, project, state, env, quit_while_blocked):
         if quit_while_blocked:
             started = time.monotonic()
             os.write(master, b'\x11')
-            proc.wait(timeout=4)
+            drain_until_exit(master, proc, output, 4)
             assert time.monotonic() - started < 4
             assert proc.returncode == 4, proc.returncode
         else:
@@ -108,7 +123,7 @@ def untrusted(binary, project, state, env, quit_while_blocked):
             os.write(master, b'\x0f')
             until('concluída'.encode())
             os.write(master, b'\x11')  # Idle prompt: Ctrl+Q types /exit.
-            proc.wait(timeout=10)
+            drain_until_exit(master, proc, output, 10)
             assert proc.returncode == 0, proc.returncode
         assert termios.tcgetattr(slave) == before
         assert not (state / 'claude-native.lock').exists()
@@ -154,7 +169,7 @@ def run(binary, project, state, env, resume, decision):
         if decision == 'y':
             until(b'aprovada')
         try:
-            proc.wait(timeout=20)
+            drain_until_exit(master, proc, output, 20)
         except subprocess.TimeoutExpired as exc:
             raise AssertionError(f'Bee did not exit after {decision!r}; output={output[-800:]!r}') from exc
         assert proc.returncode == 0, proc.returncode
