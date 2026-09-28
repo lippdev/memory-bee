@@ -63,7 +63,18 @@ impl Lock {
             options.mode(0o600);
         }
         let mut file = options.open(&path).map_err(|e| e.to_string())?;
-        match file.try_lock() {
+        // A fork by another thread briefly holds a copy of a just-closed
+        // descriptor until its exec, so contention gets a short grace period.
+        // A process that really holds the lock is still refused.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
+        let mut result = file.try_lock();
+        while matches!(result, Err(TryLockError::WouldBlock))
+            && std::time::Instant::now() < deadline
+        {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            result = file.try_lock();
+        }
+        match result {
             Ok(()) => {}
             Err(TryLockError::WouldBlock) => {
                 let mut holder = String::new();

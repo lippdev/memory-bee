@@ -19,6 +19,9 @@ seguintes. O snapshot era sincronizado, mas o diretório não.
   disco e guarda só o PID, para a mensagem de "em uso". O kernel solta a trava
   quando o processo termina, inclusive por `kill -9`; um processo vivo nunca é
   desalojado. Arquivo de trava que não seja arquivo comum (symlink) é recusado.
+  Havendo disputa, a abertura tenta por até 500 ms: um `fork` de outra thread do
+  mesmo processo mantém uma cópia do descritor até o `exec` (visto como falha
+  intermitente de 7 em 60 execuções dos testes paralelos; 0 em 60 com a espera).
 - Com a trava obtida, um `*.new` remanescente é de uma escrita que parou antes do
   rename: o snapshot confirmado continua sendo o último estado completo. O
   remanescente é renomeado para `*.new.recovered-<nanossegundos>` na mesma pasta,
