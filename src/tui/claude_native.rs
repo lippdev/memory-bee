@@ -730,6 +730,9 @@ struct ToolCall {
     approved: Option<bool>,
     /// Seen as `PreToolUse`; false when the request arrived first.
     pre: bool,
+    /// A request without `tool_use_id` matched several identical calls, so
+    /// the Bee cannot tell which one it answered.
+    ambiguous: bool,
 }
 
 /// One-line hint of what a tool touches; the review panel shows everything.
@@ -864,8 +867,39 @@ impl HiddenView {
             input: value["tool_input"].clone(),
             approved: None,
             pre,
+            ambiguous: false,
         });
         self.next_tool
+    }
+    /// Call answered by a `PermissionRequest`. The official payload carries
+    /// no `tool_use_id`, so identical unanswered calls make it ambiguous;
+    /// those are marked instead of guessing. Returns `None` in that case.
+    fn request_target(&mut self, value: &serde_json::Value) -> Option<u64> {
+        if value["tool_use_id"].is_string()
+            && let Some(i) = self.find_tool(value)
+        {
+            return Some(self.tools[i].seq);
+        }
+        let name = value["tool_name"].as_str().unwrap_or("desconhecida");
+        let candidates: Vec<usize> = (0..self.tools.len())
+            .filter(|&i| {
+                let t = &self.tools[i];
+                t.approved.is_none()
+                    && !t.ambiguous
+                    && t.name == name
+                    && t.input == value["tool_input"]
+            })
+            .collect();
+        match candidates[..] {
+            [] => Some(self.add_tool(value, false)),
+            [i] => Some(self.tools[i].seq),
+            _ => {
+                for i in candidates {
+                    self.tools[i].ambiguous = true;
+                }
+                None
+            }
+        }
     }
     /// Matches a hook to its `PreToolUse` by ID, else by name and input.
     fn find_tool(&self, value: &serde_json::Value) -> Option<usize> {
@@ -947,6 +981,11 @@ impl HiddenView {
                 let tool = event.value["tool_name"].as_str().unwrap_or("ação");
                 let origin = match self.find_tool(&event.value).map(|i| self.tools.remove(i)) {
                     Some(ToolCall {
+                        ambiguous: true, ..
+                    }) => {
+                        "origem incerta: houve um pedido para uma chamada idêntica e não é possível dizer qual foi aprovada"
+                    }
+                    Some(ToolCall {
                         approved: Some(true),
                         ..
                     }) => "aprovada por você na Bee, uma vez",
@@ -969,17 +1008,14 @@ impl HiddenView {
                     .unwrap_or_else(|_| "<entrada inválida>".into());
                 let request = format!("Ferramenta: {name}\nEntrada completa:\n{details}");
                 self.push(format!("Claude pediu permissão: {name}"));
-                let seq = match self.find_tool(&event.value) {
-                    Some(i) => self.tools[i].seq,
-                    None => self.add_tool(&event.value, false),
-                };
+                let seq = self.request_target(&event.value);
                 if let Some(reply) = event.reply {
                     if self.pending.is_some() {
                         let _ = reply.send(false);
                         self.push(format!(
                             "Negado: {name} (outro pedido já aguardava revisão)"
                         ));
-                        if let Some(call) = self.tools.iter_mut().find(|t| t.seq == seq) {
+                        if let Some(call) = self.tools.iter_mut().find(|t| Some(t.seq) == seq) {
                             call.approved = Some(false);
                         }
                     } else {
@@ -988,7 +1024,7 @@ impl HiddenView {
                         self.pending = Some(Pending {
                             request,
                             reply,
-                            tool: Some(seq),
+                            tool: seq,
                             since: now,
                         });
                     }
@@ -1519,6 +1555,55 @@ mod tests {
         }
         assert!(view.lines.last().unwrap().contains("aprovada por você"));
         assert!(view.tools.is_empty());
+    }
+    #[cfg(unix)]
+    #[test]
+    fn identical_parallel_calls_never_claim_a_specific_approval() {
+        let start = Instant::now();
+        let id = Uuid::new_v4();
+        let mut view = HiddenView::new(start);
+        let input = serde_json::json!({"command": "make"});
+        let hook = |name: &str, tool_id: Option<&str>| {
+            let mut value = serde_json::json!({"hook_event_name": name, "session_id": id.to_string(), "tool_name": "Bash", "tool_input": input});
+            if let Some(tool_id) = tool_id {
+                value["tool_use_id"] = tool_id.into();
+            }
+            value
+        };
+        for tool_id in ["b1", "b2"] {
+            view.receive(
+                BridgeEvent {
+                    value: hook("PreToolUse", Some(tool_id)),
+                    reply: None,
+                },
+                id,
+                start,
+            );
+        }
+        let (tx, rx) = mpsc::channel();
+        view.receive(
+            BridgeEvent {
+                value: hook("PermissionRequest", None),
+                reply: Some(tx),
+            },
+            id,
+            start,
+        );
+        view.decide(true, false);
+        assert!(rx.recv().unwrap());
+        for tool_id in ["b1", "b2"] {
+            view.receive(
+                BridgeEvent {
+                    value: hook("PostToolUse", Some(tool_id)),
+                    reply: None,
+                },
+                id,
+                start,
+            );
+            let line = view.lines.last().unwrap();
+            assert!(line.contains("origem incerta"), "{line}");
+            assert!(!line.contains("aprovada por você"));
+        }
     }
     #[cfg(unix)]
     #[test]

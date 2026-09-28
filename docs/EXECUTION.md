@@ -804,8 +804,10 @@ escopo da entrega atual nem a próxima tarefa aprovada.
   revisão, expiração, pedido concorrente e aprovação tardia; teste PTY com CLI
   falsa emitindo leitura sem pedido e Bash com pedido. Checks canônicos, quatro
   scripts PTY e `check_bundle.py` passaram localmente (Linux). Autorrevisão.
-- Limitação: a presença de `tool_use_id` no `PermissionRequest` real não foi
-  confirmada; sem ele a associação usa nome e entrada exatos.
+- Limitação: segundo a referência oficial de hooks, `PermissionRequest` não traz
+  `tool_use_id`; a associação usa nome e entrada exatos. Após revisão do
+  Pullfrog no PR #51, chamadas idênticas paralelas sem decisão recebem "origem
+  incerta" em vez de uma aprovação possivelmente trocada.
 - CI macOS do PR #51 expôs duas falhas, corrigidas: o script PTY parava de ler
   a saída ao aguardar a saída da Bee (buffer pequeno do macOS bloqueava o
   redesenho final); e hooks sem permissão não esperavam confirmação, então

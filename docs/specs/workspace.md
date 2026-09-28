@@ -41,7 +41,10 @@ Cada ação aparece com um resumo (`Ação: Bash · <comando>`). O resultado inf
 origem: "aprovada por você na Bee, uma vez" somente quando houve
 `PermissionRequest` e o hook recebeu `allow`; ações sem pedido aparecem como
 "sem pedido de permissão; liberada pelas regras ou modo do próprio Claude". A
-associação usa `tool_use_id` e, na falta dele, nome e entrada da ferramenta. O
+associação usa `tool_use_id` quando existe; o `PermissionRequest` oficial não o
+traz, então vale nome e entrada da ferramenta. Se o pedido corresponder a mais de
+uma chamada idêntica ainda sem decisão, os resultados dessas chamadas aparecem
+com "origem incerta", sem atribuir a aprovação a nenhuma delas. O
 painel fecha em 85 s, antes do limite de 90 s do hook, e registra que o pedido
 expirou negado; um segundo pedido enquanto outro aguarda é negado e registrado.
 Se a resposta não chegar ao hook, a Bee informa que nada foi aprovado.
