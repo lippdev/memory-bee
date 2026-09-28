@@ -728,6 +728,8 @@ struct ToolCall {
     input: serde_json::Value,
     /// `None`: Claude never asked; `Some(false)`: asked and not approved.
     approved: Option<bool>,
+    /// Seen as `PreToolUse`; false when the request arrived first.
+    pre: bool,
 }
 
 /// One-line hint of what a tool touches; the review panel shows everything.
@@ -850,6 +852,21 @@ impl HiddenView {
         self.turn = Some(now);
         self.turn_hinted = false;
     }
+    fn add_tool(&mut self, value: &serde_json::Value, pre: bool) -> u64 {
+        if self.tools.len() >= 64 {
+            self.tools.remove(0);
+        }
+        self.next_tool += 1;
+        self.tools.push(ToolCall {
+            seq: self.next_tool,
+            id: value["tool_use_id"].as_str().map(String::from),
+            name: value["tool_name"].as_str().unwrap_or("desconhecida").into(),
+            input: value["tool_input"].clone(),
+            approved: None,
+            pre,
+        });
+        self.next_tool
+    }
     /// Matches a hook to its `PreToolUse` by ID, else by name and input.
     fn find_tool(&self, value: &serde_json::Value) -> Option<usize> {
         if let Some(id) = value["tool_use_id"].as_str()
@@ -913,17 +930,18 @@ impl HiddenView {
                     "Ação: {name}{}",
                     tool_summary(&event.value["tool_input"])
                 ));
-                if self.tools.len() >= 64 {
-                    self.tools.remove(0);
+                // Hooks use separate connections; a request may come first.
+                if let Some(call) = self
+                    .tools
+                    .iter_mut()
+                    .rev()
+                    .find(|t| !t.pre && t.name == name && t.input == event.value["tool_input"])
+                {
+                    call.pre = true;
+                    call.id = event.value["tool_use_id"].as_str().map(String::from);
+                } else {
+                    self.add_tool(&event.value, true);
                 }
-                self.next_tool += 1;
-                self.tools.push(ToolCall {
-                    seq: self.next_tool,
-                    id: event.value["tool_use_id"].as_str().map(String::from),
-                    name: name.into(),
-                    input: event.value["tool_input"].clone(),
-                    approved: None,
-                });
             }
             name @ ("PostToolUse" | "PostToolUseFailure") => {
                 let tool = event.value["tool_name"].as_str().unwrap_or("ação");
@@ -951,16 +969,18 @@ impl HiddenView {
                     .unwrap_or_else(|_| "<entrada inválida>".into());
                 let request = format!("Ferramenta: {name}\nEntrada completa:\n{details}");
                 self.push(format!("Claude pediu permissão: {name}"));
-                let tool = self.find_tool(&event.value);
-                let seq = tool.map(|i| self.tools[i].seq);
+                let seq = match self.find_tool(&event.value) {
+                    Some(i) => self.tools[i].seq,
+                    None => self.add_tool(&event.value, false),
+                };
                 if let Some(reply) = event.reply {
                     if self.pending.is_some() {
                         let _ = reply.send(false);
                         self.push(format!(
                             "Negado: {name} (outro pedido já aguardava revisão)"
                         ));
-                        if let Some(i) = tool {
-                            self.tools[i].approved = Some(false);
+                        if let Some(call) = self.tools.iter_mut().find(|t| t.seq == seq) {
+                            call.approved = Some(false);
                         }
                     } else {
                         // Decisions are always reviewed in the Bee panel.
@@ -968,7 +988,7 @@ impl HiddenView {
                         self.pending = Some(Pending {
                             request,
                             reply,
-                            tool: seq,
+                            tool: Some(seq),
                             since: now,
                         });
                     }
@@ -1482,6 +1502,23 @@ mod tests {
         view.receive(event(serde_json::json!({"hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_use_id": "b1"})), id, start);
         assert!(view.lines.last().unwrap().contains("aprovada por você"));
         assert!(view.lines.iter().any(|l| l == "Ação: Bash · touch ok"));
+    }
+    #[cfg(unix)]
+    #[test]
+    fn approval_links_even_when_the_request_arrives_first() {
+        let start = Instant::now();
+        let id = Uuid::new_v4();
+        let mut view = HiddenView::new(start);
+        let input = serde_json::json!({"command": "touch ok"});
+        let (tx, rx) = mpsc::channel();
+        view.receive(BridgeEvent { value: serde_json::json!({"hook_event_name": "PermissionRequest", "session_id": id.to_string(), "tool_name": "Bash", "tool_input": input}), reply: Some(tx) }, id, start);
+        view.decide(true, false);
+        assert!(rx.recv().unwrap());
+        for name in ["PreToolUse", "PostToolUse"] {
+            view.receive(BridgeEvent { value: serde_json::json!({"hook_event_name": name, "session_id": id.to_string(), "tool_name": "Bash", "tool_use_id": "b1", "tool_input": input}), reply: None }, id, start);
+        }
+        assert!(view.lines.last().unwrap().contains("aprovada por você"));
+        assert!(view.tools.is_empty());
     }
     #[cfg(unix)]
     #[test]
