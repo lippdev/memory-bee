@@ -35,8 +35,39 @@ a TUI nativa visível para diagnóstico. Se houver permissão pendente, `Ctrl+C`
 `Ctrl+Q` negam antes de interromper ou sair; outras teclas além de `y`, `n` e
 Esc não decidem a permissão.
 O painel mostra o `tool_input` completo; quando não cabe para revisão, `y` também
-nega. `Ctrl+Q` aguarda até cinco segundos por `/exit` e encerra o processo se
-o CLI nativo estiver preso em um prompt invisível.
+nega.
+
+Cada ação aparece com um resumo (`Ação: Bash · <comando>`). O resultado informa a
+origem: "aprovada por você na Bee, uma vez" somente quando houve
+`PermissionRequest` e o hook recebeu `allow`; ações sem pedido aparecem como
+"sem pedido de permissão; liberada pelas regras ou modo do próprio Claude". A
+associação usa `tool_use_id` quando existe; o `PermissionRequest` oficial não o
+traz, então vale nome e entrada da ferramenta. Se o pedido corresponder a mais de
+uma chamada idêntica ainda sem decisão, os resultados dessas chamadas aparecem
+com "origem incerta", sem atribuir a aprovação a nenhuma delas; o mesmo vale
+quando o pedido chega antes do `PreToolUse` correspondente. Os registros de
+ferramentas são descartados ao fim de cada turno. O
+painel fecha em 85 s, antes do limite de 90 s do hook, e registra que o pedido
+expirou negado; um segundo pedido enquanto outro aguarda é negado e registrado.
+Se a resposta não chegar ao hook, a Bee informa que nada foi aprovado.
+
+Telas nativas sem hook (login, confiança do projeto, configuração inicial ou
+outro diálogo) são detectadas pela ausência de progresso: sem `SessionStart` em
+5 s, a Bee informa que o Claude aguarda uma ação no terminal original e nomeia o
+tipo provável (confiança, login, configuração inicial ou tela sem evento) por
+palavras-chave da tela privada, sem copiar o texto nativo para a conversa. Com a
+sessão pronta, um turno sem hooks por 20 s gera um aviso único (pode estar
+pensando ou numa tela nativa). A saída do PTY alimenta um modelo de tela privado
+que responde consultas de terminal e só é desenhado quando o usuário pressiona
+`Ctrl+O`, ação explícita para concluir a preparação ou diagnosticar; nesse modo
+as teclas vão ao Claude, `Ctrl+O` volta à Bee e pedidos de permissão sempre
+retornam ao painel Bee. A Memory Bee não registra a tela nativa.
+
+`Ctrl+Q` nunca digita em um diálogo nativo: antes do `SessionStart`, encerra o
+processo imediatamente; com turno em andamento ou tela original aberta, envia
+`Ctrl+C` e digita `/exit` só depois do `Stop` do turno (sem turno, aguarda o
+encerramento); no prompt ocioso da Bee, digita `/exit`.
+Em todos os casos, se o CLI não sair em cinco segundos, o processo é encerrado.
 
 `claude-native.json` guarda projeto canônico, IDs e códigos de saída (até 128
 sessões, 64 KiB), sem transcrição. A pasta é 0700 e arquivos são 0600 em Unix;
@@ -50,10 +81,10 @@ conversa/permissões reais por si só; ver [roteiro manual](../MANUAL_TESTS.md).
 **Direção atual:** o mantenedor não quer ver a TUI original do Claude. O modo
 padrão `--claude` já oculta essa tela e mostra componentes da Memory Bee. O
 terminal embutido anterior requer `--claude-terminal`. A UI Bee ainda é um
-recorte funcional sem histórico/exportação nativos integrados; prompts de login,
-confiança do projeto ou outros controles do Claude que não emitam hooks podem
-ficar ocultos e bloquear a sessão. Preparar o projeto no Claude original antes
-de usar a Bee e conferir o [roteiro manual](../MANUAL_TESTS.md). O [ADR 0018](../decisions/0018-unified-workspace.md)
+recorte funcional sem histórico/exportação nativos integrados. Prompts nativos
+sem hook agora são sinalizados e podem ser concluídos com `Ctrl+O`; a detecção é
+heurística (tempo e palavras-chave) e o diálogo de confiança real ainda não foi
+ensaiado com conta autenticada. Conferir o [roteiro manual](../MANUAL_TESTS.md). O [ADR 0018](../decisions/0018-unified-workspace.md)
 registra por que o transporte mantém o binário interativo sem usar `-p`.
 
 ```sh

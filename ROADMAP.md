@@ -37,7 +37,8 @@ por trás, assinaturas existentes e lançamento conjunto. Isso amplia as etapas
 2. Prova real por agente/assinatura, incluindo dois perfis isolados: em andamento.
    `workspace --claude` hospeda o binário Claude Code original em PTY oculto,
    usa hooks para conversa e permissões na Bee e retoma o ID nativo. Mensagem real
-   curta comprovada; ferramentas/perfis reais ainda exigem ensaio humano.
+   curta comprovada; prompts nativos sem hook são sinalizados e concluídos por
+   `Ctrl+O` (#29); ferramentas/perfis reais ainda exigem ensaio humano.
 3. Experiência integrada aos dois harnesses, histórico e exportação: pendente.
 4. Troca real entre agentes/contas com revisão e preservação da origem: pendente.
 5. Lançamento conjunto após todos os aceites, sem substituir o requisito por
@@ -56,8 +57,8 @@ atender a esse contrato, registrar a lacuna antes do lançamento conjunto.
 O mantenedor priorizou a implementação nativa **Claude primeiro**. O PTY oculto
 com hooks e UI Bee é a primeira entrega desse caminho, em modo experimental;
 não altera o aceite do lançamento conjunto da experiência completa. O próximo
-recorte deve completar histórico/exportação revisável, cobrir prompts nativos que
-não emitem hooks e ensaiar ferramentas/permissões reais. A moldura PTY anterior
+recorte deve completar histórico/exportação revisável e ensaiar
+ferramentas/permissões reais; prompts nativos sem hook já são sinalizados (#29). A moldura PTY anterior
 virou diagnóstico opcional. O transporte atual continua com o binário interativo
 original e login próprio; não usa `-p` nem API separada.
 O HTML ainda representa o plano

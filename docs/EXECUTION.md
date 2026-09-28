@@ -1,6 +1,6 @@
 # Estado de execução
 
-Última atualização: 2026-09-25. Este arquivo é o ponto de retomada entre agentes. Não substitui a inspeção do Git nem os critérios do [roadmap](../ROADMAP.md).
+Última atualização: 2026-09-28. Este arquivo é o ponto de retomada entre agentes. Não substitui a inspeção do Git nem os critérios do [roadmap](../ROADMAP.md).
 
 ## Situação atual
 
@@ -74,8 +74,12 @@ de patches e consulta ao Git ficam para a etapa 04.
 rejeitou a exibição da tela nativa do Claude. `workspace --claude` agora hospeda
 a CLI interativa em PTY oculto e usa hooks para mostrar texto, ações e permissões
 na Bee. Uma resposta real curta foi recebida na UI; negação/aprovação e retomada
-foram testadas com CLI falsa. Próximo: ensaio humano de ferramentas/permissões
-reais, tratamento de prompts nativos sem hook e histórico/exportação revisável.
+foram testadas com CLI falsa. Prompts nativos sem hook agora são detectados e
+concluídos por `Ctrl+O` ([#29](https://github.com/lippdev/memory-bee/issues/29)),
+e a Bee distingue ações aprovadas por ela das liberadas pelo próprio Claude.
+Próximo: ensaio humano de ferramentas/permissões reais
+([#30](https://github.com/lippdev/memory-bee/issues/30)) e histórico/exportação
+revisável ([#31](https://github.com/lippdev/memory-bee/issues/31)).
 O modo ainda guarda só IDs; perfis reais e Codex integrado seguem pendentes.
 O lançamento da experiência completa ainda exige os dois agentes (ADR 0018).
 
@@ -746,3 +750,69 @@ escopo da entrega atual nem a próxima tarefa aprovada.
   permissão; `Ctrl+C` e `Ctrl+Q` negam antes de interromper/sair. O roteiro 51
   identifica `--claude-terminal` como diagnóstico. Ainda não há prova de
   ferramentas e permissões reais além da resposta curta já observada.
+
+## Claude oculto — prompts nativos sem hook (#29)
+
+- Data: 2026-09-28. Branch `claude/quirky-lovelace-pybgg3`, conforme a sessão
+  (não `codex/<assunto>`, porque a sessão fixou esse nome).
+- `workspace --claude` passa a alimentar um modelo de tela privado (`vt100`)
+  com a saída do PTY, respondendo consultas de cursor/estado. Sem `SessionStart`
+  em 5 s, a Bee mostra que o Claude aguarda uma ação nativa e nomeia o tipo
+  (confiança, login, configuração inicial ou tela sem evento) sem copiar o texto
+  da tela. `Ctrl+O` abre explicitamente o Claude original para concluir; pedidos
+  de permissão sempre voltam ao painel Bee. Turnos sem hooks por 20 s geram um
+  aviso único.
+- `Ctrl+Q` deixou de digitar `/exit` + Enter em qualquer estado (um Enter
+  poderia confirmar um diálogo nativo, como a confiança do projeto): antes do
+  `SessionStart` encerra o processo; em turno ativo envia `Ctrl+C` e digita
+  `/exit` só após `Stop`; no prompt ocioso mantém `/exit`; fallback de 5 s.
+- Evidências automatizadas: testes unitários da heurística (inclui não copiar
+  texto com credencial falsa) e da máquina de estados; `scripts/check_claude_hidden_pty.py`
+  ganhou CLI falsa com diálogo de confiança sem hook: bloqueio visível sem vazar
+  a tela, `Ctrl+O` → resposta `1` → `SessionStart` → retorno à Bee → `/exit`; e
+  `Ctrl+Q` bloqueado sem nada digitado no diálogo, saída 4 e terminal restaurado.
+  `cargo fmt --check`, `clippy -D warnings`, `cargo test --locked`, os quatro
+  scripts PTY e `check_bundle.py` passaram localmente (Linux).
+- Caminho real observado pelo agente: Claude Code 2.1.283 sem login, projeto
+  descartável em pasta temporária. A Bee sinalizou "configuração inicial" sem
+  mostrar o texto nativo; `Ctrl+O` exibiu a tela de boas-vindas; `Ctrl+Q` saiu
+  em 0,27 s com terminal restaurado e trava removida. Não havia conta autenticada,
+  então o diálogo de confiança real e o login completo não foram ensaiados;
+  item 52 do roteiro segue pendente para o mantenedor.
+- Limitações: a detecção é heurística (tempo + palavras-chave em inglês); um
+  diálogo nativo no meio do turno só gera aviso, não bloqueio. Autorrevisão;
+  sem revisão independente.
+- Próximo: [#30](https://github.com/lippdev/memory-bee/issues/30) (ferramentas e
+  permissões reais) e [#31](https://github.com/lippdev/memory-bee/issues/31)
+  (histórico e exportação da sessão Claude).
+
+## Claude oculto — origem das ações e expiração (#30, parcial)
+
+- Data: 2026-09-28, mesmo branch e PR #51. Parte de código da issue #30.
+- Não houve ensaio real de ferramentas: o Claude Code deste ambiente não está
+  autenticado e a Memory Bee não usa credenciais que não sejam do login próprio
+  do CLI. O ensaio real (leitura, edição, Bash, permitir/negar, interrupção e
+  retomada) continua no item 52 do roteiro, para o mantenedor.
+- Lacunas corrigidas: (1) o resultado de cada ferramenta diz se foi aprovado na
+  Bee ou liberado pelas regras/modo do próprio Claude, sem afirmar aprovação que
+  o CLI não pediu; associação por `tool_use_id` ou nome+entrada, com número de
+  sequência estável. (2) Um pedido sem resposta ficava aberto após o hook negar
+  em 90 s, e um `y` tardio mostrava "concedida"; agora o painel fecha em 85 s
+  com registro de negação, e resposta não entregue é informada como não
+  aprovada. Pedido concorrente é negado com registro.
+- Evidências: testes unitários de origem, pedido antigo concluindo durante a
+  revisão, expiração, pedido concorrente e aprovação tardia; teste PTY com CLI
+  falsa emitindo leitura sem pedido e Bash com pedido. Checks canônicos, quatro
+  scripts PTY e `check_bundle.py` passaram localmente (Linux). Autorrevisão.
+- Limitação: segundo a referência oficial de hooks, `PermissionRequest` não traz
+  `tool_use_id`; a associação usa nome e entrada exatos. Após revisão do
+  Pullfrog no PR #51, chamadas idênticas paralelas sem decisão recebem "origem
+  incerta" em vez de uma aprovação possivelmente trocada.
+- CI macOS do PR #51 expôs duas falhas, corrigidas: o script PTY parava de ler
+  a saída ao aguardar a saída da Bee (buffer pequeno do macOS bloqueava o
+  redesenho final); e hooks sem permissão não esperavam confirmação, então
+  eventos emitidos logo antes de o Claude sair podiam se perder. Agora o hook
+  aguarda até 5 s a confirmação de enfileiramento e a Bee drena os eventos e
+  redesenha antes de encerrar.
+- Próximo: ensaio humano do item 52 para fechar #29/#30 e, em código, #31
+  (histórico e exportação da sessão Claude).

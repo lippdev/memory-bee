@@ -889,11 +889,25 @@ solicitação, verificar que `n` nega e `y` permite somente a ação exibida.
 Testar `Ctrl+C`, colagem, resize, `Ctrl+Q`, retomada e restauração do terminal.
 Com permissão pendente, conferir que outra tecla não decide e que `Ctrl+C` ou
 `Ctrl+Q` negam antes de interromper ou sair.
+Para cada ação, conferir a origem mostrada no resultado: ações que o Claude já
+permite (por exemplo, leitura) devem aparecer "sem pedido de permissão"; somente
+ações aprovadas com `y` aparecem como "aprovada por você na Bee". Deixar um
+pedido sem resposta por 85 s e conferir "Pedido expirou sem resposta e foi
+negado" e que a ação não ocorreu.
 Confirmar que a sessão continua acessível no Claude original. Registrar versão
 e resultados, sem copiar dados reais da conversa para o repositório.
 
-Prompts de login/confiança não cobertos por hook podem ficar invisíveis; se a
-tela não avançar, sair com `Ctrl+Q` e preparar o projeto diretamente no Claude.
+Prompts nativos sem hook: em um projeto descartável **não confiado** (e, se
+possível, num perfil ainda sem login), rodar o comando acima sem preparar o
+projeto antes. Esperado: em cerca de 5 s a Bee informa "Claude aguarda
+confiança do projeto" (ou login/configuração inicial) sem mostrar o texto nativo;
+`Ctrl+O` abre o Claude original com moldura Bee; concluir a confiança/login ali;
+a Bee registra "Preparação nativa concluída"; `Ctrl+O` volta à conversa Bee.
+Repetir em outro projeto não confiado e pressionar `Ctrl+Q` enquanto bloqueado:
+a Bee deve sair em até 1 s, o projeto continuar não confiado no Claude original
+e o terminal ser restaurado. Durante um turno longo, conferir o aviso de 20 s e
+que `Ctrl+Q` interrompe antes de sair. Nenhuma credencial deve aparecer fora da
+tela nativa aberta por `Ctrl+O`.
 `--claude-terminal` mostra o modo antigo apenas para diagnóstico. O teste
 sintético é `python3 scripts/check_claude_hidden_pty.py`; não substitui este
 ensaio humano. Exportação integrada e perfis reais ainda pendentes.
@@ -901,6 +915,8 @@ ensaio humano. Exportação integrada e perfis reais ainda pendentes.
 | Item novo | Estado | Evidência manual |
 |---|---|---|
 | 52: UI Bee sobre Claude real oculto, ferramentas, permissões e retomada | Pendente | — |
+| 52: origem das ações (regra do Claude × aprovação Bee) e expiração negada | Pendente | — |
+| 52: prompts nativos sem hook — confiança/login via `Ctrl+O` e `Ctrl+Q` seguro | Pendente | Agente observou só a configuração inicial de um Claude sem login (2026-09-28); não é ensaio humano |
 
 ## 53. Revisão do Pullfrog em PR (pendente)
 
