@@ -892,8 +892,17 @@ Com permissão pendente, conferir que outra tecla não decide e que `Ctrl+C` ou
 Confirmar que a sessão continua acessível no Claude original. Registrar versão
 e resultados, sem copiar dados reais da conversa para o repositório.
 
-Prompts de login/confiança não cobertos por hook podem ficar invisíveis; se a
-tela não avançar, sair com `Ctrl+Q` e preparar o projeto diretamente no Claude.
+Prompts nativos sem hook: em um projeto descartável **não confiado** (e, se
+possível, num perfil ainda sem login), rodar o comando acima sem preparar o
+projeto antes. Esperado: em cerca de 5 s a Bee informa "Claude aguarda
+confiança do projeto" (ou login/configuração inicial) sem mostrar o texto nativo;
+`Ctrl+O` abre o Claude original com moldura Bee; concluir a confiança/login ali;
+a Bee registra "Preparação nativa concluída"; `Ctrl+O` volta à conversa Bee.
+Repetir em outro projeto não confiado e pressionar `Ctrl+Q` enquanto bloqueado:
+a Bee deve sair em até 1 s, o projeto continuar não confiado no Claude original
+e o terminal ser restaurado. Durante um turno longo, conferir o aviso de 20 s e
+que `Ctrl+Q` interrompe antes de sair. Nenhuma credencial deve aparecer fora da
+tela nativa aberta por `Ctrl+O`.
 `--claude-terminal` mostra o modo antigo apenas para diagnóstico. O teste
 sintético é `python3 scripts/check_claude_hidden_pty.py`; não substitui este
 ensaio humano. Exportação integrada e perfis reais ainda pendentes.
@@ -901,6 +910,7 @@ ensaio humano. Exportação integrada e perfis reais ainda pendentes.
 | Item novo | Estado | Evidência manual |
 |---|---|---|
 | 52: UI Bee sobre Claude real oculto, ferramentas, permissões e retomada | Pendente | — |
+| 52: prompts nativos sem hook — confiança/login via `Ctrl+O` e `Ctrl+Q` seguro | Pendente | Agente observou só a configuração inicial de um Claude sem login (2026-09-28); não é ensaio humano |
 
 ## 53. Revisão do Pullfrog em PR (pendente)
 

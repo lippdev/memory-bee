@@ -14,7 +14,8 @@ import time
 
 
 FAKE = r'''#!/usr/bin/env python3
-import json, os, subprocess, sys
+import json, os, signal, subprocess, sys
+signal.signal(signal.SIGINT, signal.SIG_IGN)  # Real Claude reads Ctrl+C as a key.
 args = sys.argv[1:]
 session_id = args[args.index('--resume') + 1] if '--resume' in args else args[args.index('--session-id') + 1]
 settings = json.loads(args[args.index('--settings') + 1])
@@ -36,6 +37,80 @@ with open(os.environ['BEE_DECISIONS'], 'a') as f:
     f.write(decision['hookSpecificOutput']['decision']['behavior'] + '\n')
 hook('Stop')
 '''
+
+# Untrusted project: a native dialog waits without emitting any hook.
+FAKE_TRUST = r'''#!/usr/bin/env python3
+import json, os, subprocess, sys
+args = sys.argv[1:]
+session_id = args[args.index('--resume') + 1] if '--resume' in args else args[args.index('--session-id') + 1]
+def hook(name, **fields):
+    payload = json.dumps(dict(hook_event_name=name, session_id=session_id, **fields))
+    subprocess.run([os.environ['BEE_BINARY'], '__claude-hook'], input=payload, text=True, capture_output=True, check=True)
+print('Do you trust the files in this folder? 1. Yes 2. No', flush=True)
+for line in sys.stdin:
+    with open(os.environ['BEE_FAKE_STDIN'], 'a') as f:
+        f.write(line.strip() + '\n')
+    if line.strip() == '1':
+        hook('SessionStart')
+    elif line.strip() == '/exit':
+        sys.exit(0)
+'''
+
+
+def spawn(binary, project, state, env):
+    master, slave = pty.openpty()
+    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 24, 80, 0, 0))
+    before = termios.tcgetattr(slave)
+    argv = [str(binary), 'workspace', '--claude', '--project', str(project), '--state', str(state), '--no-color']
+    proc = subprocess.Popen(argv, stdin=slave, stdout=slave, stderr=slave, env=env)
+    output = bytearray()
+
+    def until(token, seconds=12):
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            if select.select([master], [], [], 0.05)[0]:
+                try:
+                    output.extend(os.read(master, 65536))
+                except OSError:
+                    break
+            if token in output:
+                return
+            if proc.poll() is not None:
+                break
+        raise AssertionError(f'missing Bee UI token {token!r}; process exit={proc.poll()}; Bee output={output[-400:]!r}')
+
+    return master, slave, before, proc, output, until
+
+
+def untrusted(binary, project, state, env, quit_while_blocked):
+    master, slave, before, proc, output, until = spawn(binary, project, state, env)
+    try:
+        until('confiança'.encode())
+        assert b'trust' not in output, 'native dialog leaked into the Bee view'
+        if quit_while_blocked:
+            started = time.monotonic()
+            os.write(master, b'\x11')
+            proc.wait(timeout=4)
+            assert time.monotonic() - started < 4
+            assert proc.returncode == 4, proc.returncode
+        else:
+            os.write(master, b'\x0f')  # Ctrl+O opens the original screen.
+            until(b'trust')
+            os.write(master, b'1\r')
+            until(b'encerra  ')  # Ready footer is shorter than the setup one.
+            os.write(master, b'\x0f')
+            until('concluída'.encode())
+            os.write(master, b'\x11')  # Idle prompt: Ctrl+Q types /exit.
+            proc.wait(timeout=10)
+            assert proc.returncode == 0, proc.returncode
+        assert termios.tcgetattr(slave) == before
+        assert not (state / 'claude-native.lock').exists()
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+        os.close(master)
+        os.close(slave)
 
 
 def run(binary, project, state, env, resume, decision):
@@ -112,7 +187,22 @@ def main():
         denied = subprocess.run([str(binary), '__claude-hook'], input=json.dumps({'hook_event_name':'PermissionRequest'}), text=True, capture_output=True, env=dict(env, MEMORY_BEE_CLAUDE_SOCKET=str(root / 'missing.sock')))
         assert denied.returncode == 0
         assert json.loads(denied.stdout)['hookSpecificOutput']['decision']['behavior'] == 'deny'
-    print('PASS: Bee-only UI, hidden original output, hooks, deny/allow, Ctrl+Q denial, resume and terminal restoration')
+    with tempfile.TemporaryDirectory(prefix='bee-trust-') as temp:
+        root = Path(temp)
+        fake_dir = root / 'bin'
+        fake_dir.mkdir()
+        fake = fake_dir / 'claude'
+        fake.write_text(FAKE_TRUST)
+        fake.chmod(0o700)
+        project = root / 'project'
+        project.mkdir()
+        stdin_log = root / 'stdin'
+        env = dict(os.environ, PATH=f'{fake_dir}:/usr/bin:/bin', BEE_BINARY=str(binary), BEE_FAKE_STDIN=str(stdin_log))
+        untrusted(binary, project, root / 'state-quit', env, True)
+        assert not stdin_log.exists(), 'Ctrl+Q typed into the native dialog'
+        untrusted(binary, project, root / 'state-setup', env, False)
+        assert stdin_log.read_text().splitlines() == ['1', '/exit']
+    print('PASS: Bee-only UI, hidden original output, hooks, deny/allow, Ctrl+Q denial, resume, blocked native setup via Ctrl+O, safe Ctrl+Q and terminal restoration')
 
 
 if __name__ == '__main__':
