@@ -68,18 +68,27 @@ impl Draft {
     pub fn end(&mut self) {
         self.cursor = self.line_end();
     }
-    /// Byte offset of the `column`-th char of the line starting at `start`.
+    /// Byte offset in the line starting at `start` whose display column is
+    /// closest to `column` without passing it (wide chars take two cells).
     fn at_column(&self, start: usize, column: usize) -> usize {
         let line = &self.text[start..];
         let line = &line[..line.find('\n').unwrap_or(line.len())];
-        start
-            + line
-                .char_indices()
-                .nth(column)
-                .map_or(line.len(), |(i, _)| i)
+        let mut used = 0;
+        for (i, c) in line.char_indices() {
+            let w = c.width().unwrap_or(0);
+            if used + w > column {
+                return start + i;
+            }
+            used += w;
+        }
+        start + line.len()
     }
+    /// Display column of the cursor, in terminal cells.
     fn column(&self) -> usize {
-        self.text[self.line_start()..self.cursor].chars().count()
+        self.text[self.line_start()..self.cursor]
+            .chars()
+            .map(|c| c.width().unwrap_or(0))
+            .sum()
     }
     /// Returns false on the first line, so the caller can use Up elsewhere.
     pub fn up(&mut self) -> bool {
@@ -183,6 +192,21 @@ mod tests {
         d.left();
         d.delete();
         assert_eq!(d.text(), ">primeir\nb\nerceira");
+    }
+
+    #[test]
+    fn vertical_moves_keep_the_visual_column_with_wide_chars() {
+        let mut d = draft("漢字漢\nabcdef");
+        d.left();
+        d.left();
+        assert_eq!(d.layout(80).1, (1, 4));
+        assert!(d.up());
+        assert_eq!(d.layout(80).1, (0, 4), "lands after two wide chars");
+        assert!(d.down());
+        assert_eq!(d.layout(80).1, (1, 4));
+        d.left();
+        assert!(d.up());
+        assert_eq!(d.layout(80).1, (0, 2), "never inside a wide char");
     }
 
     #[test]
