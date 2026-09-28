@@ -128,7 +128,7 @@ substituída pela revisão de sequência do mantenedor registrada acima.
 | 03 Exportação revisável | P0 | Em andamento | Exportador somente contexto com prévia, exclusões e testes implementado; ensaios manuais de pacote/retomada pendentes. |
 | 04 Estado do código | P0 | Em andamento | Referência Git, código selecionado, verify e apply explícito implementados; ensaios manuais/M1 pendentes. |
 | 05 Troca de agente | P1 | Em andamento | Inspeção/exportação Codex, descoberta, preparação de retomada e lançamento confirmado implementados, experimentais; validação real com os agentes pendente (itens 38–40). |
-| 06 Dashboard terminal | P1 | Em andamento | Leitura e ações confirmadas implementadas; cena, exportação de código pela TUI e ensaios humanos pendentes. |
+| 06 Dashboard terminal | P1 | Em andamento | Dashboard com leitura e ações confirmadas; workspace demo; Claude oculto experimental com prompts nativos via `Ctrl+O`, origem das ações, histórico/exportação, editor multilinha e recuperação após falha (#29–#32, #41). Cena, exportação de código pela TUI, Codex real e ensaios humanos (itens 42–55) pendentes. |
 | 07 Uso e alertas | P1 | Pendente | Depende de 01 e 06; falta referência de consumo. |
 | 08 Perfis de conta | P1 | Pendente | Depende de 05–06 e prova de isolamento. |
 | 09 Captura contínua | P2 | Pendente | Depende de 02–06. |
@@ -895,3 +895,14 @@ escopo da entrega atual nem a próxima tarefa aprovada.
   Autorrevisão.
 - Limitações: sistemas de arquivos de rede não suportados; versões antigas não
   respeitam a trava nova; persistência continua síncrona.
+
+## Documentação — status sincronizado (#42)
+
+- Data: 2026-09-28. README (estado e teclas do Claude oculto), tabela de
+  decisões do ROADMAP (Codex exporta e descobre, experimental), status da etapa
+  06 nesta tabela e roadmap HTML passam a descrever a mesma situação. O HTML
+  deixou de marcar todas as etapas após a 01 como "Planejado": cada selo repete
+  a tabela "Status do roadmap" acima. Histórico de decisões preservado; nenhum
+  ensaio manual declarado como feito.
+- Evidências: `node --check` do script do HTML, links relativos conferidos,
+  `git diff --check`. Autorrevisão.
