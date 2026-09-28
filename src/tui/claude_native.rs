@@ -730,6 +730,8 @@ struct ToolCall {
     approved: Option<bool>,
     /// Seen as `PreToolUse`; false when the request arrived first.
     pre: bool,
+    /// Created by a request that arrived before any matching call.
+    early: bool,
     /// A request without `tool_use_id` matched several identical calls, so
     /// the Bee cannot tell which one it answered.
     ambiguous: bool,
@@ -867,6 +869,7 @@ impl HiddenView {
             input: value["tool_input"].clone(),
             approved: None,
             pre,
+            early: !pre,
             ambiguous: false,
         });
         self.next_tool
@@ -891,7 +894,15 @@ impl HiddenView {
             })
             .collect();
         match candidates[..] {
-            [] => Some(self.add_tool(value, false)),
+            [] => {
+                // A request before any matching PreToolUse cannot tell which
+                // identical call will adopt it, so its origin stays uncertain.
+                let seq = self.add_tool(value, false);
+                if let Some(call) = self.tools.last_mut() {
+                    call.ambiguous = true;
+                }
+                Some(seq)
+            }
             [i] => Some(self.tools[i].seq),
             _ => {
                 for i in candidates {
@@ -965,16 +976,25 @@ impl HiddenView {
                     tool_summary(&event.value["tool_input"])
                 ));
                 // Hooks use separate connections; a request may come first.
+                // Any identical call seen after such a request may be the one
+                // that asked, so its origin is uncertain too.
+                let input = &event.value["tool_input"];
+                let uncertain = self
+                    .tools
+                    .iter()
+                    .any(|t| t.early && t.name == name && t.input == *input);
                 if let Some(call) = self
                     .tools
                     .iter_mut()
-                    .rev()
-                    .find(|t| !t.pre && t.name == name && t.input == event.value["tool_input"])
+                    .find(|t| !t.pre && t.name == name && t.input == *input)
                 {
                     call.pre = true;
                     call.id = event.value["tool_use_id"].as_str().map(String::from);
                 } else {
                     self.add_tool(&event.value, true);
+                    if let Some(call) = self.tools.last_mut() {
+                        call.ambiguous |= uncertain;
+                    }
                 }
             }
             name @ ("PostToolUse" | "PostToolUseFailure") => {
@@ -1032,10 +1052,17 @@ impl HiddenView {
             }
             "Stop" => {
                 self.turn = None;
+                // Calls of a finished turn get no more hooks.
+                if self.pending.is_none() {
+                    self.tools.clear();
+                }
                 self.push("Turno concluído.");
             }
             "StopFailure" => {
                 self.turn = None;
+                if self.pending.is_none() {
+                    self.tools.clear();
+                }
                 self.push("Claude encerrou o turno com erro.");
             }
             _ => {}
@@ -1541,7 +1568,7 @@ mod tests {
     }
     #[cfg(unix)]
     #[test]
-    fn approval_links_even_when_the_request_arrives_first() {
+    fn a_request_before_its_call_is_reported_as_uncertain() {
         let start = Instant::now();
         let id = Uuid::new_v4();
         let mut view = HiddenView::new(start);
@@ -1550,10 +1577,19 @@ mod tests {
         view.receive(BridgeEvent { value: serde_json::json!({"hook_event_name": "PermissionRequest", "session_id": id.to_string(), "tool_name": "Bash", "tool_input": input}), reply: Some(tx) }, id, start);
         view.decide(true, false);
         assert!(rx.recv().unwrap());
-        for name in ["PreToolUse", "PostToolUse"] {
-            view.receive(BridgeEvent { value: serde_json::json!({"hook_event_name": name, "session_id": id.to_string(), "tool_name": "Bash", "tool_use_id": "b1", "tool_input": input}), reply: None }, id, start);
+        // Two identical calls; either could be the one that asked.
+        for (name, tool_id) in [
+            ("PreToolUse", "b2"),
+            ("PreToolUse", "b1"),
+            ("PostToolUse", "b2"),
+            ("PostToolUse", "b1"),
+        ] {
+            view.receive(BridgeEvent { value: serde_json::json!({"hook_event_name": name, "session_id": id.to_string(), "tool_name": "Bash", "tool_use_id": tool_id, "tool_input": input}), reply: None }, id, start);
+            if name == "PostToolUse" {
+                let line = view.lines.last().unwrap();
+                assert!(line.contains("origem incerta"), "{line}");
+            }
         }
-        assert!(view.lines.last().unwrap().contains("aprovada por você"));
         assert!(view.tools.is_empty());
     }
     #[cfg(unix)]

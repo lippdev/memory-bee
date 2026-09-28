@@ -44,7 +44,9 @@ origem: "aprovada por você na Bee, uma vez" somente quando houve
 associação usa `tool_use_id` quando existe; o `PermissionRequest` oficial não o
 traz, então vale nome e entrada da ferramenta. Se o pedido corresponder a mais de
 uma chamada idêntica ainda sem decisão, os resultados dessas chamadas aparecem
-com "origem incerta", sem atribuir a aprovação a nenhuma delas. O
+com "origem incerta", sem atribuir a aprovação a nenhuma delas; o mesmo vale
+quando o pedido chega antes do `PreToolUse` correspondente. Os registros de
+ferramentas são descartados ao fim de cada turno. O
 painel fecha em 85 s, antes do limite de 90 s do hook, e registra que o pedido
 expirou negado; um segundo pedido enquanto outro aguarda é negado e registrado.
 Se a resposta não chegar ao hook, a Bee informa que nada foi aprovado.
