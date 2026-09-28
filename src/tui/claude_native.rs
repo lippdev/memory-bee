@@ -881,8 +881,21 @@ impl Export {
                 ));
             }
         }
+        // A finding outside the records (e.g. a branch ID) may appear in the
+        // warnings verbatim, so they are withheld instead of shown.
+        let unlocated: Vec<&str> = prepared
+            .findings()
+            .iter()
+            .filter(|f| f.line.is_none())
+            .map(|f| f.field)
+            .collect();
         let warnings = list("warnings");
-        if !warnings.is_empty() {
+        if !unlocated.is_empty() {
+            text.push(format!(
+                "Avisos ocultos na prévia: possível segredo fora dos registros ({})",
+                unlocated.join(", ")
+            ));
+        } else if !warnings.is_empty() {
             text.push("Avisos:".into());
             text.extend(warnings);
         }
@@ -2042,6 +2055,20 @@ mod tests {
         export.exclusions = "0".into();
         export.prepare(&transcript, &root);
         assert!(export.summary().contains("Linha inválida"));
+        // A secret-shaped branch ID has no line: warnings are withheld.
+        let branch = root.join("branch.jsonl");
+        std::fs::write(
+            &branch,
+            format!(
+                "{}\n",
+                serde_json::json!({"type": "user", "uuid": token, "parentUuid": null, "sessionId": "s", "message": {"role": "user", "content": "Olá"}}),
+            ),
+        )
+        .unwrap();
+        let export = Export::open(&branch, &root, root.join("exports").join("other"));
+        let summary = export.summary();
+        assert!(summary.contains("Avisos ocultos"), "{summary}");
+        assert!(!summary.contains(&token), "{summary}");
         std::fs::remove_dir_all(root).unwrap();
     }
     #[cfg(unix)]
