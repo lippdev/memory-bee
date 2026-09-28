@@ -23,7 +23,7 @@
 <footer>Documento de planejamento · Nada nesta página consulta contas, executa agentes ou transmite conversas. Preferências dos filtros não são persistidas. Sem dependências externas.</footer>
 </main>
 <script>
-const status = {'01':'Concluído','02':'Implementado · ensaio pendente','03':'Implementado · ensaio pendente','04':'Implementado · ensaio pendente','05':'Experimental · validação real pendente','06':'Em andamento','07':'Pendente','08':'Pendente','09':'Pendente','10':'Pendente','11':'Pendente'};
+const status = {'01':'Concluído','02':'Em andamento · compatibilidade real pendente','03':'Em andamento · ensaio pendente','04':'Em andamento · ensaio pendente','05':'Em andamento · experimental','06':'Em andamento','07':'Pendente','08':'Pendente','09':'Pendente','10':'Pendente','11':'Pendente'};
 const phases = [
 ['01','P0','Pesquisa e contrato do produto','Reduzir as incertezas antes de escolher a stack.','Nenhuma', ['Mapear leitura, lançamento, cota e autenticação por agente.','Comparar Orca e ai-memory; decidir reaproveitamento ou interoperabilidade.','Escolher stack, primeiro SO, formato versionado e primeiro adaptador.'], 'ADRs curtos com evidências, limites e uma tarefa sintética de referência. Pesquisa de uso e contas começa aqui, sem bloquear exportação.'],
 ['02','P0','Ler e preservar uma sessão','Recuperar contexto sem pedir uma última resposta ao agente.','01',['Descobrir e selecionar sessões por projeto.','Normalizar papéis, ordem, origem e timestamps; preservar o histórico disponível.','Tratar arquivos incompletos, versões desconhecidas e omissões sem inventar conteúdo.'], 'Fixtures de sessões normais, truncadas e vazias são interpretadas com proveniência. A leitura não altera os arquivos de origem e não chama modelos.'],
